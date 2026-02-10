@@ -4,19 +4,11 @@
     <meta charset="UTF-8">
     <title>ELECTRIC SMT Command Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         :root { 
-            --primary: #00d2ff; 
-            --accent: #1e293b;
-            --green: #00ff9d; 
-            --red: #ff4d4d; 
-            --orange: #ff9f43; 
-            --bg: #0f172a; 
-            --card: #1e293b; 
-            --dark-blue: #0f172a; 
-            --text-main: #ffffff;
-            --text-light: #cbd5e1;
+            --primary: #00d2ff; --accent: #1e293b; --green: #00ff9d; 
+            --red: #ff4d4d; --orange: #ff9f43; --bg: #0f172a; 
+            --card: #1e293b; --text-main: #ffffff; --text-light: #cbd5e1;
             --border: #475569;
         }
         
@@ -26,195 +18,112 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
         .header h3 { font-weight: 800; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; margin: 0; }
         
-        .filter-section { display: flex; flex-wrap: wrap; gap: 10px; background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
+        .filter-section { display: flex; flex-wrap: wrap; gap: 10px; background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
-        .f-group label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+        .f-group label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; }
         
-        .multiselect-container { 
-            background: #0f172a; 
-            color: white; 
-            border: 1px solid var(--primary); 
-            border-radius: 5px; 
-            font-size: 11px; 
-            height: 32px; 
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            font-weight: 600;
-            overflow: hidden;
-            white-space: nowrap;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            top: 50px;
-            left: 0;
-            background: #1e293b;
-            border: 1px solid var(--primary);
-            width: 100%;
-            z-index: 100;
-            max-height: 250px;
-            overflow-y: auto;
-            border-radius: 5px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-        }
+        .multiselect-container { background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-weight: 600; overflow: hidden; }
+        .dropdown-content { display: none; position: absolute; top: 50px; left: 0; background: #1e293b; border: 1px solid var(--primary); width: 100%; z-index: 100; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         .dropdown-content.show { display: block; }
-        .dropdown-item {
-            padding: 8px 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid #334155;
-        }
+        .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; }
         .dropdown-item:hover { background: #334155; }
-        .dropdown-item input { height: auto; width: auto; cursor: pointer; }
 
-        select, input { background: #0f172a; color: white; padding: 4px 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; outline: none; font-weight: 600; }
+        select, input { background: #0f172a; color: white; padding: 4px 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; outline: none; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
         .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; }
-        .breakdown { display: flex; justify-content: space-around; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; }
-        .breakdown b { color: var(--primary); font-weight: 900; font-size: 13px; }
+        .breakdown { display: flex; justify-content: space-around; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
+        .breakdown b { color: var(--primary); font-weight: 900; }
 
         .recon-health { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
         .mini-tile { background: var(--card); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
-        .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 4px; }
+        .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); }
+        .mini-tile div { font-size: 1.4rem; font-weight: 900; margin-top: 4px; }
 
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; height: 380px; margin-bottom: 12px; }
-        .chart-box { background: var(--card); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
+        .chart-box { background: var(--card); padding: 16px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; position: relative; }
         
-        h3.chart-title { margin: 0 0 15px 0; font-size: 12px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
-        .gauge-container { position: relative; width: 100%; height: 160px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
+        h3.chart-title { margin: 0 0 15px 0; font-size: 12px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; }
+        .gauge-container { position: relative; width: 100%; height: 160px; display: flex; align-items: flex-end; justify-content: center; }
         
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
-        .status-row { display: flex; justify-content: space-around; margin-bottom: 10px; text-align: center; }
-        .status-count { font-size: 1.8rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-        .status-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
-        .status-usd { font-size: 12px; color: var(--primary); font-weight: 800; margin-top: 2px; }
-        .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 11px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; text-transform: uppercase; }
+        .status-row { display: flex; justify-content: space-around; text-align: center; }
+        .status-count { font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-label { font-size: 10px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
+        .status-usd { font-size: 11px; color: var(--primary); font-weight: 800; }
 
         .health-rank-container { display: flex; flex-direction: column; gap: 14px; margin-top: 15px; }
         .rank-item { display: flex; align-items: center; gap: 12px; }
-        .rank-label { width: 110px; font-size: 12px; font-weight: 800; color: #fff; text-align: right; }
-        .rank-bar-bg { flex: 1; background: #0f172a; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #475569; }
-        .rank-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
-        .rank-pct { width: 45px; font-size: 13px; font-weight: 900; color: var(--primary); }
+        .rank-label { width: 110px; font-size: 11px; font-weight: 800; color: #fff; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rank-bar-bg { flex: 1; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; }
+        .rank-bar-fill { height: 100%; transition: width 0.6s ease; }
+        .rank-pct { width: 40px; font-size: 12px; font-weight: 900; color: var(--primary); }
 
-        .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; }
-        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .exec-table th { background: #0f172a; color: var(--primary); padding: 12px; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; }
-        .exec-table td { padding: 12px; border-bottom: 1px solid var(--border); font-weight: 700; }
-        .status-cell { font-weight: 900; text-align: center; font-size: 13px; }
+        .exec-summary-box { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; }
+        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; color: var(--primary); }
+        .exec-table { width: 100%; border-collapse: collapse; }
+        .exec-table th { background: #0f172a; color: var(--primary); padding: 10px; text-align: left; font-size: 10px; text-transform: uppercase; }
+        .exec-table td { padding: 10px; border-bottom: 1px solid var(--border); font-weight: 700; }
+        .status-cell { font-weight: 900; text-align: center; width: 120px; }
         
-        .trend-pill { padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; }
-        .bg-bad { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
-        .bg-good { background: #064e3b; color: #d1fae5; border-color: #10b981; }
+        .trend-pill { padding: 4px 10px; border-radius: 12px; font-size: 9px; font-weight: 900; }
+        .bg-bad { background: #7f1d1d; color: #fecaca; }
+        .bg-good { background: #064e3b; color: #d1fae5; }
 
-        #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1px; }
-        button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 5px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        button { background: var(--primary); color: #0f172a; border: none; padding: 0 15px; border-radius: 5px; font-weight: 900; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="header">
         <h3>ELECTRIC SMT COMMAND CENTER • ANALYTICS</h3>
-        <div id="status">ESTABLISHING LINK...</div>
+        <div id="status">INITIATING...</div>
     </div>
 
     <div class="filter-section">
         <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
-        
-        <div class="f-group">
-            <label>Fiscal Year</label>
-            <div class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div>
-            <div id="fYearList" class="dropdown-content"></div>
-        </div>
-
-        <div class="f-group">
-            <label>Period</label>
-            <div class="multiselect-container" onclick="toggleDropdown('fMonthList')">Select Months...</div>
-            <div id="fMonthList" class="dropdown-content"></div>
-        </div>
-
-        <div class="f-group">
-            <label>Entity</label>
-            <div class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div>
-            <div id="fCompList" class="dropdown-content"></div>
-        </div>
-
-        <div class="f-group">
-            <label>Cost Center</label>
-            <div class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div>
-            <div id="fCCList" class="dropdown-content"></div>
-        </div>
-
+        <div class="f-group"><label>Fiscal Year</label><div class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Entity</label><div class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
         <button onclick="resetFilters()" style="height:32px;">RESET FILTERS</button>
     </div>
 
     <div class="kpi-grid">
-        <div class="tile" style="border-top: 4px solid var(--primary);">
-            <span class="tile-label">Committed Spend (PRF)</span>
-            <div class="tile-val" id="valPRF">$0</div>
-        </div>
+        <div class="tile" style="border-top: 4px solid var(--primary);"><span class="tile-label">Committed Spend (PRF)</span><div class="tile-val" id="valPRF">$0</div></div>
         <div class="tile" style="border-top: 4px solid var(--orange);">
-            <span class="tile-label">Total Actual Spend</span>
-            <div class="tile-val" id="valActual">$0</div>
-            <div class="breakdown">
-                <span>ECF <b id="subECF">$0</b></span>
-                <span>TRF <b id="subTRF">$0</b></span>
-                <span>INV <b id="subInv">$0</b></span>
-            </div>
+            <span class="tile-label">Actual Spend</span><div class="tile-val" id="valActual">$0</div>
+            <div class="breakdown"><span>ECF <b id="subECF">$0</b></span><span>TRF <b id="subTRF">$0</b></span><span>INV <b id="subInv">$0</b></span></div>
         </div>
-        <div class="tile" style="border-top: 4px solid var(--green);">
-            <span class="tile-label">P&L Cost Impact</span>
-            <div class="tile-val" id="valPNL">$0</div>
-        </div>
+        <div class="tile" style="border-top: 4px solid var(--green);"><span class="tile-label">P&L Cost Impact</span><div class="tile-val" id="valPNL">$0</div></div>
     </div>
 
     <div class="recon-health">
-        <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
-        <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
-        <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
-        <div class="mini-tile"><span id="vOverLabel">Avg Overdue</span><div id="vOver" style="color:var(--red)">0 Days</div></div>
+        <div class="mini-tile"><span>Global Efficiency</span><div id="vEff" style="color:var(--green)">0%</div></div>
+        <div class="mini-tile"><span>Avg Recon Speed</span><div id="vMax">0 Days</div></div>
+        <div class="mini-tile"><span>Current Aging</span><div id="vPend">0 Days</div></div>
+        <div class="mini-tile"><span id="vOverLabel">Compliance Buffer</span><div id="vOver" style="color:var(--green)">0 Days</div></div>
     </div>
 
     <div class="viz-grid">
         <div class="chart-box">
-            <h3 class="chart-title">Global Compliance</h3>
-            <div class="gauge-container">
-                <canvas id="mixChart"></canvas>
-            </div>
+            <h3 class="chart-title">Global Compliance %</h3>
+            <div class="gauge-container"><canvas id="mixChart"></canvas></div>
             <div class="status-mix-footer">
                 <div class="status-row">
-                    <div class="status-col">
-                        <div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div>
-                        <div class="status-label" id="labelPen">Pending</div>
-                        <div class="status-usd" id="usdPen">$0</div>
-                    </div>
-                    <div class="status-col">
-                        <div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div>
-                        <div class="status-label" id="labelRec">Reconciled</div>
-                        <div class="status-usd" id="usdRec">$0</div>
-                    </div>
+                    <div><div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div><div class="status-label">Pending</div></div>
+                    <div><div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div><div class="status-label">Reconciled</div></div>
                 </div>
-                <div class="status-total">Current Exposure: <span id="usdTotalMix" style="color:#fff">$0</span></div>
             </div>
         </div>
-
         <div class="chart-box">
-            <h3 style="text-align: left; border-left: 4px solid var(--orange); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
-            <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
+            <h3 style="color:var(--orange); font-size:11px; text-transform:uppercase; font-weight:900;">Overdue Distribution</h3>
+            <div style="flex:1; position:relative;"><canvas id="ageChart"></canvas></div>
         </div>
-
         <div class="chart-box">
-            <h3 style="text-align: left; border-left: 4px solid var(--primary); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
+            <h3 style="color:var(--primary); font-size:11px; text-transform:uppercase; font-weight:900;">Top Performers (Efficiency)</h3>
             <div id="healthRankList" class="health-rank-container"></div>
         </div>
     </div>
@@ -222,33 +131,11 @@
     <div class="exec-summary-box">
         <div class="exec-header">Strategic KPI Matrix</div>
         <table class="exec-table">
-            <thead>
-                <tr>
-                    <th>Category</th>
-                    <th>Target Benchmark</th>
-                    <th style="text-align: center;">Current Value</th>
-                    <th style="text-align: center;">Status</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Category</th><th>Target Benchmark</th><th style="text-align: center;">Current Value</th><th style="text-align: center;">Status</th></tr></thead>
             <tbody>
-                <tr>
-                    <td>Compliance</td>
-                    <td>50% PRFs Reconciled within 30 days</td>
-                    <td id="exCompVal" class="status-cell">0%</td>
-                    <td id="exCompTrend" style="text-align: center;">-</td>
-                </tr>
-                <tr>
-                    <td>Process Speed</td>
-                    <td>Reconciliation Lead Time < 30 days</td>
-                    <td id="exSpeedVal" class="status-cell">0 Days</td>
-                    <td id="exSpeedTrend" style="text-align: center;">-</td>
-                </tr>
-                <tr>
-                    <td>Regional Risk</td>
-                    <td>Ghana Unreconciled Ratio < 30%</td>
-                    <td id="exRiskVal" class="status-cell">0%</td>
-                    <td id="exRiskTrend" style="text-align: center;">-</td>
-                </tr>
+                <tr><td>Compliance</td><td>50% PRFs Reconciled within 30 days</td><td id="exCompVal" class="status-cell">0%</td><td id="exCompTrend" style="text-align: center;">-</td></tr>
+                <tr><td>Process Speed</td><td>Avg Reconciliation < 30 days</td><td id="exSpeedVal" class="status-cell">0 Days</td><td id="exSpeedTrend" style="text-align: center;">-</td></tr>
+                <tr><td>Risk Level</td><td>Ghana Pending Ratio < 30%</td><td id="exRiskVal" class="status-cell">0%</td><td id="exRiskTrend" style="text-align: center;">-</td></tr>
             </tbody>
         </table>
     </div>
@@ -264,62 +151,38 @@
     };
     const parseExcelDate = (str) => {
         if (!str) return null;
-        const p = str.split('.');
-        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(str);
+        if (typeof str === 'number') return new Date((str - (25567 + 1)) * 86400 * 1000);
+        return new Date(str);
     };
 
     function toggleDropdown(id) {
-        document.querySelectorAll('.dropdown-content').forEach(d => {
-            if(d.id !== id) d.classList.remove('show');
-        });
+        document.querySelectorAll('.dropdown-content').forEach(d => { if(d.id !== id) d.classList.remove('show'); });
         document.getElementById(id).classList.toggle('show');
     }
 
-    window.onclick = function(event) {
-        if (!event.target.matches('.multiselect-container') && !event.target.closest('.dropdown-content')) {
-            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
-        }
-    }
-
-    // UPDATED SHEET ID
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
-    function fetchSheet(sheetName) {
-        const url =
-          `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
-          `?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-
-        return fetch(url)
-          .then(res => res.text())
-          .then(text => {
-              const json = JSON.parse(text.substring(47).slice(0, -2));
-              const cols = json.table.cols.map(c => c.label);
-              return json.table.rows.map(r => {
-                  let obj = {};
-                  r.c.forEach((cell, i) => {
-                      obj[cols[i]] = cell ? cell.v : "";
-                  });
-                  return obj;
-              });
-          });
+    async function fetchSheet(sheetName) {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const cols = json.table.cols.map(c => c.label || c.id);
+        return json.table.rows.map(r => {
+            let obj = {};
+            r.c.forEach((cell, i) => { obj[cols[i]] = cell ? cell.v : ""; });
+            return obj;
+        });
     }
 
     async function fetchData() {
         try {
             [appData, recData, pnlData] = await Promise.all([
-                fetchSheet("Approvals"),
-                fetchSheet("Reconciliation Report"),
-                fetchSheet("P&L Costs Summary")
+                fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary")
             ]);
-
-            document.getElementById('status').innerText =
-                "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-
+            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
             initFilters();
             updateDashboard();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('status').innerText = "LINK SEVERED";
-        }
+        } catch (e) { document.getElementById('status').innerText = "LINK OFFLINE"; }
     }
 
     function initFilters() {
@@ -327,7 +190,6 @@
             const el = document.getElementById(id);
             if (el.children.length > 0) return;
             const vals = [...new Set(data.map(r => getCol(r, ...keys)).filter(v => v))].sort();
-            
             vals.forEach(v => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
@@ -336,8 +198,6 @@
             });
         };
         fill('fCompList', appData, ['Burn Company', 'Company']);
-        fill('fCCList', appData, ['Cost Center', 'Cost Centre']);
-        fill('fMonthList', appData, ['Month']);
         fill('fYearList', appData, ['Year']);
     }
 
@@ -347,8 +207,7 @@
     }
 
     function resetFilters() {
-        document.getElementById('dStart').value = '';
-        document.getElementById('dEnd').value = '';
+        document.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
         document.querySelectorAll('.dropdown-content input').forEach(i => i.checked = false);
         updateDashboard();
     }
@@ -357,239 +216,121 @@
         const filters = {
             start: document.getElementById('dStart').value ? new Date(document.getElementById('dStart').value) : null,
             end: document.getElementById('dEnd').value ? new Date(document.getElementById('dEnd').value) : null,
-            yr: getSelected('fYearList'), 
-            mo: getSelected('fMonthList'),
-            comp: getSelected('fCompList'), 
-            cc: getSelected('fCCList')
+            yr: getSelected('fYearList'), comp: getSelected('fCompList')
         };
 
         const passes = (row) => {
-            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date', 'Date'));
             if (filters.start && d < filters.start) return false;
             if (filters.end && d > filters.end) return false;
-            
-            const rYr = String(getCol(row, 'Year'));
-            const rMo = getCol(row, 'Month');
-            const rComp = getCol(row, 'Burn Company', 'Company');
-            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
-
-            if (filters.yr && !filters.yr.includes(rYr)) return false;
-            if (filters.mo && !filters.mo.includes(rMo)) return false;
-            if (filters.comp && !filters.comp.includes(rComp)) return false;
-            if (filters.cc && !filters.cc.includes(rCC)) return false;
-            
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false;
             return true;
         };
 
-        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
+        // Aggregates
+        let prf = 0, actual = 0, ecf=0, trf=0, inv=0, pnl = 0;
         appData.filter(passes).forEach(r => {
             const amt = clean(getCol(r, 'Amount (USD)'));
-            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
+            const type = String(getCol(r, 'Document Type', 'Type')).toUpperCase();
             if (type.includes('PRF')) prf += amt;
-            else if (type.includes('ECF')) ecf += amt;
-            else if (type.includes('TRF')) trf += amt;
-            else if (type.includes('INV')) inv += amt;
+            else { 
+                actual += amt;
+                if(type.includes('ECF')) ecf += amt;
+                if(type.includes('TRF')) trf += amt;
+                if(type.includes('INV')) inv += amt;
+            }
         });
         pnlData.filter(passes).forEach(r => pnl += clean(getCol(r, 'Amount (USD)')));
 
-        let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
-        let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, ccMap = {};
-        let a1=0, a2=0, a3=0;
-        let recWithin30 = 0, totalDaysToRec = 0, ghanaTotalCount = 0, ghanaPenCount = 0;
+        // Reconciliation Logic
+        let recCount = 0, penCount = 0, recWithin30 = 0, totalEff = 0, totalLead = 0;
+        let ghanaTotal = 0, ghanaPen = 0, ages = [0, 0, 0];
+        let ccMap = {};
 
         recData.filter(passes).forEach(r => {
-            const status = (getCol(r, 'Status') || "").toLowerCase();
-            const amt = clean(getCol(r, 'PRF Amount (USD)'));
-            const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc";
+            const status = String(getCol(r, 'Status')).toLowerCase();
+            const days = clean(getCol(r, 'Actual Recon Days', 'Days to Reconcile'));
+            const pending = clean(getCol(r, 'Days Pending'));
             const eff = clean(getCol(r, 'Efficiency %'));
-            const overdue = clean(getCol(r, 'Days Overdue'));
-            const region = (getCol(r, 'Region', 'Country') || "").toLowerCase();
-            const daysToRec = clean(getCol(r, 'Actual Recon Days', 'Days to Reconcile'));
+            const cc = getCol(r, 'Cost Center') || "Other";
+            const reg = String(getCol(r, 'Region', 'Country')).toLowerCase();
 
-            if (status.includes('reconciled')) { 
-                recSum += amt; recCount++; 
-                totalDaysToRec += daysToRec;
-                if(daysToRec <= 30) recWithin30++;
-            } else { 
-                penSum += amt; penCount++; 
+            totalEff += eff;
+            if (!ccMap[cc]) ccMap[cc] = { s: 0, c: 0 };
+            ccMap[cc].s += eff; ccMap[cc].c++;
+
+            if (status.includes('reconciled')) {
+                recCount++;
+                totalLead += days;
+                if (days <= 30) recWithin30++;
+            } else {
+                penCount++;
+                if (pending <= 7) ages[0]++;
+                else if (pending <= 14) ages[1]++;
+                else ages[2]++;
             }
-            
-            if(region.includes('ghana')) {
-                ghanaTotalCount++;
-                if(!status.includes('reconciled')) ghanaPenCount++;
-            }
 
-            effAgg += eff; mDays += clean(getCol(r, 'Max Reconciliation Days'));
-            pDays += clean(getCol(r, 'Days Pending')); oDays += overdue;
-            count++;
-
-            if (overdue > 0 && overdue <= 7) a1++;
-            else if (overdue > 7 && overdue <= 14) a2++;
-            else if (overdue > 14) a3++;
-
-            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
-            ccMap[cc].sum += eff; ccMap[cc].count++;
+            if(reg.includes('ghana')) { ghanaTotal++; if(!status.includes('reconciled')) ghanaPen++; }
         });
 
-        const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
-        document.getElementById('valPRF').innerText = fmt(prf);
-        document.getElementById('valActual').innerText = fmt(ecf + trf + inv);
-        document.getElementById('subECF').innerText = fmt(ecf);
-        document.getElementById('subTRF').innerText = fmt(trf);
-        document.getElementById('subInv').innerText = fmt(inv);
-        document.getElementById('valPNL').innerText = fmt(pnl);
-        
-        const avgMax = count > 0 ? (mDays/count) : 0;
-        const avgPend = count > 0 ? (pDays/count) : 0;
-        const avgOver = count > 0 ? (oDays/count) : 0;
-        const avgRecDays = recCount > 0 ? (totalDaysToRec/recCount) : 0;
-
-        document.getElementById('vEff').innerText = count > 0 ? (effAgg/count).toFixed(0) + "%" : "0%";
-        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days";
-        document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
-
-        const overLabel = document.getElementById('vOverLabel');
-        const overVal = document.getElementById('vOver');
-        if (avgMax > avgPend) {
-            overLabel.innerText = "Days to Deadline";
-            const deadlineVal = avgMax - avgPend;
-            overVal.innerText = deadlineVal.toFixed(0) + " Days";
-            overVal.style.color = "var(--green)";
-        } else {
-            overLabel.innerText = "Avg Overdue";
-            overVal.innerText = avgOver.toFixed(0) + " Days";
-            overVal.style.color = "var(--red)";
-        }
-        
         const totalItems = recCount + penCount;
-        document.getElementById('countPen').innerText = penCount;
+        const compliance = totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0;
+        const avgSpeed = recCount > 0 ? (totalLead / recCount) : 0;
+        const risk = ghanaTotal > 0 ? (ghanaPen / ghanaTotal) * 100 : 0;
+
+        // Update UI
+        document.getElementById('valPRF').innerText = prf.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        document.getElementById('valActual').innerText = actual.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        document.getElementById('subECF').innerText = ecf.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        document.getElementById('subTRF').innerText = trf.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        document.getElementById('subInv').innerText = inv.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        document.getElementById('valPNL').innerText = pnl.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+
+        document.getElementById('vEff').innerText = totalItems > 0 ? (totalEff / totalItems).toFixed(0) + "%" : "0%";
+        document.getElementById('vMax').innerText = avgSpeed.toFixed(0) + " Days";
         document.getElementById('countRec').innerText = recCount;
-        
-        document.getElementById('labelPen').innerText = `Pending for ${avgPend.toFixed(0)} days`;
-        document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
+        document.getElementById('countPen').innerText = penCount;
 
-        document.getElementById('usdPen').innerText = fmt(penSum);
-        document.getElementById('usdRec').innerText = fmt(recSum);
-        document.getElementById('usdTotalMix').innerText = fmt(recSum + penSum);
+        // KPI Matrix Update
+        setExecRow('exComp', compliance, 50, false, '%');
+        setExecRow('exSpeed', avgSpeed, 30, true, ' Days');
+        setExecRow('exRisk', risk, 30, true, '%');
 
-        const complianceVal = totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0;
-        const processSpeedVal = avgPend;
-        const regionalRiskVal = ghanaTotalCount > 0 ? (ghanaPenCount / ghanaTotalCount) * 100 : 0;
+        // Chart Update
+        mixChart.data.datasets[0].data = [compliance, 100 - compliance];
+        mixChart.update();
+        ageChart.data.datasets[0].data = ages;
+        ageChart.update();
 
-        updateExecSummary(complianceVal, processSpeedVal, regionalRiskVal);
-        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
-    }
-
-    function updateExecSummary(comp, speed, risk) {
-        setExecRow('exComp', comp, 50, false, '%'); 
-        setExecRow('exSpeed', speed, 30, true, ' Days'); 
-        setExecRow('exRisk', risk, 30, true, '%'); 
+        // Rank Update
+        const rankList = document.getElementById('healthRankList');
+        rankList.innerHTML = '';
+        Object.keys(ccMap).sort((a,b) => (ccMap[b].s/ccMap[b].c) - (ccMap[a].s/ccMap[a].c)).slice(0,5).forEach(cc => {
+            const score = (ccMap[cc].s/ccMap[cc].c).toFixed(0);
+            rankList.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label">${cc}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:var(--green)"></div></div><div class="rank-pct">${score}%</div></div>`);
+        });
     }
 
     function setExecRow(id, val, target, lowerIsBetter, unit) {
-        const valEl = document.getElementById(id + 'Val');
-        const trendEl = document.getElementById(id + 'Trend');
         const isGood = lowerIsBetter ? val <= target : val >= target;
-        
-        valEl.innerText = val.toFixed(0) + unit;
-        valEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad');
-        trendEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`;
-    }
-
-    function updateVisuals(rec, pen, ageData, ccMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; 
-        mixChart.update();
-        ageChart.data.datasets[0].data = ageData; 
-        ageChart.update();
-        
-        const rankList = document.getElementById('healthRankList');
-        rankList.innerHTML = '';
-        const sorted = Object.keys(ccMap).sort((a,b) => (ccMap[b].sum/ccMap[b].count) - (ccMap[a].sum/ccMap[a].count)).slice(0, 5);
-
-        sorted.forEach(cc => {
-            const score = (ccMap[cc].sum / ccMap[cc].count).toFixed(0);
-            let color = 'var(--primary)';
-            if (score > 80) color = 'var(--green)';
-            else if (score < 50) color = 'var(--red)';
-
-            rankList.insertAdjacentHTML('beforeend', `
-                <div class="rank-item">
-                    <div class="rank-label" title="${cc}">${cc}</div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:${color}"></div></div>
-                    <div class="rank-pct">${score}%</div>
-                </div>
-            `);
-        });
+        document.getElementById(id + 'Val').innerText = val.toFixed(0) + unit;
+        document.getElementById(id + 'Val').className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad');
+        document.getElementById(id + 'Trend').innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK'}</span>`;
     }
 
     window.onload = () => {
-        const gaugeNeedle = {
-            id: 'gaugeNeedle',
-            afterDraw(chart) {
-                const { ctx, data } = chart;
-                ctx.save();
-                const meta = chart.getDatasetMeta(0).data[0];
-                const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                const value = data.datasets[0].data[0]; 
-                
-                const xCenter = meta.x;
-                const yCenter = meta.y - 15;
-                const pivotRadius = 24;
-                
-                const pct = total > 0 ? value / total : 0;
-                const angle = Math.PI + (Math.PI * pct);
-                
-                ctx.translate(xCenter, yCenter);
-                
-                ctx.save();
-                ctx.rotate(angle);
-                ctx.beginPath();
-                ctx.fillStyle = '#ffffff';
-                ctx.moveTo(pivotRadius - 2, -3.5); 
-                ctx.lineTo(meta.outerRadius - 38, -0.5); 
-                ctx.lineTo(meta.outerRadius - 38, 0.5);  
-                ctx.lineTo(pivotRadius - 2, 3.5);  
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-                
-                ctx.beginPath();
-                ctx.arc(0, 0, pivotRadius, 0, Math.PI * 2);
-                ctx.fillStyle = '#1e293b';
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.font = 'bold 16px Inter';
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0);
-                
-                ctx.restore();
-            }
-        };
-
-        mixChart = new Chart(document.getElementById('mixChart'), { 
-            type: 'doughnut', plugins: [gaugeNeedle],
-            data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, 
-            options: { 
-                maintainAspectRatio: false, 
-                cutout: '85%', 
-                animation: { duration: 1500, easing: 'easeOutElastic' },
-                plugins: { legend: { display: false } }, 
-                layout: { padding: { bottom: 10 } } 
-            } 
+        mixChart = new Chart(document.getElementById('mixChart'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [0, 100], backgroundColor: ['#00ff9d', '#334155'], borderWidth: 0, circumference: 180, rotation: 270 }] },
+            options: { cutout: '80%', plugins: { tooltip: { enabled: false }, legend: { display: false } } }
         });
-
-        ageChart = new Chart(document.getElementById('ageChart'), { 
-            type: 'pie', 
-            data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, 
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', boxWidth: 15, font: { size: 11, weight: 'bold' } } } } } 
+        ageChart = new Chart(document.getElementById('ageChart'), {
+            type: 'pie',
+            data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ data: [0,0,0], backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], borderWidth:0 }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#fff', boxWidth: 10 } } } }
         });
-
-        fetchData(); setInterval(fetchData, 30000);
+        fetchData();
     };
 </script>
 </body>
