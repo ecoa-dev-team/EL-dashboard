@@ -140,7 +140,7 @@
     </div>
 
     <div class="tab-container">
-        <div class="tab-btn active" onclick="switchTab('dashboard', this)">Analytics Dashboard</div>
+        <div class="tab-btn active" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
         <div class="tab-btn" onclick="switchTab('approvals-tab', this)">Approvals Ledger</div>
     </div>
 
@@ -321,7 +321,6 @@
 
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     
-    // UPDATED FETCH LOGIC: Pulls RAW data regardless of Sheet UI filters
     function fetchSheet(sheetName) {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
         return fetch(url)
@@ -333,7 +332,6 @@
                   let obj = {};
                   r.c.forEach((cell, i) => { 
                       let val = cell ? cell.v : "";
-                      // Handle formatted dates/numbers provided by Google Visualization
                       if (cell && cell.f) val = cell.f; 
                       obj[cols[i]] = val; 
                   });
@@ -522,7 +520,8 @@
         head.innerHTML = ''; body.innerHTML = '';
         if (data.length === 0) return;
 
-        const excludedCols = ['link', 'pdf link', 'url', 'last modified date'];
+        // "Full File Name" is now added to the excluded list
+        const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
         const displayCols = Object.keys(data[0]).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
         
         let trH = '<tr>';
