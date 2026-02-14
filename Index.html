@@ -26,6 +26,13 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
         .header h3 { font-weight: 800; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; margin: 0; }
         
+        /* Tab Styling */
+        .tab-container { display: flex; gap: 5px; margin-bottom: 15px; }
+        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 8px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 5px 5px 0 0; }
+        .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         .filter-section { display: flex; flex-wrap: wrap; gap: 10px; background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
         .f-group label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
@@ -107,11 +114,17 @@
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; }
         .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .exec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .exec-table th { background: #0f172a; color: var(--primary); padding: 12px; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; }
-        .exec-table td { padding: 12px; border-bottom: 1px solid var(--border); font-weight: 700; }
-        .status-cell { font-weight: 900; text-align: center; font-size: 13px; }
+        .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .exec-table th { background: #0f172a; color: var(--primary); padding: 12px; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; border-bottom: 2px solid var(--border); }
+        .exec-table td { padding: 10px; border-bottom: 1px solid var(--border); font-weight: 700; }
         
+        /* Approvals Table Scroll */
+        .table-wrap { max-height: 600px; overflow-y: auto; background: var(--card); }
+
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; }
+        .pdf-btn:hover { filter: brightness(1.2); }
+
+        .status-cell { font-weight: 900; text-align: center; font-size: 13px; }
         .trend-pill { padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; }
         .bg-bad { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
         .bg-good { background: #064e3b; color: #d1fae5; border-color: #10b981; }
@@ -125,6 +138,11 @@
     <div class="header">
         <h3>ELECTRIC SMT COMMAND CENTER • ANALYTICS</h3>
         <div id="status">ESTABLISHING LINK...</div>
+    </div>
+
+    <div class="tab-container">
+        <div class="tab-btn active" onclick="switchTab('dashboard', this)">Analytics Dashboard</div>
+        <div class="tab-btn" onclick="switchTab('approvals-tab', this)">Approvals Ledger</div>
     </div>
 
     <div class="filter-section">
@@ -158,99 +176,113 @@
         <button onclick="resetFilters()" style="height:32px;">RESET FILTERS</button>
     </div>
 
-    <div class="kpi-grid">
-        <div class="tile" style="border-top: 4px solid var(--primary);">
-            <span class="tile-label">Committed Spend (PRF)</span>
-            <div class="tile-val" id="valPRF">$0</div>
-        </div>
-        <div class="tile" style="border-top: 4px solid var(--orange);">
-            <span class="tile-label">Total Actual Spend</span>
-            <div class="tile-val" id="valActual">$0</div>
-            <div class="breakdown">
-                <span>ECF <b id="subECF">$0</b></span>
-                <span>TRF <b id="subTRF">$0</b></span>
-                <span>INV <b id="subInv">$0</b></span>
+    <div id="dashboard" class="tab-content active">
+        <div class="kpi-grid">
+            <div class="tile" style="border-top: 4px solid var(--primary);">
+                <span class="tile-label">Committed Spend (PRF)</span>
+                <div class="tile-val" id="valPRF">$0</div>
             </div>
-        </div>
-        <div class="tile" style="border-top: 4px solid var(--green);">
-            <span class="tile-label">P&L Cost Impact</span>
-            <div class="tile-val" id="valPNL">$0</div>
-        </div>
-    </div>
-
-    <div class="recon-health">
-        <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
-        <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
-        <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
-        <div class="mini-tile"><span id="vOverLabel">Avg Overdue</span><div id="vOver" style="color:var(--red)">0 Days</div></div>
-    </div>
-
-    <div class="viz-grid">
-        <div class="chart-box">
-            <h3 class="chart-title">Global Compliance</h3>
-            <div class="gauge-container">
-                <canvas id="mixChart"></canvas>
-            </div>
-            <div class="status-mix-footer">
-                <div class="status-row">
-                    <div class="status-col">
-                        <div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div>
-                        <div class="status-label" id="labelPen">Pending</div>
-                        <div class="status-usd" id="usdPen">$0</div>
-                    </div>
-                    <div class="status-col">
-                        <div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div>
-                        <div class="status-label" id="labelRec">Reconciled</div>
-                        <div class="status-usd" id="usdRec">$0</div>
-                    </div>
+            <div class="tile" style="border-top: 4px solid var(--orange);">
+                <span class="tile-label">Total Actual Spend</span>
+                <div class="tile-val" id="valActual">$0</div>
+                <div class="breakdown">
+                    <span>ECF <b id="subECF">$0</b></span>
+                    <span>TRF <b id="subTRF">$0</b></span>
+                    <span>INV <b id="subInv">$0</b></span>
                 </div>
-                <div class="status-total">Current Exposure: <span id="usdTotalMix" style="color:#fff">$0</span></div>
+            </div>
+            <div class="tile" style="border-top: 4px solid var(--green);">
+                <span class="tile-label">P&L Cost Impact</span>
+                <div class="tile-val" id="valPNL">$0</div>
             </div>
         </div>
 
-        <div class="chart-box">
-            <h3 style="text-align: left; border-left: 4px solid var(--orange); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
-            <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
+        <div class="recon-health">
+            <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
+            <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
+            <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
+            <div class="mini-tile"><span id="vOverLabel">Avg Overdue</span><div id="vOver" style="color:var(--red)">0 Days</div></div>
         </div>
 
-        <div class="chart-box">
-            <h3 style="text-align: left; border-left: 4px solid var(--primary); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
-            <div id="healthRankList" class="health-rank-container"></div>
+        <div class="viz-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Global Compliance</h3>
+                <div class="gauge-container">
+                    <canvas id="mixChart"></canvas>
+                </div>
+                <div class="status-mix-footer">
+                    <div class="status-row">
+                        <div class="status-col">
+                            <div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div>
+                            <div class="status-label" id="labelPen">Pending</div>
+                            <div class="status-usd" id="usdPen">$0</div>
+                        </div>
+                        <div class="status-col">
+                            <div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div>
+                            <div class="status-label" id="labelRec">Reconciled</div>
+                            <div class="status-usd" id="usdRec">$0</div>
+                        </div>
+                    </div>
+                    <div class="status-total">Current Exposure: <span id="usdTotalMix" style="color:#fff">$0</span></div>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <h3 style="text-align: left; border-left: 4px solid var(--orange); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
+                <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
+            </div>
+
+            <div class="chart-box">
+                <h3 style="text-align: left; border-left: 4px solid var(--primary); padding-left: 10px; font-size: 12px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
+                <div id="healthRankList" class="health-rank-container"></div>
+            </div>
+        </div>
+
+        <div class="exec-summary-box">
+            <div class="exec-header">Strategic KPI Matrix</div>
+            <table class="exec-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Target Benchmark</th>
+                        <th style="text-align: center;">Current Value</th>
+                        <th style="text-align: center;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Compliance</td>
+                        <td>50% PRFs Reconciled within 30 days</td>
+                        <td id="exCompVal" class="status-cell">0%</td>
+                        <td id="exCompTrend" style="text-align: center;">-</td>
+                    </tr>
+                    <tr>
+                        <td>Process Speed</td>
+                        <td>Reconciliation Lead Time < 30 days</td>
+                        <td id="exSpeedVal" class="status-cell">0 Days</td>
+                        <td id="exSpeedTrend" style="text-align: center;">-</td>
+                    </tr>
+                    <tr>
+                        <td>Regional Risk</td>
+                        <td>Ghana Unreconciled Ratio < 30%</td>
+                        <td id="exRiskVal" class="status-cell">0%</td>
+                        <td id="exRiskTrend" style="text-align: center;">-</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="exec-summary-box">
-        <div class="exec-header">Strategic KPI Matrix</div>
-        <table class="exec-table">
-            <thead>
-                <tr>
-                    <th>Category</th>
-                    <th>Target Benchmark</th>
-                    <th style="text-align: center;">Current Value</th>
-                    <th style="text-align: center;">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Compliance</td>
-                    <td>50% PRFs Reconciled within 30 days</td>
-                    <td id="exCompVal" class="status-cell">0%</td>
-                    <td id="exCompTrend" style="text-align: center;">-</td>
-                </tr>
-                <tr>
-                    <td>Process Speed</td>
-                    <td>Reconciliation Lead Time < 30 days</td>
-                    <td id="exSpeedVal" class="status-cell">0 Days</td>
-                    <td id="exSpeedTrend" style="text-align: center;">-</td>
-                </tr>
-                <tr>
-                    <td>Regional Risk</td>
-                    <td>Ghana Unreconciled Ratio < 30%</td>
-                    <td id="exRiskVal" class="status-cell">0%</td>
-                    <td id="exRiskTrend" style="text-align: center;">-</td>
-                </tr>
-            </tbody>
-        </table>
+    <div id="approvals-tab" class="tab-content">
+        <div class="exec-summary-box">
+            <div class="exec-header">Detailed Approvals Ledger</div>
+            <div class="table-wrap">
+                <table class="exec-table" id="approvalsTable">
+                    <thead id="approvalsHead"></thead>
+                    <tbody id="approvalsBody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
 <script>
@@ -268,6 +300,13 @@
         return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(str);
     };
 
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+    }
+
     function toggleDropdown(id) {
         document.querySelectorAll('.dropdown-content').forEach(d => {
             if(d.id !== id) d.classList.remove('show');
@@ -281,13 +320,9 @@
         }
     }
 
-    // UPDATED SHEET ID
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     function fetchSheet(sheetName) {
-        const url =
-          `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
-          `?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
         return fetch(url)
           .then(res => res.text())
           .then(text => {
@@ -295,9 +330,7 @@
               const cols = json.table.cols.map(c => c.label);
               return json.table.rows.map(r => {
                   let obj = {};
-                  r.c.forEach((cell, i) => {
-                      obj[cols[i]] = cell ? cell.v : "";
-                  });
+                  r.c.forEach((cell, i) => { obj[cols[i]] = cell ? cell.v : ""; });
                   return obj;
               });
           });
@@ -310,10 +343,7 @@
                 fetchSheet("Reconciliation Report"),
                 fetchSheet("P&L Costs Summary")
             ]);
-
-            document.getElementById('status').innerText =
-                "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-
+            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
             initFilters();
             updateDashboard();
         } catch (e) {
@@ -327,7 +357,6 @@
             const el = document.getElementById(id);
             if (el.children.length > 0) return;
             const vals = [...new Set(data.map(r => getCol(r, ...keys)).filter(v => v))].sort();
-            
             vals.forEach(v => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
@@ -363,26 +392,25 @@
             cc: getSelected('fCCList')
         };
 
-        const passes = (row) => {
+        const filteredApps = appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
             if (filters.end && d > filters.end) return false;
-            
             const rYr = String(getCol(row, 'Year'));
             const rMo = getCol(row, 'Month');
             const rComp = getCol(row, 'Burn Company', 'Company');
             const rCC = getCol(row, 'Cost Center', 'Cost Centre');
-
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.cc && !filters.cc.includes(rCC)) return false;
-            
             return true;
-        };
+        });
+
+        renderApprovalsTable(filteredApps);
 
         let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
-        appData.filter(passes).forEach(r => {
+        filteredApps.forEach(r => {
             const amt = clean(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             if (type.includes('PRF')) prf += amt;
@@ -390,14 +418,28 @@
             else if (type.includes('TRF')) trf += amt;
             else if (type.includes('INV')) inv += amt;
         });
-        pnlData.filter(passes).forEach(r => pnl += clean(getCol(r, 'Amount (USD)')));
+        
+        // Use filtered set for P&L logic consistency
+        pnlData.filter(r => {
+            const rComp = getCol(r, 'Burn Company', 'Company');
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            if (filters.comp && !filters.comp.includes(rComp)) return false;
+            if (filters.cc && !filters.cc.includes(rCC)) return false;
+            return true;
+        }).forEach(r => pnl += clean(getCol(r, 'Amount (USD)')));
 
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
         let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, ccMap = {};
         let a1=0, a2=0, a3=0;
         let recWithin30 = 0, totalDaysToRec = 0, ghanaTotalCount = 0, ghanaPenCount = 0;
 
-        recData.filter(passes).forEach(r => {
+        recData.filter(r => {
+            const rComp = getCol(r, 'Burn Company', 'Company');
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            if (filters.comp && !filters.comp.includes(rComp)) return false;
+            if (filters.cc && !filters.cc.includes(rCC)) return false;
+            return true;
+        }).forEach(r => {
             const status = (getCol(r, 'Status') || "").toLowerCase();
             const amt = clean(getCol(r, 'PRF Amount (USD)'));
             const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc";
@@ -413,20 +455,16 @@
             } else { 
                 penSum += amt; penCount++; 
             }
-            
             if(region.includes('ghana')) {
                 ghanaTotalCount++;
                 if(!status.includes('reconciled')) ghanaPenCount++;
             }
-
             effAgg += eff; mDays += clean(getCol(r, 'Max Reconciliation Days'));
             pDays += clean(getCol(r, 'Days Pending')); oDays += overdue;
             count++;
-
             if (overdue > 0 && overdue <= 7) a1++;
             else if (overdue > 7 && overdue <= 14) a2++;
             else if (overdue > 14) a3++;
-
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
             ccMap[cc].sum += eff; ccMap[cc].count++;
         });
@@ -452,8 +490,7 @@
         const overVal = document.getElementById('vOver');
         if (avgMax > avgPend) {
             overLabel.innerText = "Days to Deadline";
-            const deadlineVal = avgMax - avgPend;
-            overVal.innerText = deadlineVal.toFixed(0) + " Days";
+            overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days";
             overVal.style.color = "var(--green)";
         } else {
             overLabel.innerText = "Avg Overdue";
@@ -464,20 +501,36 @@
         const totalItems = recCount + penCount;
         document.getElementById('countPen').innerText = penCount;
         document.getElementById('countRec').innerText = recCount;
-        
         document.getElementById('labelPen').innerText = `Pending for ${avgPend.toFixed(0)} days`;
         document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
-
         document.getElementById('usdPen').innerText = fmt(penSum);
         document.getElementById('usdRec').innerText = fmt(recSum);
         document.getElementById('usdTotalMix').innerText = fmt(recSum + penSum);
 
-        const complianceVal = totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0;
-        const processSpeedVal = avgPend;
-        const regionalRiskVal = ghanaTotalCount > 0 ? (ghanaPenCount / ghanaTotalCount) * 100 : 0;
-
-        updateExecSummary(complianceVal, processSpeedVal, regionalRiskVal);
+        updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgPend, ghanaTotalCount > 0 ? (ghanaPenCount / ghanaTotalCount) * 100 : 0);
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
+    }
+
+    function renderApprovalsTable(data) {
+        const head = document.getElementById('approvalsHead');
+        const body = document.getElementById('approvalsBody');
+        head.innerHTML = ''; body.innerHTML = '';
+        if (data.length === 0) return;
+
+        const displayCols = Object.keys(data[0]);
+        let trH = '<tr>';
+        displayCols.forEach(c => trH += `<th>${c}</th>`);
+        trH += '<th>Action</th></tr>';
+        head.innerHTML = trH;
+
+        data.forEach(row => {
+            let trB = '<tr>';
+            let pdfLink = getCol(row, 'PDF Link', 'Link', 'URL');
+            displayCols.forEach(c => trB += `<td>${row[c] || '-'}</td>`);
+            trB += `<td>${pdfLink ? `<a href="${pdfLink}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td>`;
+            trB += '</tr>';
+            body.insertAdjacentHTML('beforeend', trB);
+        });
     }
 
     function updateExecSummary(comp, speed, risk) {
@@ -490,35 +543,21 @@
         const valEl = document.getElementById(id + 'Val');
         const trendEl = document.getElementById(id + 'Trend');
         const isGood = lowerIsBetter ? val <= target : val >= target;
-        
         valEl.innerText = val.toFixed(0) + unit;
         valEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad');
         trendEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`;
     }
 
     function updateVisuals(rec, pen, ageData, ccMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; 
-        mixChart.update();
-        ageChart.data.datasets[0].data = ageData; 
-        ageChart.update();
-        
+        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update();
+        ageChart.data.datasets[0].data = ageData; ageChart.update();
         const rankList = document.getElementById('healthRankList');
         rankList.innerHTML = '';
         const sorted = Object.keys(ccMap).sort((a,b) => (ccMap[b].sum/ccMap[b].count) - (ccMap[a].sum/ccMap[a].count)).slice(0, 5);
-
         sorted.forEach(cc => {
             const score = (ccMap[cc].sum / ccMap[cc].count).toFixed(0);
-            let color = 'var(--primary)';
-            if (score > 80) color = 'var(--green)';
-            else if (score < 50) color = 'var(--red)';
-
-            rankList.insertAdjacentHTML('beforeend', `
-                <div class="rank-item">
-                    <div class="rank-label" title="${cc}">${cc}</div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:${color}"></div></div>
-                    <div class="rank-pct">${score}%</div>
-                </div>
-            `);
+            let color = score > 80 ? 'var(--green)' : (score < 50 ? 'var(--red)' : 'var(--primary)');
+            rankList.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:${color}"></div></div><div class="rank-pct">${score}%</div></div>`);
         });
     }
 
@@ -531,56 +570,19 @@
                 const meta = chart.getDatasetMeta(0).data[0];
                 const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
                 const value = data.datasets[0].data[0]; 
-                
-                const xCenter = meta.x;
-                const yCenter = meta.y - 15;
-                const pivotRadius = 24;
-                
-                const pct = total > 0 ? value / total : 0;
-                const angle = Math.PI + (Math.PI * pct);
-                
-                ctx.translate(xCenter, yCenter);
-                
-                ctx.save();
-                ctx.rotate(angle);
-                ctx.beginPath();
-                ctx.fillStyle = '#ffffff';
-                ctx.moveTo(pivotRadius - 2, -3.5); 
-                ctx.lineTo(meta.outerRadius - 38, -0.5); 
-                ctx.lineTo(meta.outerRadius - 38, 0.5);  
-                ctx.lineTo(pivotRadius - 2, 3.5);  
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
-                
-                ctx.beginPath();
-                ctx.arc(0, 0, pivotRadius, 0, Math.PI * 2);
-                ctx.fillStyle = '#1e293b';
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.font = 'bold 16px Inter';
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0);
-                
-                ctx.restore();
+                const xCenter = meta.x; const yCenter = meta.y - 15; const pivotRadius = 24;
+                const pct = total > 0 ? value / total : 0; const angle = Math.PI + (Math.PI * pct);
+                ctx.translate(xCenter, yCenter); ctx.save(); ctx.rotate(angle); ctx.beginPath(); ctx.fillStyle = '#ffffff';
+                ctx.moveTo(pivotRadius - 2, -3.5); ctx.lineTo(meta.outerRadius - 38, -0.5); ctx.lineTo(meta.outerRadius - 38, 0.5); ctx.lineTo(pivotRadius - 2, 3.5);
+                ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, pivotRadius, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 16px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore();
             }
         };
 
         mixChart = new Chart(document.getElementById('mixChart'), { 
             type: 'doughnut', plugins: [gaugeNeedle],
             data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, 
-            options: { 
-                maintainAspectRatio: false, 
-                cutout: '85%', 
-                animation: { duration: 1500, easing: 'easeOutElastic' },
-                plugins: { legend: { display: false } }, 
-                layout: { padding: { bottom: 10 } } 
-            } 
+            options: { maintainAspectRatio: false, cutout: '85%', animation: { duration: 1500, easing: 'easeOutElastic' }, plugins: { legend: { display: false } }, layout: { padding: { bottom: 10 } } } 
         });
 
         ageChart = new Chart(document.getElementById('ageChart'), { 
