@@ -396,6 +396,7 @@
             cc: getSelected('fCCList')
         };
 
+        // Filter Approvals Logic
         const filteredApps = appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
@@ -423,9 +424,14 @@
             else if (type.includes('INV')) inv += amt;
         });
         
+        // Filter P&L Logic
         pnlData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rYr = String(getCol(r, 'Year'));
+            const rMo = getCol(r, 'Month');
+            if (filters.yr && !filters.yr.includes(rYr)) return false;
+            if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.cc && !filters.cc.includes(rCC)) return false;
             return true;
@@ -436,9 +442,18 @@
         let a1=0, a2=0, a3=0;
         let recWithin30 = 0, totalDaysToRec = 0, ghanaTotalCount = 0, ghanaPenCount = 0;
 
+        // UPDATED: Filter Reconciliation Report Data (Charts respect ALL filters)
         recData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rYr = String(getCol(r, 'Year'));
+            const rMo = getCol(r, 'Month');
+            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+
+            if (filters.start && d < filters.start) return false;
+            if (filters.end && d > filters.end) return false;
+            if (filters.yr && !filters.yr.includes(rYr)) return false;
+            if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.cc && !filters.cc.includes(rCC)) return false;
             return true;
@@ -465,9 +480,15 @@
             effAgg += eff; mDays += clean(getCol(r, 'Max Reconciliation Days'));
             pDays += clean(getCol(r, 'Days Pending')); oDays += overdue;
             count++;
-            if (overdue > 0 && overdue <= 7) a1++;
-            else if (overdue > 7 && overdue <= 14) a2++;
-            else if (overdue > 14) a3++;
+            
+            // Overdue Pie Chart logic
+            if (overdue > 0) {
+                if (overdue <= 7) a1++;
+                else if (overdue <= 14) a2++;
+                else a3++;
+            }
+
+            // CC Ranking Logic
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
             ccMap[cc].sum += eff; ccMap[cc].count++;
         });
@@ -520,7 +541,6 @@
         head.innerHTML = ''; body.innerHTML = '';
         if (data.length === 0) return;
 
-        // "Full File Name" is now added to the excluded list
         const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
         const displayCols = Object.keys(data[0]).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
         
