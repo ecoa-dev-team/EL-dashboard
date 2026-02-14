@@ -396,7 +396,6 @@
             cc: getSelected('fCCList')
         };
 
-        // Filter Approvals Logic
         const filteredApps = appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
@@ -424,7 +423,6 @@
             else if (type.includes('INV')) inv += amt;
         });
         
-        // Filter P&L Logic
         pnlData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
@@ -442,7 +440,6 @@
         let a1=0, a2=0, a3=0;
         let recWithin30 = 0, totalDaysToRec = 0, ghanaTotalCount = 0, ghanaPenCount = 0;
 
-        // UPDATED: Filter Reconciliation Report Data (Charts respect ALL filters)
         recData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
@@ -481,14 +478,12 @@
             pDays += clean(getCol(r, 'Days Pending')); oDays += overdue;
             count++;
             
-            // Overdue Pie Chart logic
             if (overdue > 0) {
                 if (overdue <= 7) a1++;
                 else if (overdue <= 14) a2++;
                 else a3++;
             }
 
-            // CC Ranking Logic
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
             ccMap[cc].sum += eff; ccMap[cc].count++;
         });
@@ -541,6 +536,7 @@
         head.innerHTML = ''; body.innerHTML = '';
         if (data.length === 0) return;
 
+        // "Last Modified Date" is now explicitly excluded
         const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
         const displayCols = Object.keys(data[0]).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
         
