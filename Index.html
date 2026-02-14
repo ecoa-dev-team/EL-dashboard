@@ -296,7 +296,7 @@
     };
     const parseExcelDate = (str) => {
         if (!str) return null;
-        const p = str.split('.');
+        const p = str.toString().split('.');
         return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(str);
     };
 
@@ -419,7 +419,6 @@
             else if (type.includes('INV')) inv += amt;
         });
         
-        // Use filtered set for P&L logic consistency
         pnlData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
@@ -517,7 +516,10 @@
         head.innerHTML = ''; body.innerHTML = '';
         if (data.length === 0) return;
 
-        const displayCols = Object.keys(data[0]);
+        // Filtering out specific columns
+        const excludedCols = ['link', 'pdf link', 'url', 'last modified date'];
+        const displayCols = Object.keys(data[0]).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
+        
         let trH = '<tr>';
         displayCols.forEach(c => trH += `<th>${c}</th>`);
         trH += '<th>Action</th></tr>';
@@ -526,7 +528,26 @@
         data.forEach(row => {
             let trB = '<tr>';
             let pdfLink = getCol(row, 'PDF Link', 'Link', 'URL');
-            displayCols.forEach(c => trB += `<td>${row[c] || '-'}</td>`);
+            
+            displayCols.forEach(c => {
+                let cellVal = row[c] || '-';
+                
+                // Format USD Amount to 2 decimals
+                if (c.toLowerCase().includes('amount') && c.toLowerCase().includes('usd')) {
+                    cellVal = clean(cellVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+                
+                // Clean Dates (Remove time component if present)
+                if (c.toLowerCase().includes('date') && cellVal !== '-') {
+                    const d = new Date(cellVal);
+                    if (!isNaN(d.getTime())) {
+                        cellVal = d.toLocaleDateString();
+                    }
+                }
+
+                trB += `<td>${cellVal}</td>`;
+            });
+            
             trB += `<td>${pdfLink ? `<a href="${pdfLink}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td>`;
             trB += '</tr>';
             body.insertAdjacentHTML('beforeend', trB);
