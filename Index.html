@@ -112,19 +112,19 @@
         .rank-pct { width: 45px; font-size: 13px; font-weight: 900; color: var(--primary); }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; position: relative; }
-        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         
         .exec-header.sticky { position: sticky; top: 0; z-index: 100; }
         .ledger-table thead th { 
             position: sticky !important; 
-            top: 54px !important; /* REPOSITIONED TO CLEAR FIRST ROW COMPLETELY */
+            top: 54px !important; 
             z-index: 90 !important; 
             background: #0f172a !important; 
             border-bottom: 2px solid var(--primary) !important;
             box-shadow: 0 2px 2px -1px rgba(0,0,0,0.4);
         }
         
-        .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+        .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
         .ledger-table { font-size: 14px !important; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); }
@@ -137,7 +137,8 @@
             display: inline-block;
         }
 
-        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; }
+        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 11px; font-weight: 900; padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        .exec-table td { padding: 15px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         
         .table-wrap { max-height: 850px; overflow-y: auto; background: var(--card); }
 
@@ -145,8 +146,8 @@
         .pdf-btn:hover { filter: brightness(1.2); }
         .pdf-btn.viewed { background: #ff4d4d !important; color: #fff !important; }
 
-        .status-cell { font-weight: 900; text-align: center; font-size: 13px; }
-        .trend-pill { padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; }
+        .status-cell { font-weight: 900; text-align: center; font-size: 14px; width: 150px; border-radius: 4px; }
+        .trend-pill { padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         .bg-bad { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
         .bg-good { background: #064e3b; color: #d1fae5; border-color: #10b981; }
 
@@ -324,12 +325,6 @@
                         <td>Reconciliation Lead Time < 30 days</td>
                         <td id="exSpeedVal" class="status-cell">0 Days</td>
                         <td id="exSpeedTrend" style="text-align: center;">-</td>
-                    </tr>
-                    <tr>
-                        <td>Regional Risk</td>
-                        <td>Ghana Unreconciled Ratio < 30%</td>
-                        <td id="exRiskVal" class="status-cell">0%</td>
-                        <td id="exRiskTrend" style="text-align: center;">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -555,7 +550,7 @@
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
         let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, ccMap = {};
         let a1=0, a2=0, a3=0;
-        let recWithin30 = 0, totalDaysToRec = 0, ghanaTotalCount = 0, ghanaPenCount = 0;
+        let recWithin30 = 0, totalDaysToRec = 0;
 
         recData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
@@ -576,7 +571,6 @@
             const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc";
             const eff = cleanNum(getCol(r, 'Efficiency %'));
             const overdue = cleanNum(getCol(r, 'Days Overdue'));
-            const region = (getCol(r, 'Region', 'Country') || "").toLowerCase();
             const daysToRec = cleanNum(getCol(r, 'Actual Recon Days', 'Days to Reconcile'));
 
             if (status.includes('reconciled')) { 
@@ -586,10 +580,7 @@
             } else { 
                 penSum += amt; penCount++; 
             }
-            if(region.includes('ghana')) {
-                ghanaTotalCount++;
-                if(!status.includes('reconciled')) ghanaPenCount++;
-            }
+            
             effAgg += eff; mDays += cleanNum(getCol(r, 'Max Reconciliation Days'));
             pDays += cleanNum(getCol(r, 'Days Pending')); oDays += overdue;
             count++;
@@ -640,7 +631,7 @@
         document.getElementById('usdRec').innerText = fmt(recSum);
         document.getElementById('usdTotalMix').innerText = fmt(recSum + penSum);
 
-        updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgPend, ghanaTotalCount > 0 ? (ghanaPenCount / ghanaTotalCount) * 100 : 0);
+        updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
     }
 
@@ -728,10 +719,9 @@
         updateDashboard();
     }
 
-    function updateExecSummary(comp, speed, risk) {
+    function updateExecSummary(comp, speed) {
         setExecRow('exComp', comp, 50, false, '%'); 
         setExecRow('exSpeed', speed, 30, true, ' Days'); 
-        setExecRow('exRisk', risk, 30, true, '%'); 
     }
 
     function setExecRow(id, val, target, lowerIsBetter, unit) {
