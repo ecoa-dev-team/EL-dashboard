@@ -14,6 +14,7 @@
             --orange: #ff9f43; 
             --bg: #0f172a; 
             --card: #1e293b; 
+            --dark-blue: #0f172a; 
             --text-main: #ffffff;
             --text-light: #cbd5e1;
             --border: #475569;
@@ -31,52 +32,50 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .filter-section { display: flex; flex-wrap: wrap; gap: 10px; background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border); align-items: flex-end; }
+        /* Global Filters - Hidden on Ledger Tab */
+        #global-filter-bar { display: flex; flex-wrap: wrap; gap: 10px; background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
-        .f-group label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; }
+        .f-group label { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
         
-        .multiselect-container { background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-weight: 600; }
-        .dropdown-content { display: none; position: absolute; top: 50px; left: 0; background: #1e293b; border: 1px solid var(--primary); width: 100%; z-index: 100; max-height: 250px; overflow-y: auto; border-radius: 5px; }
+        .multiselect-container { background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; }
+        .dropdown-content { display: none; position: absolute; top: 50px; left: 0; background: #1e293b; border: 1px solid var(--primary); width: 100%; z-index: 100; max-height: 250px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
         .dropdown-content.show { display: block; }
         .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; }
         .dropdown-item:hover { background: #334155; }
-        
-        input, button { background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; padding: 0 10px; font-weight: 600; }
-        button { background: var(--primary); color: #0f172a; border: none; cursor: pointer; text-transform: uppercase; font-weight: 900; }
+        .dropdown-item input { height: auto; width: auto; cursor: pointer; }
+
+        select, input { background: #0f172a; color: white; padding: 4px 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 32px; outline: none; font-weight: 600; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .tile-val { font-size: 1.8rem; font-weight: 900; }
+        .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; }
+        .breakdown { display: flex; justify-content: space-around; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; }
+        .breakdown b { color: var(--primary); font-weight: 900; font-size: 13px; }
 
-        /* Ledger Table Styles */
-        .table-controls { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-        .table-wrap { max-height: 80vh; overflow: auto; background: var(--card); border-radius: 8px; border: 1px solid var(--border); }
-        .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; color: white; }
-        .exec-table th { background: #0f172a; color: var(--primary); padding: 12px; text-align: left; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid var(--border); }
-        .exec-table td { padding: 10px; border-bottom: 1px solid var(--border); }
+        .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; height: 380px; margin-bottom: 12px; }
+        .chart-box { background: var(--card); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
+        h3.chart-title { margin: 0 0 15px 0; font-size: 12px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
 
-        .header-filter-icon { margin-left: 5px; cursor: pointer; color: var(--primary); font-size: 10px; }
+        .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; }
+        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .ledger-table { font-size: 14px !important; }
+        .ledger-table th { position: relative; padding-right: 25px !important; background: #0f172a; color: var(--primary); padding: 12px; text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; border-bottom: 2px solid var(--border); }
+        .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); font-weight: 700; }
         
-        .col-dropdown-container {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: #1e293b;
-            border: 1px solid var(--primary);
-            width: 220px;
-            z-index: 200;
-            display: none;
-            max-height: 350px;
-            overflow-y: auto;
-            border-radius: 5px;
-            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
-            text-transform: none;
-        }
+        .header-filter-icon { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--primary); font-size: 10px; }
+        .table-wrap { max-height: 75vh; overflow-y: auto; background: var(--card); }
+
+        /* Column Dropdown UI Fixed */
+        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 1px solid var(--primary); width: 220px; z-index: 200; display: none; max-height: 350px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; }
         .col-dropdown-container.show { display: block; }
-        .col-filter-header { padding: 8px; background: #0f172a; position: sticky; top: 0; z-index: 11; border-bottom: 1px solid var(--border); }
-        .col-filter-search { width: 100%; height: 25px; margin-bottom: 5px; }
+        .col-filter-header { padding: 8px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
+        .col-filter-search { width: 100%; margin-bottom: 5px; height: 28px; background: #1e293b; border: 1px solid var(--primary); color: white; padding: 0 5px; }
         
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-weight: 900; font-size: 10px; }
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; }
+        #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1px; }
+        button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 5px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -92,29 +91,31 @@
         <div class="tab-btn" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
     </div>
 
-    <div id="global-filter-bar" class="filter-section">
+    <div id="global-filter-bar">
         <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Fiscal Year</label><div class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Period</label><div class="multiselect-container" onclick="toggleDropdown('fMonthList')">Select Months...</div><div id="fMonthList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Entity</label><div class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Cost Center</label><div class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
-        <button onclick="resetFilters()">RESET FILTERS</button>
+        <button onclick="resetFilters()" style="height:32px;">RESET FILTERS</button>
     </div>
 
     <div id="cost-analysis" class="tab-content active"></div>
-    <div id="dashboard" class="tab-content">
-        </div>
+    <div id="dashboard" class="tab-content">Dashboard Content Placeholder</div>
 
     <div id="approvals-tab" class="tab-content">
-        <div class="table-controls">
-            <button onclick="resetFilters()" style="background: var(--red); color: white;">RESET ALL TABLE FILTERS</button>
-        </div>
-        <div class="table-wrap">
-            <table class="exec-table" id="approvalsTable">
-                <thead id="approvalsHead"></thead>
-                <tbody id="approvalsBody"></tbody>
-            </table>
+        <div class="exec-summary-box">
+            <div class="exec-header">
+                <span>DETAILED APPROVALS LEDGER</span>
+                <button onclick="resetFilters()" style="height:25px; font-size:10px; padding:0 10px;">RESET ALL FILTERS</button>
+            </div>
+            <div class="table-wrap">
+                <table class="exec-table ledger-table" id="approvalsTable">
+                    <thead id="approvalsHead"></thead>
+                    <tbody id="approvalsBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -122,14 +123,20 @@
     let appData = [], recData = [], pnlData = [];
     let tableFilters = {}; 
 
-    const cleanNum = (v) => {
-        if (!v) return 0;
-        return typeof v === 'number' ? v : parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0;
-    };
-
+    const cleanNum = (v) => (v === null || v === undefined || v === "") ? 0 : (typeof v === 'number' ? v : parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0);
     const getCol = (row, ...keys) => {
         const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim()));
         return found ? row[found] : null;
+    };
+
+    const parseExcelDate = (str) => {
+        if (!str) return null;
+        let s = str.toString();
+        if (s.includes('Date(')) {
+            let p = s.match(/\d+/g);
+            return p ? new Date(p[0], p[1], p[2]) : null;
+        }
+        return new Date(s);
     };
 
     function switchTab(id, btn) {
@@ -137,17 +144,20 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
-
-        // Hide global filters if on Ledger tab to save space
-        const filterBar = document.getElementById('global-filter-bar');
-        filterBar.style.display = (id === 'approvals-tab') ? 'none' : 'flex';
+        document.getElementById('global-filter-bar').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
     function toggleDropdown(id) {
         const el = document.getElementById(id);
-        const isShow = el.classList.contains('show');
+        const wasOpen = el.classList.contains('show');
         document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show'));
-        if (!isShow) el.classList.add('show');
+        if (!wasOpen) el.classList.add('show');
+    }
+
+    window.onclick = (e) => {
+        if (!e.target.closest('.multiselect-container') && !e.target.closest('.dropdown-content') && !e.target.closest('.col-dropdown-container') && !e.target.closest('.header-filter-icon')) {
+            document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show'));
+        }
     }
 
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
@@ -156,7 +166,7 @@
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        const cols = json.table.cols.map(c => c.label || "");
+        const cols = json.table.cols.map(c => c.label || `Col${json.table.cols.indexOf(c)}`);
         return json.table.rows.map(r => {
             let obj = {};
             r.c.forEach((cell, i) => { obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; });
@@ -165,124 +175,143 @@
     }
 
     async function fetchData() {
-        [appData, recData, pnlData] = await Promise.all([
-            fetchSheet("Approvals"),
-            fetchSheet("Reconciliation Report"),
-            fetchSheet("P&L Costs Summary")
-        ]);
-        document.getElementById('status').innerText = "SYSTEM ONLINE";
-        initGlobalFilters();
-        updateDashboard();
+        try {
+            [appData, recData, pnlData] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary")]);
+            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
+            initGlobalFilters();
+            updateDashboard();
+        } catch (e) {
+            document.getElementById('status').innerText = "LINK RE-ESTABLISHING...";
+            setTimeout(fetchData, 5000);
+        }
     }
 
     function initGlobalFilters() {
         const fill = (id, keys) => {
             const el = document.getElementById(id);
-            if (el.children.length > 1) return;
+            if (el.children.length > 0) return;
             const vals = [...new Set(appData.map(r => getCol(r, ...keys)).filter(v => v))].sort();
-            el.innerHTML = `<div class="dropdown-item"><input type="checkbox" onchange="toggleAllFilters('${id}', this.checked)"> <b>SELECT ALL</b></div>`;
+            el.innerHTML = `<div class="dropdown-item"><input type="checkbox" onchange="toggleAll('${id}', this.checked)"> <b>SELECT ALL</b></div>`;
             vals.forEach(v => {
                 el.innerHTML += `<div class="dropdown-item"><input type="checkbox" value="${v}" onchange="updateDashboard()"> ${v}</div>`;
             });
         };
         fill('fCompList', ['Burn Company', 'Company']);
-        fill('fCCList', ['Cost Center']);
+        fill('fCCList', ['Cost Center', 'Cost Centre']);
         fill('fMonthList', ['Month']);
         fill('fYearList', ['Year']);
     }
 
-    function updateDashboard() {
-        const filters = {
-            yr: Array.from(document.querySelectorAll('#fYearList input:checked')).map(i => i.value),
-            comp: Array.from(document.querySelectorAll('#fCompList input:checked')).map(i => i.value)
-        };
-
-        const filtered = appData.filter(row => {
-            // Apply global filters
-            if (filters.yr.length && !filters.yr.includes(String(row['Year']))) return false;
-            if (filters.comp.length && !filters.comp.includes(row['Burn Company'])) return false;
-            
-            // Apply Column filters
-            for (let col in tableFilters) {
-                if (tableFilters[col].length && !tableFilters[col].includes(String(row[col] || "-"))) return false;
-            }
-            return true;
-        });
-
-        renderLedger(filtered);
-    }
-
-    function renderLedger(data) {
-        const head = document.getElementById('approvalsHead');
-        const body = document.getElementById('approvalsBody');
-        const excluded = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
-        const cols = Object.keys(appData[0] || {}).filter(c => !excluded.includes(c.toLowerCase()));
-
-        if (head.innerHTML === "") {
-            let hHtml = "<tr>";
-            cols.forEach(c => {
-                const dropId = `drop_${c.replace(/\s+/g, '_')}`;
-                hHtml += `<th>${c} <span class="header-filter-icon" onclick="toggleDropdown('${dropId}')">▼</span>
-                    <div id="${dropId}" class="col-dropdown-container">
-                        <div class="col-filter-header">
-                            <input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchCol('${dropId}', this.value)">
-                            <div class="dropdown-item"><input type="checkbox" onchange="toggleTableCol('${c}', '${dropId}', this.checked)"> <b>SELECT ALL</b></div>
-                        </div>
-                        <div class="opt-list"></div>
-                    </div>
-                </th>`;
-            });
-            hHtml += "<th>Action</th></tr>";
-            head.innerHTML = hHtml;
-
-            // Fill Column Options once
-            cols.forEach(c => {
-                const dropId = `drop_${c.replace(/\s+/g, '_')}`;
-                const list = document.querySelector(`#${dropId} .opt-list`);
-                const uniqueVals = [...new Set(appData.map(r => String(r[c] || "-")))].sort();
-                uniqueVals.forEach(v => {
-                    const div = document.createElement('div');
-                    div.className = 'dropdown-item';
-                    div.innerHTML = `<input type="checkbox" value="${v}" onchange="syncTableFilter('${c}', '${dropId}')"> ${v}`;
-                    list.appendChild(div);
-                });
-            });
-        }
-
-        body.innerHTML = data.map(row => `
-            <tr>
-                ${cols.map(c => `<td>${row[c] || '-'}</td>`).join('')}
-                <td><a href="${getCol(row, 'PDF Link', 'Link')}" target="_blank" class="pdf-btn">VIEW</a></td>
-            </tr>
-        `).join('');
-    }
-
-    function searchCol(id, q) {
-        const items = document.querySelectorAll(`#${id} .opt-list .dropdown-item`);
-        items.forEach(i => i.style.display = i.innerText.toLowerCase().includes(q.toLowerCase()) ? 'flex' : 'none');
-    }
-
-    function toggleTableCol(col, dropId, checked) {
-        document.querySelectorAll(`#${dropId} .opt-list input`).forEach(i => i.checked = checked);
-        syncTableFilter(col, dropId);
-    }
-
-    function syncTableFilter(col, dropId) {
-        tableFilters[col] = Array.from(document.querySelectorAll(`#${dropId} .opt-list input:checked`)).map(i => i.value);
+    function toggleAll(id, chk) {
+        document.querySelectorAll(`#${id} input`).forEach(i => i.checked = chk);
         updateDashboard();
     }
 
     function resetFilters() {
+        document.getElementById('dStart').value = '';
+        document.getElementById('dEnd').value = '';
         document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
         tableFilters = {};
         updateDashboard();
     }
 
-    window.onclick = (e) => {
-        if (!e.target.closest('.col-dropdown-container') && !e.target.closest('.header-filter-icon') && !e.target.closest('.multiselect-container')) {
-            document.querySelectorAll('.col-dropdown-container, .dropdown-content').forEach(d => d.classList.remove('show'));
+    function updateDashboard() {
+        const gF = {
+            start: document.getElementById('dStart').value ? new Date(document.getElementById('dStart').value) : null,
+            end: document.getElementById('dEnd').value ? new Date(document.getElementById('dEnd').value) : null,
+            yr: getSelected('fYearList'), mo: getSelected('fMonthList'),
+            comp: getSelected('fCompList'), cc: getSelected('fCCList')
+        };
+
+        const filtered = appData.filter(row => {
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if (gF.start && d < gF.start) return false;
+            if (gF.end && d > gF.end) return false;
+            if (gF.yr && !gF.yr.includes(String(getCol(row, 'Year')))) return false;
+            if (gF.mo && !gF.mo.includes(getCol(row, 'Month'))) return false;
+            if (gF.comp && !gF.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false;
+            if (gF.cc && !gF.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
+            
+            for(let col in tableFilters) {
+                if(tableFilters[col].length > 0 && !tableFilters[col].includes(String(row[col] || "-"))) return false;
+            }
+            return true;
+        });
+        renderTable(filtered);
+    }
+
+    function getSelected(id) {
+        const c = Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value).filter(v => v);
+        return c.length > 0 ? c : null;
+    }
+
+    function renderTable(data) {
+        const head = document.getElementById('approvalsHead');
+        const body = document.getElementById('approvalsBody');
+        const excludes = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
+        const cols = Object.keys(appData[0] || {}).filter(c => !excludes.includes(c.toLowerCase().trim()));
+
+        if (head.children.length === 0 && cols.length > 0) {
+            let trH = '<tr>';
+            cols.forEach(c => {
+                const dropId = `drop_${c.replace(/\W/g, '')}`;
+                trH += `<th>${c} <span class="header-filter-icon" onclick="toggleDropdown('${dropId}')">▼</span>
+                    <div id="${dropId}" class="col-dropdown-container">
+                        <div class="col-filter-header">
+                            <input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchList('${dropId}', this.value)">
+                            <div class="dropdown-item"><input type="checkbox" onchange="toggleTableCol('${c}', '${dropId}', this.checked)"> <b>SELECT ALL</b></div>
+                        </div>
+                        <div class="col-list"></div>
+                    </div></th>`;
+            });
+            trH += '<th>Action</th></tr>';
+            head.innerHTML = trH;
+            
+            cols.forEach(c => {
+                const dropId = `drop_${c.replace(/\W/g, '')}`;
+                const list = document.querySelector(`#${dropId} .col-list`);
+                const uniqueVals = [...new Set(appData.map(r => String(r[c] || "-")))].sort();
+                uniqueVals.forEach(v => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.innerHTML = `<input type="checkbox" value="${v}" onchange="updateTableFilter('${c}', '${dropId}')"> ${v}`;
+                    list.appendChild(item);
+                });
+            });
         }
-    };
+
+        body.innerHTML = '';
+        data.forEach(row => {
+            let tr = '<tr>';
+            cols.forEach(c => {
+                let v = row[c] || '-';
+                if (c.toLowerCase().includes('amount')) v = cleanNum(v).toLocaleString();
+                if (c.toLowerCase().includes('date')) {
+                    let d = parseExcelDate(v);
+                    v = (d && !isNaN(d)) ? d.toLocaleDateString('en-GB') : v;
+                }
+                tr += `<td>${v}</td>`;
+            });
+            const pdf = getCol(row, 'PDF Link', 'Link', 'URL');
+            tr += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW</a>` : '-'}</td></tr>`;
+            body.innerHTML += tr;
+        });
+    }
+
+    function searchList(id, q) {
+        const items = document.querySelectorAll(`#${id} .col-list .dropdown-item`);
+        items.forEach(i => i.style.display = i.innerText.toLowerCase().includes(q.toLowerCase()) ? 'flex' : 'none');
+    }
+
+    function toggleTableCol(col, id, chk) {
+        document.querySelectorAll(`#${id} .col-list input`).forEach(i => i.checked = chk);
+        updateTableFilter(col, id);
+    }
+
+    function updateTableFilter(col, id) {
+        tableFilters[col] = Array.from(document.querySelectorAll(`#${id} .col-list input:checked`)).map(i => i.value);
+        updateDashboard();
+    }
 
     window.onload = fetchData;
 </script>
