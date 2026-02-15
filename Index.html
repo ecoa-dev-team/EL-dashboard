@@ -114,15 +114,16 @@
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; position: relative; }
         .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         
-        /* FREEZE LOGIC FOR ALL COLUMN HEADERS */
         .exec-header.sticky { position: sticky; top: 0; z-index: 100; }
+        
+        /* ADJUSTED FREEZE OFFSET TO PREVENT OVERLAP */
         .ledger-table thead th { 
             position: sticky !important; 
-            top: 38px !important; 
+            top: 40px !important; /* Increased from 38px to move below the header row */
             z-index: 90 !important; 
             background: #0f172a !important; 
             border-bottom: 2px solid var(--primary) !important;
-            box-shadow: 0 2px 2px -1px rgba(0,0,0,0.4);
+            box-shadow: 0 4px 4px -2px rgba(0,0,0,0.6);
         }
         
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
