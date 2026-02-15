@@ -26,7 +26,6 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
         .header h3 { font-weight: 800; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; margin: 0; }
         
-        /* Tab Styling */
         .tab-container { display: flex; gap: 5px; margin-bottom: 15px; }
         .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 8px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 5px 5px 0 0; }
         .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
@@ -116,7 +115,6 @@
         .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         
-        /* UPDATED: Approval Table Specifics */
         .ledger-table { font-size: 14px !important; }
         .ledger-table th { position: relative; padding-right: 25px !important; }
         .ledger-table td { padding: 12px 10px !important; }
@@ -147,7 +145,6 @@
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1px; }
         button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 5px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
 
-        /* Excel-like filter inputs */
         .col-filter-input {
             width: 100%;
             background: #1e293b;
@@ -321,13 +318,22 @@
     let mixChart, ageChart;
     let tableFilters = {};
 
-    const clean = (v) => v ? parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0 : 0;
+    // ACCURACY FIX: Robust numeric cleaner that handles non-string inputs and prevents NaN
+    const clean = (v) => {
+        if (v === null || v === undefined) return 0;
+        if (typeof v === 'number') return v;
+        const cleaned = parseFloat(v.toString().replace(/[^\d.-]/g, ''));
+        return isNaN(cleaned) ? 0 : cleaned;
+    };
+
     const getCol = (row, ...keys) => {
         const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim()));
         return found ? row[found] : null;
     };
+
     const parseExcelDate = (str) => {
         if (!str) return null;
+        if (str instanceof Date) return str;
         const p = str.toString().split('.');
         return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(str);
     };
@@ -360,12 +366,12 @@
           .then(res => res.text())
           .then(text => {
               const json = JSON.parse(text.substring(47).slice(0, -2));
-              const cols = json.table.cols.map(c => c.label);
+              const cols = json.table.cols.map(c => c.label || c.id);
               return json.table.rows.map(r => {
                   let obj = {};
                   r.c.forEach((cell, i) => { 
-                      let val = cell ? cell.v : "";
-                      if (cell && cell.f) val = cell.f; 
+                      // ACCURACY FIX: Use raw value (.v) for calculation, but fallback to formatted (.f) for labels
+                      let val = (cell && cell.v !== undefined) ? cell.v : (cell ? cell.f : "");
                       obj[cols[i]] = val; 
                   });
                   return obj;
@@ -443,7 +449,6 @@
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.cc && !filters.cc.includes(rCC)) return false;
             
-            // Add column-specific filters
             for(let col in tableFilters) {
                 const val = (row[col] || "").toString().toLowerCase();
                 const filterVal = tableFilters[col].toLowerCase();
@@ -474,7 +479,7 @@
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.cc && !filters.cc.includes(rCC)) return false;
             return true;
-        }).forEach(r => pnl += clean(getCol(r, 'Amount (USD)')));
+        }).forEach(r => pnl += clean(getCol(r, 'Amount (USD)', 'Total Amount')));
 
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
         let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, ccMap = {};
@@ -497,7 +502,7 @@
             return true;
         }).forEach(r => {
             const status = (getCol(r, 'Status') || "").toLowerCase();
-            const amt = clean(getCol(r, 'PRF Amount (USD)'));
+            const amt = clean(getCol(r, 'PRF Amount (USD)', 'Amount'));
             const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc";
             const eff = clean(getCol(r, 'Efficiency %'));
             const overdue = clean(getCol(r, 'Days Overdue'));
@@ -575,7 +580,6 @@
         const head = document.getElementById('approvalsHead');
         const body = document.getElementById('approvalsBody');
         
-        // Only generate head if empty to preserve filter inputs
         if(head.children.length === 0) {
             if (appData.length === 0) return;
             const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
@@ -604,13 +608,12 @@
                 let cellVal = row[c] || '-';
                 const lowerC = c.toLowerCase();
                 
-                // UPDATED: Commas for Amount and Amount Advanced columns
                 if (lowerC.includes('amount') || lowerC.includes('advanced')) {
                     const numericVal = clean(cellVal);
                     cellVal = numericVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 } else if (lowerC.includes('date') && cellVal !== '-') {
-                    const d = new Date(cellVal);
-                    if (!isNaN(d.getTime())) cellVal = d.toLocaleDateString();
+                    const d = parseExcelDate(cellVal);
+                    if (d && !isNaN(d.getTime())) cellVal = d.toLocaleDateString();
                 }
                 trB += `<td>${cellVal}</td>`;
             });
