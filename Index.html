@@ -319,7 +319,6 @@
     let mixChart, ageChart;
     let tableFilters = {};
 
-    // 100% Accuracy: Ensure numeric values are extracted without formatting interference
     const cleanNum = (v) => {
         if (v === null || v === undefined || v === "") return 0;
         if (typeof v === 'number') return v;
@@ -370,7 +369,6 @@
               return json.table.rows.map(r => {
                   let obj = {};
                   r.c.forEach((cell, i) => { 
-                      // 100% Accuracy: Prefer 'v' (raw value) over 'f' (formatted string)
                       let val = cell ? (cell.v !== null ? cell.v : "") : "";
                       obj[cols[i]] = val; 
                   });
@@ -461,9 +459,9 @@
 
         let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
         
-        // 100% Accuracy: Explicit categorization matching
         filteredApps.forEach(r => {
-            const amt = cleanNum(getCol(r, 'Amount (USD)', 'Amount'));
+            // STRICT: Pick only Amount (USD) for calculation, ignoring generic "Amount"
+            const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             
             if (type.includes('PRF')) prf += amt;
@@ -611,12 +609,20 @@
                 let cellVal = row[c] || '-';
                 const lowerC = c.toLowerCase();
                 
-                if (lowerC.includes('amount') || lowerC.includes('advanced')) {
+                // STRICT: Formatting rules for Amount (USD) and Amount Advanced
+                if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
                     const numericVal = cleanNum(cellVal);
                     cellVal = numericVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } else if (lowerC.includes('date') && cellVal !== '-') {
+                } 
+                // DATE FORMATTING: Clean output without commas
+                else if (lowerC.includes('date') && cellVal !== '-') {
                     const d = parseExcelDate(cellVal);
-                    if (d && !isNaN(d.getTime())) cellVal = d.toLocaleDateString();
+                    if (d && !isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        cellVal = `${day}/${month}/${year}`;
+                    }
                 }
                 trB += `<td>${cellVal}</td>`;
             });
