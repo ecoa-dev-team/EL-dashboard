@@ -334,7 +334,6 @@
         if (!str) return null;
         if (str instanceof Date) return str;
         let s = str.toString();
-        // Handle Google Sheets Date(2026,0,5...) format
         if (s.includes('Date(')) {
             let parts = s.match(/\d+/g);
             if (parts && parts.length >= 3) {
@@ -620,6 +619,10 @@
                     const numericVal = cleanNum(cellVal);
                     cellVal = numericVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 } 
+                else if (lowerC === "amount") {
+                    const numericVal = cleanNum(cellVal);
+                    cellVal = numericVal.toLocaleString('en-US');
+                }
                 else if (lowerC.includes('date') || lowerC.includes('modified')) {
                     if (cellVal !== '-') {
                         const d = parseExcelDate(cellVal);
