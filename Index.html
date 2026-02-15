@@ -112,14 +112,12 @@
         .rank-pct { width: 45px; font-size: 13px; font-weight: 900; color: var(--primary); }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; position: relative; }
-        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: 0; }
+        .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         
         .exec-header.sticky { position: sticky; top: 0; z-index: 100; }
-        
-        /* Adjusted Top to align exactly with the bottom of the sticky summary header */
         .ledger-table thead th { 
             position: sticky !important; 
-            top: 40px !important; 
+            top: 54px !important; /* REPOSITIONED TO CLEAR FIRST ROW COMPLETELY */
             z-index: 90 !important; 
             background: #0f172a !important; 
             border-bottom: 2px solid var(--primary) !important;
@@ -127,7 +125,7 @@
         }
         
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
-        .ledger-table { font-size: 14px !important; margin-top: 0; }
+        .ledger-table { font-size: 14px !important; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); }
         
