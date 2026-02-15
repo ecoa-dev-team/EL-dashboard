@@ -333,8 +333,16 @@
     const parseExcelDate = (str) => {
         if (!str) return null;
         if (str instanceof Date) return str;
-        const p = str.toString().split('.');
-        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(str);
+        let s = str.toString();
+        // Handle Google Sheets Date(2026,0,5...) format
+        if (s.includes('Date(')) {
+            let parts = s.match(/\d+/g);
+            if (parts && parts.length >= 3) {
+                return new Date(parts[0], parts[1], parts[2]);
+            }
+        }
+        const p = s.split('.');
+        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(s);
     };
 
     function switchTab(id, btn) {
@@ -460,7 +468,6 @@
         let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
         
         filteredApps.forEach(r => {
-            // STRICT: Pick only Amount (USD) for calculation, ignoring generic "Amount"
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             
@@ -609,19 +616,19 @@
                 let cellVal = row[c] || '-';
                 const lowerC = c.toLowerCase();
                 
-                // STRICT: Formatting rules for Amount (USD) and Amount Advanced
                 if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
                     const numericVal = cleanNum(cellVal);
                     cellVal = numericVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 } 
-                // DATE FORMATTING: Clean output without commas
-                else if (lowerC.includes('date') && cellVal !== '-') {
-                    const d = parseExcelDate(cellVal);
-                    if (d && !isNaN(d.getTime())) {
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const year = d.getFullYear();
-                        cellVal = `${day}/${month}/${year}`;
+                else if (lowerC.includes('date') || lowerC.includes('modified')) {
+                    if (cellVal !== '-') {
+                        const d = parseExcelDate(cellVal);
+                        if (d && !isNaN(d.getTime())) {
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+                            cellVal = `${day}/${month}/${year}`;
+                        }
                     }
                 }
                 trB += `<td>${cellVal}</td>`;
