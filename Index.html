@@ -113,10 +113,14 @@
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 12px; }
         .exec-header { background: #334155; padding: 10px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         
+        /* Freeze Header Logic */
+        .exec-header.sticky { position: sticky; top: 0; z-index: 50; }
+        .ledger-table thead th { position: sticky; top: 38px; z-index: 40; background: #0f172a; box-shadow: inset 0 -2px 0 var(--border); }
+        
+        .exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .ledger-table { font-size: 14px !important; }
-        .ledger-table th { position: relative; padding-right: 25px !important; }
+        .ledger-table th { padding-right: 25px !important; }
         .ledger-table td { padding: 12px 10px !important; }
         
         .header-filter-icon {
@@ -134,8 +138,9 @@
         
         .table-wrap { max-height: 850px; overflow-y: auto; background: var(--card); }
 
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; }
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
         .pdf-btn:hover { filter: brightness(1.2); }
+        .pdf-btn.viewed { background: #ff4d4d !important; color: #fff !important; }
 
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; }
         .trend-pill { padding: 6px 14px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; }
@@ -180,6 +185,8 @@
             font-size: 12px;
         }
         .col-options-list { padding: 5px 0; }
+
+        #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--green); }
     </style>
 </head>
 <body>
@@ -327,9 +334,12 @@
 
     <div id="approvals-tab" class="tab-content">
         <div class="exec-summary-box">
-            <div class="exec-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 15px;">
-                <span>Detailed Approvals Ledger</span>
-                <button onclick="resetFilters()" style="background: var(--primary); color: #000; height: 24px; padding: 0 10px; font-size: 10px;">Reset Ledger</button>
+            <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 5px 15px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                    <span>Detailed Approvals Ledger</span>
+                    <div id="ledger-summary">TOTAL: $0.00</div>
+                </div>
+                <button onclick="resetFilters()" style="background: var(--primary); color: #000; height: 28px; padding: 0 15px; font-size: 11px;">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap">
                 <table class="exec-table ledger-table" id="approvalsTable">
@@ -376,7 +386,6 @@
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
         
-        // Hide global filter bar if on approvals tab
         const filterSection = document.getElementById('global-filters');
         if(id === 'approvals-tab') {
             filterSection.style.display = 'none';
@@ -488,6 +497,7 @@
             cc: getSelected('fCCList')
         };
 
+        let ledgerTotal = 0;
         const filteredApps = appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
@@ -508,17 +518,18 @@
                     if(!selectedVals.includes(rowVal)) return false;
                 }
             }
+            
+            ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             return true;
         });
 
+        document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
         renderApprovalsTable(filteredApps);
 
         let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
-        
         filteredApps.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            
             if (type.includes('PRF')) prf += amt;
             if (type.includes('ECF')) ecf += amt;
             if (type.includes('TRF')) trf += amt;
@@ -548,7 +559,6 @@
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
-
             if (filters.start && d < filters.start) return false;
             if (filters.end && d > filters.end) return false;
             if (filters.yr && !filters.yr.includes(rYr)) return false;
@@ -579,13 +589,11 @@
             effAgg += eff; mDays += cleanNum(getCol(r, 'Max Reconciliation Days'));
             pDays += cleanNum(getCol(r, 'Days Pending')); oDays += overdue;
             count++;
-            
             if (overdue > 0) {
                 if (overdue <= 7) a1++;
                 else if (overdue <= 14) a2++;
                 else a3++;
             }
-
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
             ccMap[cc].sum += eff; ccMap[cc].count++;
         });
@@ -656,7 +664,6 @@
             trH += '<th>Action</th></tr>';
             head.innerHTML = trH;
             
-            // Critical Fix: Populate options AFTER the list elements are in the DOM
             displayCols.forEach(c => {
                 const uniqueId = `colDrop_${c.replace(/\W/g, '_')}`;
                 const list = document.getElementById(`${uniqueId}_list`);
@@ -677,29 +684,21 @@
             displayCols.forEach(c => {
                 let cellVal = row[c] || '-';
                 const lowerC = c.toLowerCase();
-                
                 if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
-                    const numericVal = cleanNum(cellVal);
-                    cellVal = numericVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } 
-                else if (lowerC === "amount") {
-                    const numericVal = cleanNum(cellVal);
-                    cellVal = numericVal.toLocaleString('en-US');
-                }
-                else if (lowerC.includes('date') || lowerC.includes('modified')) {
+                    cellVal = cleanNum(cellVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else if (lowerC === "amount") {
+                    cellVal = cleanNum(cellVal).toLocaleString('en-US');
+                } else if (lowerC.includes('date') || lowerC.includes('modified')) {
                     if (cellVal !== '-') {
                         const d = parseExcelDate(cellVal);
                         if (d && !isNaN(d.getTime())) {
-                            const day = String(d.getDate()).padStart(2, '0');
-                            const month = String(d.getMonth() + 1).padStart(2, '0');
-                            const year = d.getFullYear();
-                            cellVal = `${day}/${month}/${year}`;
+                            cellVal = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
                         }
                     }
                 }
                 trB += `<td>${cellVal}</td>`;
             });
-            trB += `<td>${pdfLink ? `<a href="${pdfLink}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td>`;
+            trB += `<td>${pdfLink ? `<a href="${pdfLink}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW PDF</a>` : '-'}</td>`;
             trB += '</tr>';
             body.insertAdjacentHTML('beforeend', trB);
         });
