@@ -230,9 +230,9 @@
         </div>
 
         <div class="f-group">
-            <label>Cost Center</label>
-            <div class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div>
-            <div id="fCCList" class="dropdown-content"></div>
+            <label>Department</label>
+            <div class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div>
+            <div id="fDeptList" class="dropdown-content"></div>
         </div>
 
         <button onclick="resetFilters()" style="height:32px;">RESET FILTERS</button>
@@ -446,7 +446,7 @@
     function initFilters() {
         const fill = (id, data, keys) => {
             const el = document.getElementById(id);
-            if (el.children.length > 0) return;
+            if (!el || el.children.length > 0) return;
             const vals = [...new Set(data.map(r => getCol(r, ...keys)).filter(v => v))].sort();
             
             const sa = document.createElement('div');
@@ -463,7 +463,7 @@
             });
         };
         fill('fCompList', appData, ['Burn Company', 'Company']);
-        fill('fCCList', appData, ['Cost Center', 'Cost Centre']);
+        fill('fDeptList', appData, ['Department', 'Cost Center', 'Cost Centre']);
         fill('fMonthList', appData, ['Month']);
         fill('fYearList', appData, ['Year']);
     }
@@ -493,7 +493,7 @@
             yr: getSelected('fYearList'), 
             mo: getSelected('fMonthList'),
             comp: getSelected('fCompList'), 
-            cc: getSelected('fCCList')
+            dept: getSelected('fDeptList')
         };
 
         let ledgerTotal = 0;
@@ -504,11 +504,11 @@
             const rYr = String(getCol(row, 'Year'));
             const rMo = getCol(row, 'Month');
             const rComp = getCol(row, 'Burn Company', 'Company');
-            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
+            const rDept = getCol(row, 'Department', 'Cost Center', 'Cost Centre');
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
-            if (filters.cc && !filters.cc.includes(rCC)) return false;
+            if (filters.dept && !filters.dept.includes(rDept)) return false;
             
             for(let col in tableFilters) {
                 const selectedVals = tableFilters[col];
@@ -537,24 +537,24 @@
         
         pnlData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
-            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rDept = getCol(r, 'Department', 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
-            if (filters.cc && !filters.cc.includes(rCC)) return false;
+            if (filters.dept && !filters.dept.includes(rDept)) return false;
             return true;
         }).forEach(r => pnl += cleanNum(getCol(r, 'Amount (USD)')));
 
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
-        let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, ccMap = {};
+        let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, deptMap = {};
         let a1=0, a2=0, a3=0;
         let recWithin30 = 0, totalDaysToRec = 0;
 
         recData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
-            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rDept = getCol(r, 'Department', 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -563,12 +563,12 @@
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
-            if (filters.cc && !filters.cc.includes(rCC)) return false;
+            if (filters.dept && !filters.dept.includes(rDept)) return false;
             return true;
         }).forEach(r => {
             const status = (getCol(r, 'Status') || "").toLowerCase();
             const amt = cleanNum(getCol(r, 'PRF Amount (USD)'));
-            const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc";
+            const dept = getCol(r, 'Department', 'Cost Center', 'Cost Centre') || "Misc";
             const eff = cleanNum(getCol(r, 'Efficiency %'));
             const overdue = cleanNum(getCol(r, 'Days Overdue'));
             const daysToRec = cleanNum(getCol(r, 'Actual Recon Days', 'Days to Reconcile'));
@@ -589,8 +589,8 @@
                 else if (overdue <= 14) a2++;
                 else a3++;
             }
-            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
-            ccMap[cc].sum += eff; ccMap[cc].count++;
+            if (!deptMap[dept]) deptMap[dept] = { sum: 0, count: 0 };
+            deptMap[dept].sum += eff; deptMap[dept].count++;
         });
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
@@ -632,7 +632,7 @@
         document.getElementById('usdTotalMix').innerText = fmt(recSum + penSum);
 
         updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
-        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
+        updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
     }
 
     function renderApprovalsTable(data) {
@@ -733,16 +733,16 @@
         trendEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`;
     }
 
-    function updateVisuals(rec, pen, ageData, ccMap) {
+    function updateVisuals(rec, pen, ageData, deptMap) {
         mixChart.data.datasets[0].data = [rec, pen]; mixChart.update();
         ageChart.data.datasets[0].data = ageData; ageChart.update();
         const rankList = document.getElementById('healthRankList');
         rankList.innerHTML = '';
-        const sorted = Object.keys(ccMap).sort((a,b) => (ccMap[b].sum/ccMap[b].count) - (ccMap[a].sum/ccMap[a].count)).slice(0, 5);
-        sorted.forEach(cc => {
-            const score = (ccMap[cc].sum / ccMap[cc].count).toFixed(0);
+        const sorted = Object.keys(deptMap).sort((a,b) => (deptMap[b].sum/deptMap[b].count) - (deptMap[a].sum/deptMap[a].count)).slice(0, 5);
+        sorted.forEach(dept => {
+            const score = (deptMap[dept].sum / deptMap[dept].count).toFixed(0);
             let color = score > 80 ? 'var(--green)' : (score < 50 ? 'var(--red)' : 'var(--primary)');
-            rankList.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:${color}"></div></div><div class="rank-pct">${score}%</div></div>`);
+            rankList.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label" title="${dept}">${dept}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${score}%; background:${color}"></div></div><div class="rank-pct">${score}%</div></div>`);
         });
     }
 
