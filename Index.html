@@ -235,6 +235,12 @@
             <div id="fDeptList" class="dropdown-content"></div>
         </div>
 
+        <div class="f-group">
+            <label>Cost Center</label>
+            <div class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div>
+            <div id="fCCList" class="dropdown-content"></div>
+        </div>
+
         <button onclick="resetFilters()" style="height:32px;">RESET FILTERS</button>
     </div>
 
@@ -463,7 +469,8 @@
             });
         };
         fill('fCompList', appData, ['Burn Company', 'Company']);
-        fill('fDeptList', appData, ['Department', 'Cost Center', 'Cost Centre']);
+        fill('fDeptList', appData, ['Department']);
+        fill('fCCList', appData, ['Cost Center', 'Cost Centre']);
         fill('fMonthList', appData, ['Month']);
         fill('fYearList', appData, ['Year']);
     }
@@ -493,7 +500,8 @@
             yr: getSelected('fYearList'), 
             mo: getSelected('fMonthList'),
             comp: getSelected('fCompList'), 
-            dept: getSelected('fDeptList')
+            dept: getSelected('fDeptList'),
+            cc: getSelected('fCCList')
         };
 
         let ledgerTotal = 0;
@@ -504,11 +512,14 @@
             const rYr = String(getCol(row, 'Year'));
             const rMo = getCol(row, 'Month');
             const rComp = getCol(row, 'Burn Company', 'Company');
-            const rDept = getCol(row, 'Department', 'Cost Center', 'Cost Centre');
+            const rDept = getCol(row, 'Department');
+            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
+
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.dept && !filters.dept.includes(rDept)) return false;
+            if (filters.cc && !filters.cc.includes(rCC)) return false;
             
             for(let col in tableFilters) {
                 const selectedVals = tableFilters[col];
@@ -537,13 +548,15 @@
         
         pnlData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
-            const rDept = getCol(r, 'Department', 'Cost Center', 'Cost Centre');
+            const rDept = getCol(r, 'Department');
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             if (filters.yr && !filters.yr.includes(rYr)) return false;
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.dept && !filters.dept.includes(rDept)) return false;
+            if (filters.cc && !filters.cc.includes(rCC)) return false;
             return true;
         }).forEach(r => pnl += cleanNum(getCol(r, 'Amount (USD)')));
 
@@ -554,7 +567,8 @@
 
         recData.filter(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
-            const rDept = getCol(r, 'Department', 'Cost Center', 'Cost Centre');
+            const rDept = getCol(r, 'Department');
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -564,11 +578,12 @@
             if (filters.mo && !filters.mo.includes(rMo)) return false;
             if (filters.comp && !filters.comp.includes(rComp)) return false;
             if (filters.dept && !filters.dept.includes(rDept)) return false;
+            if (filters.cc && !filters.cc.includes(rCC)) return false;
             return true;
         }).forEach(r => {
             const status = (getCol(r, 'Status') || "").toLowerCase();
             const amt = cleanNum(getCol(r, 'PRF Amount (USD)'));
-            const dept = getCol(r, 'Department', 'Cost Center', 'Cost Centre') || "Misc";
+            const dept = getCol(r, 'Department') || "Misc";
             const eff = cleanNum(getCol(r, 'Efficiency %'));
             const overdue = cleanNum(getCol(r, 'Days Overdue'));
             const daysToRec = cleanNum(getCol(r, 'Actual Recon Days', 'Days to Reconcile'));
@@ -640,12 +655,18 @@
         const body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
         
-        // Ensure "Department" is prioritized in columns
         const rawCols = Object.keys(appData[0]);
-        const displayCols = rawCols.map(c => {
-            if(c.toLowerCase().trim() === 'cost center' || c.toLowerCase().trim() === 'cost centre') return 'Department';
-            return c;
-        }).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
+        let displayCols = [];
+        
+        // Define order: Department followed by Cost Center, then others
+        rawCols.forEach(c => {
+            const clean = c.toLowerCase().trim();
+            if (clean === 'department' || clean === 'cost center' || clean === 'cost centre') return;
+            if (!excludedCols.includes(clean)) displayCols.push(c);
+        });
+        
+        // Insert Department and Cost Center at the start
+        displayCols.unshift('Department', 'Cost Center');
 
         if(head.children.length === 0) {
             let trH = '<tr>';
@@ -668,11 +689,11 @@
             displayCols.forEach(c => {
                 const uniqueId = `colDrop_${c.replace(/\W/g, '_')}`;
                 const list = document.getElementById(`${uniqueId}_list`);
-                
-                // Logic to pull data from original sheet keys even if renamed for UI
                 const originalKey = rawCols.find(rk => {
-                   if(c === 'Department') return rk.toLowerCase().trim() === 'cost center' || rk.toLowerCase().trim() === 'cost centre' || rk.toLowerCase().trim() === 'department';
-                   return rk === c;
+                    const rkClean = rk.toLowerCase().trim();
+                    if(c === 'Department') return rkClean === 'department';
+                    if(c === 'Cost Center') return rkClean === 'cost center' || rkClean === 'cost centre';
+                    return rk === c;
                 });
 
                 const vals = [...new Set(appData.map(r => (r[originalKey] || "-").toString()))].sort();
@@ -690,16 +711,16 @@
             let trB = '<tr>';
             let pdfLink = getCol(row, 'PDF Link', 'Link', 'URL');
             displayCols.forEach(c => {
-                // Find data in row using multiple possible keys for "Department"
-                let cellVal = (c === 'Department') ? getCol(row, 'Department', 'Cost Center', 'Cost Centre') : row[c];
-                cellVal = cellVal || '-';
+                let cellVal;
+                if (c === 'Department') cellVal = row['Department'];
+                else if (c === 'Cost Center') cellVal = getCol(row, 'Cost Center', 'Cost Centre');
+                else cellVal = row[c];
                 
+                cellVal = cellVal || '-';
                 const lowerC = c.toLowerCase();
                 if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
                     cellVal = cleanNum(cellVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } else if (lowerC === "amount") {
-                    cellVal = cleanNum(cellVal).toLocaleString('en-US');
-                } else if (lowerC.includes('date') || lowerC.includes('modified')) {
+                } else if (lowerC.includes('date')) {
                     if (cellVal !== '-') {
                         const d = parseExcelDate(cellVal);
                         if (d && !isNaN(d.getTime())) {
