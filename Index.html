@@ -639,7 +639,13 @@
         const head = document.getElementById('approvalsHead');
         const body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'full file name'];
-        const displayCols = Object.keys(appData[0]).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
+        
+        // Ensure "Department" is prioritized in columns
+        const rawCols = Object.keys(appData[0]);
+        const displayCols = rawCols.map(c => {
+            if(c.toLowerCase().trim() === 'cost center' || c.toLowerCase().trim() === 'cost centre') return 'Department';
+            return c;
+        }).filter(c => !excludedCols.includes(c.toLowerCase().trim()));
 
         if(head.children.length === 0) {
             let trH = '<tr>';
@@ -662,7 +668,14 @@
             displayCols.forEach(c => {
                 const uniqueId = `colDrop_${c.replace(/\W/g, '_')}`;
                 const list = document.getElementById(`${uniqueId}_list`);
-                const vals = [...new Set(appData.map(r => (r[c] || "-").toString()))].sort();
+                
+                // Logic to pull data from original sheet keys even if renamed for UI
+                const originalKey = rawCols.find(rk => {
+                   if(c === 'Department') return rk.toLowerCase().trim() === 'cost center' || rk.toLowerCase().trim() === 'cost centre' || rk.toLowerCase().trim() === 'department';
+                   return rk === c;
+                });
+
+                const vals = [...new Set(appData.map(r => (r[originalKey] || "-").toString()))].sort();
                 vals.forEach(v => {
                     const item = document.createElement('div');
                     item.className = 'dropdown-item';
@@ -677,7 +690,10 @@
             let trB = '<tr>';
             let pdfLink = getCol(row, 'PDF Link', 'Link', 'URL');
             displayCols.forEach(c => {
-                let cellVal = row[c] || '-';
+                // Find data in row using multiple possible keys for "Department"
+                let cellVal = (c === 'Department') ? getCol(row, 'Department', 'Cost Center', 'Cost Centre') : row[c];
+                cellVal = cellVal || '-';
+                
                 const lowerC = c.toLowerCase();
                 if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
                     cellVal = cleanNum(cellVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
