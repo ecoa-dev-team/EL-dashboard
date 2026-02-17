@@ -128,7 +128,10 @@
         .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .status-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
         .status-usd { font-size: 12px; color: var(--primary); font-weight: 800; margin-top: 2px; }
-        .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 11px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; text-transform: uppercase; }
+        .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 12px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 10px; text-transform: uppercase; }
+        
+        /* Modified font size for Current Exposure */
+        #usdTotalMix { font-size: 2.2rem; display: block; margin-top: 5px; color: var(--red); font-weight: 900; }
 
         .health-rank-container { display: flex; flex-direction: column; gap: 14px; margin-top: 15px; }
         .rank-item { display: flex; align-items: center; gap: 12px; }
@@ -321,7 +324,7 @@
                             <div class="status-usd" id="usdRec">$0</div>
                         </div>
                     </div>
-                    <div class="status-total">Current Exposure: <span id="usdTotalMix" style="color:#fff">$0</span></div>
+                    <div class="status-total">Current Exposure: <span id="usdTotalMix">$0</span></div>
                 </div>
             </div>
 
@@ -683,7 +686,7 @@
         document.getElementById('usdPen').innerText = fmt(penSum);
         document.getElementById('usdRec').innerText = fmt(recSum);
         
-        // FIXED: Current Exposure now reflects ONLY the dollar amount of pending PRFs
+        // Final exposure figure is highlighted in RED and set to big font size
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
 
         updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
