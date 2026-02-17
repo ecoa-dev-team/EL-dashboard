@@ -290,7 +290,6 @@
                 <span class="tile-label">Total Actual Spend</span>
                 <div class="tile-val" id="valActual">$0</div>
                 <div class="breakdown">
-                    <span>PR <b id="subPR">$0</b></span>
                     <span>ECF <b id="subECF">$0</b></span>
                     <span>TRF <b id="subTRF">$0</b></span>
                     <span>INV <b id="subInv">$0</b></span>
@@ -579,27 +578,22 @@
             return true;
         });
 
-        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0, pr = 0;
+        let ecf = 0, trf = 0, inv = 0, pnl = 0;
         let commPRF = 0, commPR = 0, commTRF = 0;
 
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             
-            // Logic for Actual Spend (Bottom Breakdown)
+            // Committed Spend Logic
+            if (type.includes('PRF')) commPRF += amt;
+            else if (type.includes('PR')) commPR += amt;
+            else if (type.includes('TRF')) commTRF += amt;
+
+            // Actual Spend Logic (PR removed per request)
             if (type.includes('ECF')) ecf += amt;
+            if (type.includes('TRF')) trf += amt; 
             if (type.includes('INV')) inv += amt;
-            
-            // Separation for Actual vs Committed
-            if (type.includes('PRF')) {
-                commPRF += amt;
-            } else if (type.includes('PR')) {
-                commPR += amt;
-                pr += amt; // Also counts for actual breakdown if not PRF
-            } else if (type.includes('TRF')) {
-                commTRF += amt;
-                trf += amt; // Also counts for actual breakdown if not PRF
-            }
         });
         
         pnlData.forEach(r => {
@@ -665,15 +659,14 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         
-        // Update Committed Spend (Top Header Logic)
+        // Update Committed Spend
         document.getElementById('valPRF').innerText = fmt(commPRF + commPR + commTRF);
         document.getElementById('subCommPRF').innerText = fmt(commPRF);
         document.getElementById('subCommPR').innerText = fmt(commPR);
         document.getElementById('subCommTRF').innerText = fmt(commTRF);
 
-        // Update Total Actual Spend
-        document.getElementById('valActual').innerText = fmt(pr + ecf + trf + inv);
-        document.getElementById('subPR').innerText = fmt(pr);
+        // Update Total Actual Spend (Removed PR)
+        document.getElementById('valActual').innerText = fmt(ecf + trf + inv);
         document.getElementById('subECF').innerText = fmt(ecf);
         document.getElementById('subTRF').innerText = fmt(trf);
         document.getElementById('subInv').innerText = fmt(inv);
