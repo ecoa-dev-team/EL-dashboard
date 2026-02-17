@@ -409,7 +409,10 @@
             }
         }
         const p = s.split('.');
-        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(s);
+        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+        
+        const iso = new Date(s);
+        return isNaN(iso.getTime()) ? null : iso;
     };
 
     function switchTab(id, btn) {
@@ -578,22 +581,27 @@
             if (type.includes('INV')) inv += amt;
         });
         
-        // Corrected P&L Calculation with Date Filtering
+        // FIXED: P&L Cost Impact calculation logic to handle date range filtering
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rDept = getCol(r, 'Department');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
-            const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year'));
             
-            if (filters.start && rDate && rDate < filters.start) return;
-            if (filters.end && rDate && rDate > filters.end) return;
+            // Filter by selected facets
             if (filters.yr && !filters.yr.includes(rYr)) return;
             if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return;
             if (filters.dept && !filters.dept.includes(rDept)) return;
             if (filters.cc && !filters.cc.includes(rCC)) return;
+            
+            // Filter by explicit Date Range
+            const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
+            if (rDate) {
+                if (filters.start && rDate < filters.start) return;
+                if (filters.end && rDate > filters.end) return;
+            }
             
             pnl += cleanNum(getCol(r, 'Amount (USD)'));
         });
@@ -653,18 +661,18 @@
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days";
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
 
-        // Corrected Overdue Calculation: Avg Pending - Max Cycle
-        const overdueValue = avgPend - avgMax;
         const overLabel = document.getElementById('vOverLabel');
         const overVal = document.getElementById('vOver');
         
-        if (overdueValue <= 0) {
+        // Logical check: If Avg Pending is higher than Max Cycle, it's overdue
+        const overdueDiff = avgPend - avgMax;
+        if (overdueDiff <= 0) {
             overLabel.innerText = "Days to Deadline"; 
-            overVal.innerText = Math.abs(overdueValue).toFixed(0) + " Days";
+            overVal.innerText = Math.abs(overdueDiff).toFixed(0) + " Days";
             overVal.style.color = "var(--green)";
         } else {
             overLabel.innerText = "Avg Overdue"; 
-            overVal.innerText = overdueValue.toFixed(0) + " Days";
+            overVal.innerText = overdueDiff.toFixed(0) + " Days";
             overVal.style.color = "var(--red)";
         }
         
