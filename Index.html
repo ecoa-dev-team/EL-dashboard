@@ -572,7 +572,6 @@
             return true;
         });
 
-        // FIXED: Added pr logic for Total Actual Spend calculation
         let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0, pr = 0;
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -647,7 +646,6 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         document.getElementById('valPRF').innerText = fmt(prf);
-        // FIXED: Included pr in valActual
         document.getElementById('valActual').innerText = fmt(pr + ecf + trf + inv);
         document.getElementById('subPR').innerText = fmt(pr);
         document.getElementById('subECF').innerText = fmt(ecf);
@@ -678,14 +676,15 @@
         }
         
         const totalItems = recCount + penCount;
-        // FIXED: Added PRFs unit to counts
         document.getElementById('countPen').innerText = penCount + " PRFs";
         document.getElementById('countRec').innerText = recCount + " PRFs";
         document.getElementById('labelPen').innerText = `Pending for ${avgPend.toFixed(0)} days`;
         document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
         document.getElementById('usdPen').innerText = fmt(penSum);
         document.getElementById('usdRec').innerText = fmt(recSum);
-        document.getElementById('usdTotalMix').innerText = fmt(recSum + penSum);
+        
+        // FIXED: Current Exposure now reflects ONLY the dollar amount of pending PRFs
+        document.getElementById('usdTotalMix').innerText = fmt(penSum);
 
         updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
