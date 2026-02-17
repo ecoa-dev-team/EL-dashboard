@@ -84,22 +84,19 @@
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: auto; width: auto; cursor: pointer; }
 
-        /* High Visibility Date Inputs */
+        /* Brightened Calendar Inputs */
         input[type="date"] { 
             background: #ffffff !important; 
             color: #000000 !important; 
-            padding: 4px 10px; 
-            border: 2px solid var(--primary); 
+            padding: 0 10px; 
+            border: 1px solid var(--primary); 
             border-radius: 5px; 
             font-size: 11px; 
             height: 32px; 
             outline: none; 
             font-weight: 800;
             cursor: pointer;
-        }
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(0);
-            cursor: pointer;
+            width: 100%;
         }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
@@ -122,6 +119,7 @@
         
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
         .status-row { display: flex; justify-content: space-around; margin-bottom: 10px; text-align: center; }
+        .status-col { display: flex; flex-direction: column; align-items: center; }
         .status-count { font-size: 1.8rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
         .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .status-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
@@ -266,7 +264,7 @@
             <div id="fCCList" class="dropdown-content"></div>
         </div>
 
-        <button onclick="resetGlobalFilters()" style="height:32px; background: var(--green); color: #000;">RESET DASH FILTERS</button>
+        <button onclick="resetGlobalFilters()" style="height:32px;">RESET DASH FILTERS</button>
     </div>
 
     <div id="cost-analysis" class="tab-content active"></div>
@@ -550,7 +548,7 @@
             yr: getSelected('fYearList'), 
             mo: getSelected('fMonthList'),
             comp: getSelected('fCompList'), 
-            dept: getSelected('fDeptLabel') ? getSelected('fDeptList') : null, // Fix selector reference
+            dept: getSelected('fDeptList'),
             cc: getSelected('fCCList')
         };
 
@@ -576,7 +574,6 @@
             if (type.includes('INV')) inv += amt;
         });
         
-        // Fix P&L filtering logic
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rDept = getCol(r, 'Department');
