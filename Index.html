@@ -278,8 +278,13 @@
     <div id="dashboard" class="tab-content">
         <div class="kpi-grid">
             <div class="tile" style="border-top: 4px solid var(--primary);">
-                <span class="tile-label">Committed Spend (PRF, PR, TRF)</span>
+                <span class="tile-label">Committed Spend</span>
                 <div class="tile-val" id="valPRF">$0</div>
+                <div class="breakdown">
+                    <span>PRF <b id="subCommPRF">$0</b></span>
+                    <span>PR <b id="subCommPR">$0</b></span>
+                    <span>TRF <b id="subCommTRF">$0</b></span>
+                </div>
             </div>
             <div class="tile" style="border-top: 4px solid var(--orange);">
                 <span class="tile-label">Total Actual Spend</span>
@@ -574,21 +579,26 @@
             return true;
         });
 
-        let committedAgg = 0, ecf = 0, trfVal = 0, inv = 0, pnl = 0, prVal = 0, prfVal = 0;
+        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0, pr = 0;
+        let commPRF = 0, commPR = 0, commTRF = 0;
+
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             
-            // Logic for Individual Breakdowns
-            if (type.includes('PRF')) prfVal += amt;
+            // Logic for Actual Spend (Bottom Breakdown)
             if (type.includes('ECF')) ecf += amt;
-            if (type.includes('TRF')) trfVal += amt;
             if (type.includes('INV')) inv += amt;
-            if (type.includes('PR') && !type.includes('PRF')) prVal += amt;
-
-            // Logic for Committed Spend Tile (PRF + PR + TRF)
-            if (type.includes('PRF') || (type.includes('PR') && !type.includes('PRF')) || type.includes('TRF')) {
-                committedAgg += amt;
+            
+            // Separation for Actual vs Committed
+            if (type.includes('PRF')) {
+                commPRF += amt;
+            } else if (type.includes('PR')) {
+                commPR += amt;
+                pr += amt; // Also counts for actual breakdown if not PRF
+            } else if (type.includes('TRF')) {
+                commTRF += amt;
+                trf += amt; // Also counts for actual breakdown if not PRF
             }
         });
         
@@ -654,12 +664,20 @@
         });
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
-        document.getElementById('valPRF').innerText = fmt(committedAgg);
-        document.getElementById('valActual').innerText = fmt(prVal + ecf + trfVal + inv);
-        document.getElementById('subPR').innerText = fmt(prVal);
+        
+        // Update Committed Spend (Top Header Logic)
+        document.getElementById('valPRF').innerText = fmt(commPRF + commPR + commTRF);
+        document.getElementById('subCommPRF').innerText = fmt(commPRF);
+        document.getElementById('subCommPR').innerText = fmt(commPR);
+        document.getElementById('subCommTRF').innerText = fmt(commTRF);
+
+        // Update Total Actual Spend
+        document.getElementById('valActual').innerText = fmt(pr + ecf + trf + inv);
+        document.getElementById('subPR').innerText = fmt(pr);
         document.getElementById('subECF').innerText = fmt(ecf);
-        document.getElementById('subTRF').innerText = fmt(trfVal);
+        document.getElementById('subTRF').innerText = fmt(trf);
         document.getElementById('subInv').innerText = fmt(inv);
+        
         document.getElementById('valPNL').innerText = fmt(pnl);
         
         const avgMax = count > 0 ? (mDays/count) : 0;
@@ -672,8 +690,8 @@
 
         const overLabel = document.getElementById('vOverLabel');
         const overVal = document.getElementById('vOver');
-        
         const overdueDiff = avgPend - avgMax;
+        
         if (overdueDiff <= 0) {
             overLabel.innerText = "Days to Deadline"; 
             overVal.innerText = Math.abs(overdueDiff).toFixed(0) + " Days";
