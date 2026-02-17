@@ -139,8 +139,18 @@
         .rank-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
         .rank-pct { width: 45px; font-size: 13px; font-weight: 900; color: var(--primary); }
 
-        /* FIXED OVERLAP HERE: Added margin-top and clear:both */
-        .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 25px; position: relative; clear: both; }
+        /* Separation Fix: Added margin-top and a thin border to separate from charts */
+        .exec-summary-box { 
+            background: var(--card); 
+            color: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            border: 1px solid var(--border); 
+            margin-top: 25px; 
+            position: relative;
+            border-top: 2px solid var(--primary);
+        }
+        
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         
         .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
@@ -685,6 +695,7 @@
         document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
         document.getElementById('usdPen').innerText = fmt(penSum);
         document.getElementById('usdRec').innerText = fmt(recSum);
+        
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
 
         updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
