@@ -278,7 +278,7 @@
     <div id="dashboard" class="tab-content">
         <div class="kpi-grid">
             <div class="tile" style="border-top: 4px solid var(--primary);">
-                <span class="tile-label">Committed Spend (PRF)</span>
+                <span class="tile-label">Committed Spend (PRF, PR, TRF)</span>
                 <div class="tile-val" id="valPRF">$0</div>
             </div>
             <div class="tile" style="border-top: 4px solid var(--orange);">
@@ -574,15 +574,22 @@
             return true;
         });
 
-        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0, pr = 0;
+        let committedAgg = 0, ecf = 0, trfVal = 0, inv = 0, pnl = 0, prVal = 0, prfVal = 0;
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            if (type.includes('PRF')) prf += amt;
+            
+            // Logic for Individual Breakdowns
+            if (type.includes('PRF')) prfVal += amt;
             if (type.includes('ECF')) ecf += amt;
-            if (type.includes('TRF')) trf += amt;
+            if (type.includes('TRF')) trfVal += amt;
             if (type.includes('INV')) inv += amt;
-            if (type.includes('PR') && !type.includes('PRF')) pr += amt; 
+            if (type.includes('PR') && !type.includes('PRF')) prVal += amt;
+
+            // Logic for Committed Spend Tile (PRF + PR + TRF)
+            if (type.includes('PRF') || (type.includes('PR') && !type.includes('PRF')) || type.includes('TRF')) {
+                committedAgg += amt;
+            }
         });
         
         pnlData.forEach(r => {
@@ -647,11 +654,11 @@
         });
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
-        document.getElementById('valPRF').innerText = fmt(prf);
-        document.getElementById('valActual').innerText = fmt(pr + ecf + trf + inv);
-        document.getElementById('subPR').innerText = fmt(pr);
+        document.getElementById('valPRF').innerText = fmt(committedAgg);
+        document.getElementById('valActual').innerText = fmt(prVal + ecf + trfVal + inv);
+        document.getElementById('subPR').innerText = fmt(prVal);
         document.getElementById('subECF').innerText = fmt(ecf);
-        document.getElementById('subTRF').innerText = fmt(trf);
+        document.getElementById('subTRF').innerText = fmt(trfVal);
         document.getElementById('subInv').innerText = fmt(inv);
         document.getElementById('valPNL').innerText = fmt(pnl);
         
