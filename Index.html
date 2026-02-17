@@ -107,8 +107,8 @@
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
         .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; }
-        .breakdown { display: flex; justify-content: space-around; font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; }
-        .breakdown b { color: var(--primary); font-weight: 900; font-size: 13px; }
+        .breakdown { display: flex; justify-content: space-around; font-size: 10px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 4px; }
+        .breakdown b { color: var(--primary); font-weight: 900; font-size: 12px; }
 
         .recon-health { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
         .mini-tile { background: var(--card); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -283,6 +283,7 @@
                 <span class="tile-label">Total Actual Spend</span>
                 <div class="tile-val" id="valActual">$0</div>
                 <div class="breakdown">
+                    <span>PR <b id="subPR">$0</b></span>
                     <span>ECF <b id="subECF">$0</b></span>
                     <span>TRF <b id="subTRF">$0</b></span>
                     <span>INV <b id="subInv">$0</b></span>
@@ -571,7 +572,8 @@
             return true;
         });
 
-        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0;
+        // FIXED: Added pr logic for Total Actual Spend calculation
+        let prf = 0, ecf = 0, trf = 0, inv = 0, pnl = 0, pr = 0;
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
@@ -579,9 +581,9 @@
             if (type.includes('ECF')) ecf += amt;
             if (type.includes('TRF')) trf += amt;
             if (type.includes('INV')) inv += amt;
+            if (type.includes('PR') && !type.includes('PRF')) pr += amt; 
         });
         
-        // FIXED: P&L Cost Impact calculation logic to handle date range filtering
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rDept = getCol(r, 'Department');
@@ -589,14 +591,12 @@
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
             
-            // Filter by selected facets
             if (filters.yr && !filters.yr.includes(rYr)) return;
             if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return;
             if (filters.dept && !filters.dept.includes(rDept)) return;
             if (filters.cc && !filters.cc.includes(rCC)) return;
             
-            // Filter by explicit Date Range
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if (rDate) {
                 if (filters.start && rDate < filters.start) return;
@@ -647,7 +647,9 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         document.getElementById('valPRF').innerText = fmt(prf);
-        document.getElementById('valActual').innerText = fmt(ecf + trf + inv);
+        // FIXED: Included pr in valActual
+        document.getElementById('valActual').innerText = fmt(pr + ecf + trf + inv);
+        document.getElementById('subPR').innerText = fmt(pr);
         document.getElementById('subECF').innerText = fmt(ecf);
         document.getElementById('subTRF').innerText = fmt(trf);
         document.getElementById('subInv').innerText = fmt(inv);
@@ -664,7 +666,6 @@
         const overLabel = document.getElementById('vOverLabel');
         const overVal = document.getElementById('vOver');
         
-        // Logical check: If Avg Pending is higher than Max Cycle, it's overdue
         const overdueDiff = avgPend - avgMax;
         if (overdueDiff <= 0) {
             overLabel.innerText = "Days to Deadline"; 
@@ -677,8 +678,9 @@
         }
         
         const totalItems = recCount + penCount;
-        document.getElementById('countPen').innerText = penCount;
-        document.getElementById('countRec').innerText = recCount;
+        // FIXED: Added PRFs unit to counts
+        document.getElementById('countPen').innerText = penCount + " PRFs";
+        document.getElementById('countRec').innerText = recCount + " PRFs";
         document.getElementById('labelPen').innerText = `Pending for ${avgPend.toFixed(0)} days`;
         document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
         document.getElementById('usdPen').innerText = fmt(penSum);
