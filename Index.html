@@ -84,10 +84,10 @@
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: auto; width: auto; cursor: pointer; }
 
-        /* Brightened Calendar Inputs */
+        /* Modified Date Picker Styling */
         input[type="date"] { 
-            background: #ffffff !important; 
-            color: #000000 !important; 
+            background: #0f172a !important; 
+            color: #ffffff !important; 
             padding: 0 10px; 
             border: 1px solid var(--primary); 
             border-radius: 5px; 
@@ -97,6 +97,12 @@
             font-weight: 800;
             cursor: pointer;
             width: 100%;
+        }
+
+        /* Brightening only the calendar picker icon */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(2);
+            cursor: pointer;
         }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
