@@ -84,7 +84,6 @@
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: auto; width: auto; cursor: pointer; }
 
-        /* Modified Date Picker Styling */
         input[type="date"] { 
             background: #0f172a !important; 
             color: #ffffff !important; 
@@ -99,7 +98,6 @@
             width: 100%;
         }
 
-        /* Brightening only the calendar picker icon */
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1) brightness(2);
             cursor: pointer;
@@ -580,13 +578,17 @@
             if (type.includes('INV')) inv += amt;
         });
         
+        // Corrected P&L Calculation with Date Filtering
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company');
             const rDept = getCol(r, 'Department');
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
             const rYr = String(getCol(r, 'Year'));
             const rMo = getCol(r, 'Month');
+            const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year'));
             
+            if (filters.start && rDate && rDate < filters.start) return;
+            if (filters.end && rDate && rDate > filters.end) return;
             if (filters.yr && !filters.yr.includes(rYr)) return;
             if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return;
@@ -645,20 +647,24 @@
         
         const avgMax = count > 0 ? (mDays/count) : 0;
         const avgPend = count > 0 ? (pDays/count) : 0;
-        const avgOver = count > 0 ? (oDays/count) : 0;
         const avgRecDays = recCount > 0 ? (totalDaysToRec/recCount) : 0;
 
         document.getElementById('vEff').innerText = count > 0 ? (effAgg/count).toFixed(0) + "%" : "0%";
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days";
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
 
+        // Corrected Overdue Calculation: Avg Pending - Max Cycle
+        const overdueValue = avgPend - avgMax;
         const overLabel = document.getElementById('vOverLabel');
         const overVal = document.getElementById('vOver');
-        if (avgMax > avgPend) {
-            overLabel.innerText = "Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days";
+        
+        if (overdueValue <= 0) {
+            overLabel.innerText = "Days to Deadline"; 
+            overVal.innerText = Math.abs(overdueValue).toFixed(0) + " Days";
             overVal.style.color = "var(--green)";
         } else {
-            overLabel.innerText = "Avg Overdue"; overVal.innerText = avgOver.toFixed(0) + " Days";
+            overLabel.innerText = "Avg Overdue"; 
+            overVal.innerText = overdueValue.toFixed(0) + " Days";
             overVal.style.color = "var(--red)";
         }
         
