@@ -356,7 +356,7 @@
                 <tbody>
                     <tr>
                         <td>Compliance</td>
-                        <td>50% PRFs Reconciled within 30 days</td>
+                        <td>100% PRFs Reconciled within 30 days</td>
                         <td id="exCompVal" class="status-cell">0%</td>
                         <td id="exCompTrend" style="text-align: center;">-</td>
                     </tr>
@@ -585,12 +585,10 @@
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             
-            // Committed Spend Logic
             if (type.includes('PRF')) commPRF += amt;
             else if (type.includes('PR')) commPR += amt;
             else if (type.includes('TRF')) commTRF += amt;
 
-            // Actual Spend Logic (PR removed per request)
             if (type.includes('ECF')) ecf += amt;
             if (type.includes('TRF')) trf += amt; 
             if (type.includes('INV')) inv += amt;
@@ -621,7 +619,7 @@
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0;
         let effAgg = 0, mDays = 0, pDays = 0, oDays = 0, count = 0, deptMap = {};
         let a1=0, a2=0, a3=0;
-        let recWithin30 = 0, totalDaysToRec = 0;
+        let recWithin30 = 0;
 
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -643,7 +641,6 @@
 
             if (status.includes('reconciled')) { 
                 recSum += amt; recCount++; 
-                totalDaysToRec += daysToRec;
                 if(daysToRec <= 30) recWithin30++;
             } else { penSum += amt; penCount++; }
             
@@ -659,13 +656,11 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         
-        // Update Committed Spend
         document.getElementById('valPRF').innerText = fmt(commPRF + commPR + commTRF);
         document.getElementById('subCommPRF').innerText = fmt(commPRF);
         document.getElementById('subCommPR').innerText = fmt(commPR);
         document.getElementById('subCommTRF').innerText = fmt(commTRF);
 
-        // Update Total Actual Spend (Removed PR)
         document.getElementById('valActual').innerText = fmt(ecf + trf + inv);
         document.getElementById('subECF').innerText = fmt(ecf);
         document.getElementById('subTRF').innerText = fmt(trf);
@@ -675,7 +670,6 @@
         
         const avgMax = count > 0 ? (mDays/count) : 0;
         const avgPend = count > 0 ? (pDays/count) : 0;
-        const avgRecDays = recCount > 0 ? (totalDaysToRec/recCount) : 0;
 
         document.getElementById('vEff').innerText = count > 0 ? (effAgg/count).toFixed(0) + "%" : "0%";
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days";
@@ -698,13 +692,14 @@
         const totalItems = recCount + penCount;
         document.getElementById('countPen').innerText = penCount + " PRFs";
         document.getElementById('countRec').innerText = recCount + " PRFs";
-        document.getElementById('labelPen').innerText = `Pending for ${avgPend.toFixed(0)} days`;
-        document.getElementById('labelRec').innerText = `Reconciled in ${avgRecDays.toFixed(0)} days`;
+        document.getElementById('labelPen').innerText = `Current Pending Avg`;
+        document.getElementById('labelRec').innerText = `Total Compliance Avg`;
         document.getElementById('usdPen').innerText = fmt(penSum);
         document.getElementById('usdRec').innerText = fmt(recSum);
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
 
-        updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgRecDays);
+        // Benchmark update: Compare avgPend against 30 days for Speed
+        updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgPend);
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
     }
 
@@ -813,7 +808,8 @@
     }
 
     function updateExecSummary(comp, speed) {
-        setExecRow('exComp', comp, 50, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); 
+        setExecRow('exComp', comp, 100, false, '%'); 
+        setExecRow('exSpeed', speed, 30, true, ' Days'); 
     }
 
     function setExecRow(id, val, target, lowerIsBetter, unit) {
