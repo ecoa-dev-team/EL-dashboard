@@ -698,7 +698,6 @@
         document.getElementById('usdRec').innerText = fmt(recSum);
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
 
-        // Benchmark update: Compare avgPend against 30 days for Speed
         updateExecSummary(totalItems > 0 ? (recWithin30 / totalItems) * 100 : 0, avgPend);
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
     }
@@ -792,18 +791,28 @@
 
     function searchColOptions(id, query) {
         const items = document.getElementById(`${id}_list`).querySelectorAll('.dropdown-item');
-        items.forEach(item => item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none');
+        items.forEach(item => {
+            const match = item.innerText.toLowerCase().includes(query.toLowerCase());
+            item.style.display = match ? 'flex' : 'none';
+        });
     }
 
     function toggleAllTableFilters(originalKey, dropId, checked) {
-        document.querySelectorAll(`#${dropId}_list input`).forEach(i => i.checked = checked);
+        // Only toggle items currently visible due to search
+        const visibleInputs = document.querySelectorAll(`#${dropId}_list .dropdown-item:not([style*="display: none"]) input`);
+        visibleInputs.forEach(i => i.checked = checked);
         updateTableFilter(originalKey, dropId);
     }
 
     function updateTableFilter(originalKey, dropId) {
         const checked = Array.from(document.querySelectorAll(`#${dropId}_list input:checked`)).map(i => i.value);
-        if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); }
-        else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); }
+        if (checked.length > 0) { 
+            tableFilters[originalKey] = checked; 
+            document.getElementById('icon_' + dropId).classList.add('active'); 
+        } else { 
+            delete tableFilters[originalKey]; 
+            document.getElementById('icon_' + dropId).classList.remove('active'); 
+        }
         renderApprovalsTable(appData);
     }
 
