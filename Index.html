@@ -425,22 +425,25 @@
         return found ? row[found] : null;
     };
 
-    const parseExcelDate = (str) => {
-        if (!str) return null;
-        if (str instanceof Date) return str;
-        let s = str.toString().trim().replace(/,/g, '');
+    const parseExcelDate = (val) => {
+        if (!val) return null;
+        if (val instanceof Date) return val;
         
-        // Handle Google Visualization Date string format: Date(year, month, day)
-        // Note: Google Sheets months are 0-indexed in JSON
-        if (s.includes('Date(')) {
-            let parts = s.match(/\d+/g);
-            if (parts && parts.length >= 3) {
-                return new Date(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-            }
+        let s = val.toString().trim();
+        
+        // Match Google Sheets Internal JSON Date format: Date(2026,1,9,5,50,46)
+        // Note: JS months are 0-11, and Google Sheets JSON export usually matches this.
+        const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+        if (gDateMatch) {
+            const [_, y, m, d, h, min, sec] = gDateMatch;
+            return new Date(y, m, d, h || 0, min || 0, sec || 0);
         }
         
-        const p = s.split('.');
-        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+        // Handle standard dot notation (dd.mm.yyyy)
+        const dotMatch = s.split('.');
+        if (dotMatch.length === 3) {
+            return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0]);
+        }
         
         const iso = new Date(s);
         return isNaN(iso.getTime()) ? null : iso;
@@ -642,16 +645,19 @@
 
     function renderApprovalsTable(sourceData) {
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
+        
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
-                let rawVal = row[col];
-                let rowVal = (col.toLowerCase().includes('date') || col.toLowerCase() === 'last modified') 
-                             ? formatDateStr(parseExcelDate(rawVal)) 
-                             : rawVal;
-                if(!tableFilters[col].includes((rowVal || "-").toString())) return false;
+                let cellVal = row[col];
+                // Check if current column is a date column
+                const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
+                let rowVal = isDateCol ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
+                
+                if(!tableFilters[col].includes(rowVal)) return false;
             }
             return true;
         });
+
         const rawCols = Object.keys(appData[0]);
         let displayCols = [];
         rawCols.forEach(c => {
@@ -659,6 +665,7 @@
             if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c);
         });
         displayCols.unshift('Department', 'Cost Center');
+        
         if(head.children.length === 0) {
             let trH = '<tr>';
             displayCols.forEach(c => {
@@ -671,35 +678,50 @@
             });
             trH += '<th>Action</th></tr>';
             head.innerHTML = trH;
+            
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
                 const oKey = rawCols.find(rk => {
                     const rkc = rk.toLowerCase().trim();
                     return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c);
                 });
-                if (c.toLowerCase().includes('date') || c.toLowerCase() === 'last modified') renderDateHierarchy(oKey, uid, list);
-                else {
+                
+                if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) {
+                    renderDateHierarchy(oKey, uid, list);
+                } else {
                     const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort();
-                    vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); });
+                    vals.forEach(v => { 
+                        list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); 
+                    });
                 }
             });
         }
-        body.innerHTML = ''; let ledgerTotal = 0;
+
+        body.innerHTML = ''; 
+        let ledgerTotal = 0;
+        
         filteredData.forEach(row => {
-            let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+            let trB = '<tr>'; 
+            ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+            
             displayCols.forEach(c => {
-                let v = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
-                v = v === null || v === undefined ? '-' : v;
-                if (c.toLowerCase().includes('amount')) v = cleanNum(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                else if (c.toLowerCase().includes('date') || c.toLowerCase() === 'last modified') {
-                    v = formatDateStr(parseExcelDate(v));
+                let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
+                let formattedValue = cellValue;
+
+                if (c.toLowerCase().includes('amount')) {
+                    formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) {
+                    formattedValue = formatDateStr(parseExcelDate(cellValue));
                 }
-                trB += `<td>${v}</td>`;
+                
+                trB += `<td>${formattedValue || '-'}</td>`;
             });
+            
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
+        
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
     }
 
