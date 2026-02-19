@@ -425,28 +425,23 @@
         return found ? row[found] : null;
     };
 
-    // Updated date parsing to handle Sheet serials, strings, and clean potential commas
     const parseExcelDate = (str) => {
-        if (!str || str === "") return null;
+        if (!str) return null;
         if (str instanceof Date) return str;
-        
         let s = str.toString().trim().replace(/,/g, '');
         
-        // Handle Google Sheets JSON Date strings like "Date(2023,10,15)"
+        // Handle Google Visualization Date string format: Date(year, month, day)
+        // Note: Google Sheets months are 0-indexed in JSON
         if (s.includes('Date(')) {
             let parts = s.match(/\d+/g);
             if (parts && parts.length >= 3) {
-                return new Date(parts[0], parts[1], parts[2]);
+                return new Date(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
             }
         }
         
-        // Handle dd.mm.yyyy format
-        const dotParts = s.split('.');
-        if (dotParts.length === 3) {
-            return new Date(dotParts[2], dotParts[1] - 1, dotParts[0]);
-        }
-
-        // Standard JS date parsing
+        const p = s.split('.');
+        if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
+        
         const iso = new Date(s);
         return isNaN(iso.getTime()) ? null : iso;
     };
@@ -647,17 +642,16 @@
 
     function renderApprovalsTable(sourceData) {
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
-        
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
+                let rawVal = row[col];
                 let rowVal = (col.toLowerCase().includes('date') || col.toLowerCase() === 'last modified') 
-                             ? formatDateStr(parseExcelDate(row[col])) 
-                             : row[col];
+                             ? formatDateStr(parseExcelDate(rawVal)) 
+                             : rawVal;
                 if(!tableFilters[col].includes((rowVal || "-").toString())) return false;
             }
             return true;
         });
-        
         const rawCols = Object.keys(appData[0]);
         let displayCols = [];
         rawCols.forEach(c => {
@@ -665,7 +659,6 @@
             if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c);
         });
         displayCols.unshift('Department', 'Cost Center');
-        
         if(head.children.length === 0) {
             let trH = '<tr>';
             displayCols.forEach(c => {
@@ -678,14 +671,12 @@
             });
             trH += '<th>Action</th></tr>';
             head.innerHTML = trH;
-            
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
                 const oKey = rawCols.find(rk => {
                     const rkc = rk.toLowerCase().trim();
                     return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c);
                 });
-                
                 if (c.toLowerCase().includes('date') || c.toLowerCase() === 'last modified') renderDateHierarchy(oKey, uid, list);
                 else {
                     const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort();
@@ -693,25 +684,14 @@
                 }
             });
         }
-        
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             displayCols.forEach(c => {
-                let oKey = rawCols.find(rk => {
-                    const rkc = rk.toLowerCase().trim();
-                    if (c === 'Department') return rkc === 'department';
-                    if (c === 'Cost Center') return (rkc === 'cost center' || rkc === 'cost centre');
-                    return rk === c;
-                });
-                
-                let v = row[oKey];
-                v = (v === null || v === undefined) ? '-' : v;
-                
-                if (c.toLowerCase().includes('amount')) {
-                    v = cleanNum(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                } else if (c.toLowerCase().includes('date') || c.toLowerCase() === 'last modified') {
-                    // Explicit conversion to real Date objects for these columns
+                let v = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
+                v = v === null || v === undefined ? '-' : v;
+                if (c.toLowerCase().includes('amount')) v = cleanNum(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                else if (c.toLowerCase().includes('date') || c.toLowerCase() === 'last modified') {
                     v = formatDateStr(parseExcelDate(v));
                 }
                 trB += `<td>${v}</td>`;
@@ -754,11 +734,10 @@
 
     function toggleAllTableFilters(dropId, checked) {
         const container = document.getElementById(`${dropId}_list`);
-        const visibleDivs = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none');
-        if (visibleDivs.length > 0) {
-            const inputs = visibleDivs.map(div => div.querySelector('input'));
-            const oKey = inputs[0].getAttribute('data-key');
-            inputs.forEach(i => i.checked = checked);
+        const visibleInputs = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input'));
+        if (visibleInputs.length > 0) {
+            const oKey = visibleInputs[0].getAttribute('data-key');
+            visibleInputs.forEach(i => i.checked = checked);
             updateTableFilter(oKey, dropId);
         }
     }
