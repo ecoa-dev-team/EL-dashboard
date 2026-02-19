@@ -83,6 +83,16 @@
         }
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: auto; width: auto; cursor: pointer; }
+        
+        .date-group-header {
+            background: #0f172a;
+            padding: 4px 10px;
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
 
         input[type="date"] { 
             background: #0f172a !important; 
@@ -192,7 +202,7 @@
             width: 250px;
             z-index: 200;
             display: none;
-            max-height: 450px;
+            max-height: 350px;
             overflow-y: auto;
             border-radius: 5px;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
@@ -219,22 +229,6 @@
             font-size: 12px;
         }
         .col-options-list { padding: 5px 0; }
-        
-        /* Date Filter Hierarchy Styles */
-        .date-group-header {
-            background: #2d3748;
-            padding: 5px 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: bold;
-            font-size: 12px;
-            border-bottom: 1px solid #1a202c;
-        }
-        .date-child-list { padding-left: 25px; display: none; }
-        .date-child-list.expanded { display: block; }
-        .date-toggle-btn { width: 14px; font-size: 10px; text-align: center; }
 
         #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--green); }
     </style>
@@ -424,24 +418,31 @@
     const parseExcelDate = (str) => {
         if (!str) return null;
         if (str instanceof Date) return str;
-        let s = str.toString();
+        let s = str.toString().trim();
         
-        // Handle Date(Y,M,D,...) format from Google Sheet JSON
+        // Handle GSheets Date(y,m,d,h,m,s) format
         if (s.includes('Date(')) {
             let parts = s.match(/\d+/g);
             if (parts && parts.length >= 3) {
-                // Parts are year, month(0-indexed), day
+                // GSheets month is 0-indexed
                 return new Date(parts[0], parts[1], parts[2]);
             }
         }
         
-        // Handle dd.mm.yyyy format
+        // Handle dd.mm.yyyy
         const p = s.split('.');
         if (p.length === 3) return new Date(p[2], p[1]-1, p[0]);
         
         const iso = new Date(s);
         return isNaN(iso.getTime()) ? null : iso;
     };
+
+    const formatDateStr = (d) => {
+        if (!d || isNaN(d.getTime())) return '-';
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    };
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -726,19 +727,14 @@
     function renderApprovalsTable(sourceData) {
         const head = document.getElementById('approvalsHead');
         const body = document.getElementById('approvalsBody');
-        // Added 'last modified' to exclusion list
-        const excludedCols = ['link', 'pdf link', 'url', 'last modified date', 'last modified', 'full file name'];
+        const excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 const selectedVals = tableFilters[col];
                 if(selectedVals && selectedVals.length > 0) {
-                    let cellValue = (row[col] || "-").toString();
-                    if(col.toLowerCase().includes('date')) {
-                        const d = parseExcelDate(row[col]);
-                        cellValue = d ? formatDateToDMY(d) : "-";
-                    }
-                    if(!selectedVals.includes(cellValue)) return false;
+                    const rowVal = (row[col] || "-").toString();
+                    if(!selectedVals.includes(rowVal)) return false;
                 }
             }
             return true;
@@ -781,8 +777,9 @@
                     return rk === c;
                 });
 
-                if (c.toLowerCase().includes('date')) {
-                    renderDateHierarchy(originalKey, uniqueId, list);
+                const isDateCol = c.toLowerCase().includes('date');
+                if (isDateCol) {
+                    renderDateFilter(originalKey, uniqueId, list);
                 } else {
                     const vals = [...new Set(appData.map(r => (r[originalKey] || "-").toString()))].sort();
                     vals.forEach(v => {
@@ -802,15 +799,14 @@
             ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             displayCols.forEach(c => {
                 let cellVal = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
-                cellVal = cellVal || '-';
+                cellVal = cellVal === null || cellVal === undefined ? '-' : cellVal;
                 const lowerC = c.toLowerCase();
+                
                 if (lowerC === "amount (usd)" || lowerC.includes('advanced')) {
                     cellVal = cleanNum(cellVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 } else if (lowerC.includes('date')) {
-                    if (cellVal !== '-') {
-                        const d = parseExcelDate(cellVal);
-                        if (d && !isNaN(d.getTime())) cellVal = formatDateToDMY(d);
-                    }
+                    const d = parseExcelDate(cellVal);
+                    cellVal = formatDateStr(d);
                 }
                 trB += `<td>${cellVal}</td>`;
             });
@@ -821,83 +817,81 @@
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
     }
 
-    function formatDateToDMY(d) {
-        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    }
-
-    function renderDateHierarchy(originalKey, dropId, listElement) {
-        const dates = appData.map(r => parseExcelDate(r[originalKey])).filter(d => d && !isNaN(d.getTime()));
-        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        
-        // Group: { "January 2026": [ "01/01/2026", ... ] }
-        const groups = {};
-        dates.forEach(d => {
-            const groupKey = `${months[d.getMonth()]} ${d.getFullYear()}`;
-            const dateStr = formatDateToDMY(d);
-            if(!groups[groupKey]) groups[groupKey] = new Set();
-            groups[groupKey].add(dateStr);
-        });
-
-        Object.keys(groups).sort((a,b) => {
-            const da = new Date(a), db = new Date(b);
-            return db - da; // Descending
-        }).forEach(groupKey => {
-            const groupWrap = document.createElement('div');
-            const groupHeader = document.createElement('div');
-            groupHeader.className = 'date-group-header';
-            groupHeader.innerHTML = `
-                <span class="date-toggle-btn" onclick="toggleDateGroup(this)">▶</span>
-                <input type="checkbox" onchange="toggleDateGroupCheckboxes('${originalKey}', '${dropId}', this, '${groupKey}')">
-                <span>${groupKey}</span>
-            `;
+    function renderDateFilter(originalKey, dropId, listElement) {
+        const dateMap = {};
+        appData.forEach(r => {
+            const raw = r[originalKey];
+            const d = parseExcelDate(raw);
+            if (!d || isNaN(d.getTime())) return;
             
-            const childList = document.createElement('div');
-            childList.className = 'date-child-list';
-            childList.dataset.group = groupKey;
-
-            Array.from(groups[groupKey]).sort().forEach(dateStr => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-item';
-                item.innerHTML = `<input type="checkbox" value="${dateStr}" data-group="${groupKey}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${dateStr}`;
-                childList.appendChild(item);
-            });
-
-            groupWrap.appendChild(groupHeader);
-            groupWrap.appendChild(childList);
-            listElement.appendChild(groupWrap);
+            const yr = d.getFullYear();
+            const mo = monthNames[d.getMonth()];
+            const dayStr = formatDateStr(d);
+            
+            if (!dateMap[yr]) dateMap[yr] = {};
+            if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set();
+            dateMap[yr][mo].add(dayStr);
         });
-    }
 
-    function toggleDateGroup(btn) {
-        const list = btn.parentElement.nextElementSibling;
-        const expanded = list.classList.toggle('expanded');
-        btn.innerText = expanded ? '▼' : '▶';
-    }
+        Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
+            const yrHeader = document.createElement('div');
+            yrHeader.className = 'date-group-header';
+            yrHeader.innerText = yr;
+            listElement.appendChild(yrHeader);
 
-    function toggleDateGroupCheckboxes(key, dropId, masterCb, groupName) {
-        const children = document.querySelectorAll(`#${dropId}_list input[data-group="${groupName}"]`);
-        children.forEach(c => c.checked = masterCb.checked);
-        updateTableFilter(key, dropId);
+            Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
+                const moHeader = document.createElement('div');
+                moHeader.style = "padding: 4px 15px; font-weight: bold; font-size: 10px; background: #1e293b; color: #cbd5e1;";
+                moHeader.innerText = mo;
+                listElement.appendChild(moHeader);
+
+                Array.from(dateMap[yr][mo]).sort().forEach(dateStr => {
+                    const item = document.createElement('div');
+                    item.className = 'dropdown-item';
+                    item.style.paddingLeft = "25px";
+                    // Store the raw value or the same formatted value used in the search logic
+                    item.innerHTML = `<input type="checkbox" data-isdate="true" value="${dateStr}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${dateStr}`;
+                    listElement.appendChild(item);
+                });
+            });
+        });
     }
 
     function searchColOptions(id, query) {
-        const items = document.getElementById(`${id}_list`).querySelectorAll('.dropdown-item, .date-group-header, .date-child-list');
+        const items = document.getElementById(`${id}_list`).querySelectorAll('.dropdown-item');
+        const headers = document.getElementById(`${id}_list`).querySelectorAll('.date-group-header, div[style*="bold"]');
+        
         items.forEach(item => {
             const match = item.innerText.toLowerCase().includes(query.toLowerCase());
             item.style.display = match ? 'flex' : 'none';
         });
+
+        // Hide date headers if no children match
+        headers.forEach(h => h.style.display = query ? 'none' : 'block');
     }
 
     function toggleAllTableFilters(originalKey, dropId, checked) {
-        const visibleInputs = document.querySelectorAll(`#${dropId}_list input:not([style*="display: none"])`);
+        const visibleInputs = document.querySelectorAll(`#${dropId}_list .dropdown-item:not([style*="display: none"]) input`);
         visibleInputs.forEach(i => i.checked = checked);
         updateTableFilter(originalKey, dropId);
     }
 
     function updateTableFilter(originalKey, dropId) {
-        const checked = Array.from(document.querySelectorAll(`#${dropId}_list .dropdown-item input:checked`)).map(i => i.value);
-        if (checked.length > 0) { 
-            tableFilters[originalKey] = checked; 
+        const list = document.getElementById(`${dropId}_list`);
+        const checkedInputs = Array.from(list.querySelectorAll('input:checked'));
+        
+        if (checkedInputs.length > 0) {
+            // If it's a date column, we match against the formatted string
+            if (originalKey.toLowerCase().includes('date')) {
+                tableFilters[originalKey] = checkedInputs.map(i => i.value);
+                // Custom matching: rewrite the filter check for dates
+                const originalFilter = tableFilters[originalKey];
+                tableFilters[originalKey] = {
+                    includes: (val) => originalFilter.includes(formatDateStr(parseExcelDate(val)))
+                };
+            } else {
+                tableFilters[originalKey] = checkedInputs.map(i => i.value);
+            }
             document.getElementById('icon_' + dropId).classList.add('active'); 
         } else { 
             delete tableFilters[originalKey]; 
