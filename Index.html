@@ -190,9 +190,11 @@
         
         .table-wrap { max-height: 1200px; overflow-y: auto; background: var(--card); position: relative; }
 
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; margin-right: 4px; }
         .pdf-btn:hover { filter: brightness(1.2); }
         .pdf-btn.viewed { background: #ff4d4d !important; color: #fff !important; }
+        .dl-btn { background: var(--green); color: #000; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
+        .dl-btn:hover { filter: brightness(1.2); }
 
         .status-cell { font-weight: 900; text-align: center; font-size: 14px; width: 150px; border-radius: 4px; }
         .trend-pill { padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
@@ -660,7 +662,7 @@
                     <div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div>
                     <div class="col-options-list" id="${uid}_list"></div></div></th>`;
             });
-            trH += '<th>Action</th></tr>';
+            trH += '<th style="width:140px;">Action</th></tr>';
             head.innerHTML = trH;
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
@@ -686,7 +688,12 @@
                 trB += `<td>${v}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
-            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW PDF</a>` : '-'}</td></tr>`;
+            trB += `<td style="white-space:nowrap;">
+                ${pdf ? `
+                    <a href="${pdf}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW</a>
+                    <a href="${pdf}" download="approval_${Date.now()}.pdf" class="dl-btn">DOWNLOAD</a>
+                ` : '-'}
+            </td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
@@ -714,21 +721,16 @@
         const container = document.getElementById(`${id}_list`);
         const items = container.querySelectorAll('.dropdown-item');
         const headers = container.querySelectorAll('.date-group-header, .date-month-header');
-        
-        // Hide/Show items based on query
         items.forEach(item => {
             const txt = item.innerText.toLowerCase();
             item.style.display = txt.includes(query.toLowerCase()) ? 'flex' : 'none';
         });
-
-        // Hide headers if searching (Excel style usually hides hierarchy during simple text search)
         headers.forEach(h => h.style.display = query.trim() === "" ? 'block' : 'none');
     }
 
     function toggleAllTableFilters(dropId, checked) {
         const container = document.getElementById(`${dropId}_list`);
         const visibleInputs = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input'));
-        
         if (visibleInputs.length > 0) {
             const oKey = visibleInputs[0].getAttribute('data-key');
             visibleInputs.forEach(i => i.checked = checked);
