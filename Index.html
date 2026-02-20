@@ -121,7 +121,7 @@
             cursor: pointer;
         }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
         .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; }
@@ -291,9 +291,7 @@
         <button onclick="resetGlobalFilters()" style="height:32px;">RESET DASH FILTERS</button>
     </div>
 
-    <div id="cost-analysis" class="tab-content active"></div>
-
-    <div id="dashboard" class="tab-content">
+    <div id="cost-analysis" class="tab-content active">
         <div class="kpi-grid">
             <div class="tile" style="border-top: 4px solid var(--primary);">
                 <span class="tile-label">Committed Spend</span>
@@ -317,8 +315,17 @@
                 <span class="tile-label">P&L Cost Impact</span>
                 <div class="tile-val" id="valPNL">$0</div>
             </div>
+            <div class="tile" style="border-top: 4px solid var(--red);">
+                <span class="tile-label">P&L Impact per Unit Sale</span>
+                <div class="tile-val" id="valUnitPNL">$0.00</div>
+                <div class="breakdown">
+                    <span>Sales Qty: <b id="subSalesQty">0</b></span>
+                </div>
+            </div>
         </div>
+    </div>
 
+    <div id="dashboard" class="tab-content">
         <div class="recon-health">
             <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
             <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
@@ -408,7 +415,7 @@
     </div>
 
 <script>
-    let appData = [], recData = [], pnlData = [];
+    let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart;
     let tableFilters = {}; 
 
@@ -430,16 +437,12 @@
         if (val instanceof Date) return val;
         
         let s = val.toString().trim();
-        
-        // Match Google Sheets Internal JSON Date format: Date(2026,1,9,5,50,46)
-        // Note: JS months are 0-11, and Google Sheets JSON export usually matches this.
         const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
         if (gDateMatch) {
             const [_, y, m, d, h, min, sec] = gDateMatch;
             return new Date(y, m, d, h || 0, min || 0, sec || 0);
         }
         
-        // Handle standard dot notation (dd.mm.yyyy)
         const dotMatch = s.split('.');
         if (dotMatch.length === 3) {
             return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0]);
@@ -499,10 +502,11 @@
 
     async function fetchData() {
         try {
-            [appData, recData, pnlData] = await Promise.all([
+            [appData, recData, pnlData, salesData] = await Promise.all([
                 fetchSheet("Approvals"),
                 fetchSheet("Reconciliation Report"),
-                fetchSheet("P&L Costs Summary")
+                fetchSheet("P&L Costs Summary"),
+                fetchSheet("Sales")
             ]);
             document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
             initFilters();
@@ -602,7 +606,7 @@
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
             return true;
         });
-        let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0;
+        let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
@@ -616,6 +620,21 @@
             if (rDate && ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end))) return;
             pnl += cleanNum(getCol(r, 'Amount (USD)'));
         });
+
+        // Sales Quantity Aggregation logic
+        salesData.forEach(r => {
+            const sDate = parseExcelDate(getCol(r, 'Date'));
+            const sComp = getCol(r, 'Country'); // Map Country to Entity/Burn Company if necessary
+            const sMo = getCol(r, 'Month');
+            
+            if (filters.start && sDate < filters.start) return;
+            if (filters.end && sDate > filters.end) return;
+            if (filters.mo && !filters.mo.includes(sMo)) return;
+            if (filters.comp && !filters.comp.includes(sComp)) return;
+            
+            totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+        });
+
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -632,9 +651,16 @@
             if (!deptMap[dept]) deptMap[dept] = { sum: 0, count: 0 }; deptMap[dept].sum += eff; deptMap[dept].count++;
         });
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
+        const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
+        
         document.getElementById('valPRF').innerText = fmt(commPRF + commPR + commTRF); document.getElementById('subCommPRF').innerText = fmt(commPRF); document.getElementById('subCommPR').innerText = fmt(commPR); document.getElementById('subCommTRF').innerText = fmt(commTRF);
         document.getElementById('valActual').innerText = fmt(ecf + trf + inv); document.getElementById('subECF').innerText = fmt(ecf); document.getElementById('subTRF').innerText = fmt(trf); document.getElementById('subInv').innerText = fmt(inv);
         document.getElementById('valPNL').innerText = fmt(pnl);
+        
+        // P&L per Unit logic
+        document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
+        document.getElementById('valUnitPNL').innerText = totalSalesQty > 0 ? fmtDec(pnl / totalSalesQty) : "$0.00";
+
         const avgMax = count > 0 ? (mDays/count) : 0, avgPend = count > 0 ? (pDays/count) : 0;
         document.getElementById('vEff').innerText = count > 0 ? (effAgg/count).toFixed(0) + "%" : "0%"; document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
         const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
@@ -649,10 +675,8 @@
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = row[col];
-                // Check if current column is a date column
                 const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
                 let rowVal = isDateCol ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
-                
                 if(!tableFilters[col].includes(rowVal)) return false;
             }
             return true;
