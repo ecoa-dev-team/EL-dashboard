@@ -128,7 +128,6 @@
         .breakdown { display: flex; justify-content: space-around; font-size: 10px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 4px; }
         .breakdown b { color: var(--primary); font-weight: 900; font-size: 12px; }
 
-        /* P&L Card Structure with Uniform Font Levels */
         .pnl-card-container { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
         .pnl-col-main { flex: 1.2; text-align: center; border-right: 1px solid var(--border); }
         .pnl-col-stats { flex: 0.8; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding-left: 15px; text-align: left; }
@@ -143,6 +142,9 @@
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 4px; }
 
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; height: 380px; margin-bottom: 12px; }
+        /* Adjusted for Cost Analysis tab */
+        .cost-trends-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; height: 320px; }
+
         .chart-box { background: var(--card); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
         
         h3.chart-title { margin: 0 0 15px 0; font-size: 12px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
@@ -159,12 +161,12 @@
         
         #usdTotalMix { font-size: 2.2rem; display: block; margin-top: 5px; color: var(--red); font-weight: 900; }
 
-        .health-rank-container { display: flex; flex-direction: column; gap: 14px; margin-top: 15px; }
+        .health-rank-container { display: flex; flex-direction: column; gap: 14px; margin-top: 15px; overflow-y: auto; flex: 1; }
         .rank-item { display: flex; align-items: center; gap: 12px; }
-        .rank-label { width: 110px; font-size: 12px; font-weight: 800; color: #fff; text-align: right; }
-        .rank-bar-bg { flex: 1; background: #0f172a; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #475569; }
-        .rank-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
-        .rank-pct { width: 45px; font-size: 13px; font-weight: 900; color: var(--primary); }
+        .rank-label { width: 110px; font-size: 10px; font-weight: 800; color: #fff; text-align: right; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+        .rank-bar-bg { flex: 1; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; }
+        .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+        .rank-pct { width: 60px; font-size: 11px; font-weight: 900; color: var(--primary); }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 30px; position: relative; clear: both; }
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
@@ -339,6 +341,17 @@
                 </div>
             </div>
         </div>
+
+        <div class="cost-trends-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Monthly Sales vs Cost Per Unit Trend</h3>
+                <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="chart-title">Cost Center Drivers (P&L)</h3>
+                <div id="driverRankList" class="health-rank-container"></div>
+            </div>
+        </div>
     </div>
 
     <div id="dashboard" class="tab-content">
@@ -432,7 +445,7 @@
 
 <script>
     let appData = [], recData = [], pnlData = [], salesData = [];
-    let mixChart, ageChart;
+    let mixChart, ageChart, trendChart;
     let tableFilters = {}; 
 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -624,7 +637,12 @@
             cc: getSelected('fCCList')
         };
 
-        const filteredForCharts = appData.filter(row => {
+        // Aggregates
+        let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
+        let ccDriverMap = {}, monthlyAgg = {}; // { "Jan": { cost: 0, sales: 0 } }
+
+        // Core App Data filtering for KPIs
+        appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
             if (filters.end && d > filters.end) return false;
@@ -634,24 +652,35 @@
             if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return false;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
             return true;
-        });
-
-        let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        filteredForCharts.forEach(r => {
+        }).forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             if (type.includes('PRF')) commPRF += amt; else if (type.includes('PR')) commPR += amt; else if (type.includes('TRF')) commTRF += amt;
             if (type.includes('ECF')) ecf += amt; if (type.includes('TRF')) trf += amt; if (type.includes('INV')) inv += amt;
         });
 
+        // P&L Filtering
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return; if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if (rDate && ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end))) return;
-            pnl += cleanNum(getCol(r, 'Amount (USD)'));
+            
+            const amt = cleanNum(getCol(r, 'Amount (USD)'));
+            pnl += amt;
+
+            // Driver map
+            const cc = rCC || "Unspecified";
+            ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
+
+            // Trend map
+            if (rMo) {
+                if(!monthlyAgg[rMo]) monthlyAgg[rMo] = { cost: 0, sales: 0 };
+                monthlyAgg[rMo].cost += amt;
+            }
         });
 
+        // Sales Filtering
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date'));
             const sComp = getCol(r, 'Country'); 
@@ -660,9 +689,17 @@
             if (filters.end && sDate > filters.end) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             if (filters.comp && !filters.comp.includes(sComp)) return;
-            totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+            
+            const q = cleanNum(getCol(r, 'Sales QTY'));
+            totalSalesQty += q;
+
+            if (sMo) {
+                if(!monthlyAgg[sMo]) monthlyAgg[sMo] = { cost: 0, sales: 0 };
+                monthlyAgg[sMo].sales += q;
+            }
         });
 
+        // Compliance Logic
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -694,7 +731,38 @@
         const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
         if (ovDiff <= 0) { ovLbl.innerText = "Days to Deadline"; ovVal.innerText = Math.abs(ovDiff).toFixed(0) + " Days"; ovVal.style.color = "var(--green)"; } else { ovLbl.innerText = "Avg Overdue"; ovVal.innerText = ovDiff.toFixed(0) + " Days"; ovVal.style.color = "var(--red)"; }
         document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('labelPen').innerText = `Current Pending Avg`; document.getElementById('labelRec').innerText = `Total Compliance Avg`; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
-        updateExecSummary((recCount + penCount) > 0 ? (recWithin30 / (recCount + penCount)) * 100 : 0, avgPend); updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
+        
+        updateExecSummary((recCount + penCount) > 0 ? (recWithin30 / (recCount + penCount)) * 100 : 0, avgPend); 
+        updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
+        updateCostVisuals(monthlyAgg, ccDriverMap);
+    }
+
+    function updateCostVisuals(monthlyMap, ccMap) {
+        // Driver Ranking (Cost Centers)
+        const dl = document.getElementById('driverRankList'); 
+        dl.innerHTML = '';
+        const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
+
+        sortedCC.forEach(([cc, val]) => {
+            const pct = (val / maxVal * 100).toFixed(0);
+            dl.insertAdjacentHTML('beforeend', `
+                <div class="rank-item">
+                    <div class="rank-label" title="${cc}">${cc}</div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%; background:var(--primary)"></div></div>
+                    <div class="rank-pct">$${(val/1000).toFixed(1)}k</div>
+                </div>`);
+        });
+
+        // Trend Chart
+        const sortedMonths = monthNames.filter(m => monthlyMap[m]);
+        const salesDataArr = sortedMonths.map(m => monthlyMap[m].sales);
+        const cpuDataArr = sortedMonths.map(m => monthlyMap[m].sales > 0 ? (monthlyMap[m].cost / monthlyMap[m].sales) : 0);
+
+        trendChart.data.labels = sortedMonths;
+        trendChart.data.datasets[0].data = salesDataArr;
+        trendChart.data.datasets[1].data = cpuDataArr;
+        trendChart.update();
     }
 
     function renderApprovalsTable(sourceData) {
@@ -710,7 +778,9 @@
             return true;
         });
 
-        const rawCols = Object.keys(appData[0]);
+        const rawCols = Object.keys(appData[0] || {});
+        if(rawCols.length === 0) return;
+
         let displayCols = [];
         rawCols.forEach(c => {
             const cl = c.toLowerCase().trim();
@@ -830,6 +900,7 @@
 
     function setExecRow(id, val, target, lowerIsBetter, unit) {
         const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'), isGood = lowerIsBetter ? val <= target : val >= target;
+        if(!vEl || !tEl) return;
         vEl.innerText = val.toFixed(0) + unit; vEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad');
         tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`;
     }
@@ -846,6 +917,7 @@
     }
 
     window.onload = () => {
+        // Compliance Gauge Needle
         const needle = {
             id: 'needle',
             afterDraw(chart) {
@@ -858,9 +930,33 @@
                 ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 16px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore();
             }
         };
+
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } } } } } });
-        fetchData(); setInterval(fetchData, 30000);
+
+        // Trend Chart Definition
+        trendChart = new Chart(document.getElementById('trendChart'), {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' },
+                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', backgroundColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 4 }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { color: '#cbd5e1' }, grid: { display: false } },
+                    y: { position: 'left', ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(71, 85, 105, 0.2)' } },
+                    y1: { position: 'right', ticks: { color: 'var(--green)', callback: v => '$' + v.toFixed(2) }, grid: { display: false } }
+                },
+                plugins: { legend: { labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } }
+            }
+        });
+
+        fetchData(); 
+        setInterval(fetchData, 30000);
     };
 </script>
 </body>
