@@ -121,7 +121,7 @@
             cursor: pointer;
         }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
         .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; }
@@ -314,12 +314,9 @@
             <div class="tile" style="border-top: 4px solid var(--green);">
                 <span class="tile-label">P&L Cost Impact</span>
                 <div class="tile-val" id="valPNL">$0</div>
-            </div>
-            <div class="tile" style="border-top: 4px solid var(--red);">
-                <span class="tile-label">P&L Impact per Unit Sale</span>
-                <div class="tile-val" id="valUnitPNL">$0.00</div>
                 <div class="breakdown">
-                    <span>Sales Qty: <b id="subSalesQty">0</b></span>
+                    <span>Cost per Unit Sale: <b id="valUnitPNL" style="color:var(--green)">$0.00</b></span>
+                    <span>Qty: <b id="subSalesQty">0</b></span>
                 </div>
             </div>
         </div>
@@ -434,22 +431,28 @@
 
     const parseExcelDate = (val) => {
         if (!val) return null;
-        if (val instanceof Date) return val;
+        if (val instanceof Date) return new Date(val.setHours(0,0,0,0));
         
         let s = val.toString().trim();
+        // Handle Google Sheets JSON Date format: Date(year, month, day)
         const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
         if (gDateMatch) {
-            const [_, y, m, d, h, min, sec] = gDateMatch;
-            return new Date(y, m, d, h || 0, min || 0, sec || 0);
+            const [_, y, m, d] = gDateMatch;
+            return new Date(y, m, d, 0, 0, 0, 0);
         }
         
+        // Handle dd.mm.yyyy
         const dotMatch = s.split('.');
         if (dotMatch.length === 3) {
-            return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0]);
+            return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0);
         }
-        
+
+        // Handle ISO or other standard strings
         const iso = new Date(s);
-        return isNaN(iso.getTime()) ? null : iso;
+        if(!isNaN(iso.getTime())) {
+            return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0);
+        }
+        return null;
     };
 
     const formatDateStr = (d) => {
@@ -586,15 +589,24 @@
     }
 
     function updateDashboard() {
+        // Date normalizer to ensure strict boundary check (inclusive)
+        const normalize = (dStr) => {
+           if(!dStr) return null;
+           const d = new Date(dStr);
+           return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+        };
+
         const filters = {
-            start: document.getElementById('dStart').value ? new Date(document.getElementById('dStart').value) : null,
-            end: document.getElementById('dEnd').value ? new Date(document.getElementById('dEnd').value) : null,
+            start: normalize(document.getElementById('dStart').value),
+            end: normalize(document.getElementById('dEnd').value),
             yr: getSelected('fYearList'), 
             mo: getSelected('fMonthList'),
             comp: getSelected('fCompList'), 
             dept: getSelected('fDeptList'),
             cc: getSelected('fCCList')
         };
+
+        // Approval Spend Data
         const filteredForCharts = appData.filter(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (filters.start && d < filters.start) return false;
@@ -606,6 +618,7 @@
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
             return true;
         });
+
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         filteredForCharts.forEach(r => {
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -613,6 +626,8 @@
             if (type.includes('PRF')) commPRF += amt; else if (type.includes('PR')) commPR += amt; else if (type.includes('TRF')) commTRF += amt;
             if (type.includes('ECF')) ecf += amt; if (type.includes('TRF')) trf += amt; if (type.includes('INV')) inv += amt;
         });
+
+        // P&L Data
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return; if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
@@ -621,12 +636,13 @@
             pnl += cleanNum(getCol(r, 'Amount (USD)'));
         });
 
-        // Sales Quantity Aggregation logic
+        // Sales Quantity Data
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date'));
-            const sComp = getCol(r, 'Country'); // Map Country to Entity/Burn Company if necessary
+            const sComp = getCol(r, 'Country'); 
             const sMo = getCol(r, 'Month');
             
+            // Critical: Strict boundary check
             if (filters.start && sDate < filters.start) return;
             if (filters.end && sDate > filters.end) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
@@ -635,6 +651,7 @@
             totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
         });
 
+        // Reconciliation Data
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -650,14 +667,14 @@
             if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
             if (!deptMap[dept]) deptMap[dept] = { sum: 0, count: 0 }; deptMap[dept].sum += eff; deptMap[dept].count++;
         });
+
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         
         document.getElementById('valPRF').innerText = fmt(commPRF + commPR + commTRF); document.getElementById('subCommPRF').innerText = fmt(commPRF); document.getElementById('subCommPR').innerText = fmt(commPR); document.getElementById('subCommTRF').innerText = fmt(commTRF);
         document.getElementById('valActual').innerText = fmt(ecf + trf + inv); document.getElementById('subECF').innerText = fmt(ecf); document.getElementById('subTRF').innerText = fmt(trf); document.getElementById('subInv').innerText = fmt(inv);
-        document.getElementById('valPNL').innerText = fmt(pnl);
         
-        // P&L per Unit logic
+        document.getElementById('valPNL').innerText = fmt(pnl);
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNL').innerText = totalSalesQty > 0 ? fmtDec(pnl / totalSalesQty) : "$0.00";
 
