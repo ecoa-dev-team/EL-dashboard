@@ -77,14 +77,15 @@
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
 
         .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 300px 300px; gap: 15px; margin-bottom: 15px; }
+        .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
         
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
-        /* Toggle Styling */
-        .trend-toggle { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
-        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 4px 10px; border-radius: 4px; font-size: 9px; cursor: pointer; font-weight: 800; }
-        .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+        /* Toggle Styles */
+        .chart-toggle { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
+        .toggle-btn { background: #0f172a; border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; border-radius: 4px; font-size: 9px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .toggle-btn.active { background: var(--primary); color: #000; }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -190,13 +191,8 @@
 
         <div class="cost-viz-grid">
             <div class="chart-box">
-                <h3 class="chart-title">Trends: P&L Cost Impact</h3>
-                <div class="trend-toggle">
-                    <button class="toggle-btn" id="toggle-weekly" onclick="setTrendType('weekly')">Weekly</button>
-                    <button class="toggle-btn active" id="toggle-monthly" onclick="setTrendType('monthly')">Monthly</button>
-                    <button class="toggle-btn" id="toggle-quarterly" onclick="setTrendType('quarterly')">Quarterly</button>
-                </div>
-                <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
+                <h3 class="chart-title">Monthly Trends: Sales Vol vs Cost Per Unit</h3>
+                <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
             <div class="chart-box">
                 <h3 class="chart-title">Top 5 Cost Center Drivers (P&L Impact)</h3>
@@ -204,8 +200,13 @@
             </div>
 
             <div class="chart-box">
-                <h3 class="chart-title">Monthly Trends: Sales Vol vs Cost Per Unit</h3>
-                <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
+                <h3 class="chart-title">P&L Cost Impact Trends</h3>
+                <div class="chart-toggle">
+                    <button class="toggle-btn active" id="btn-wk" onclick="changePnlTrend('weekly')">Weekly</button>
+                    <button class="toggle-btn" id="btn-mo" onclick="changePnlTrend('monthly')">Monthly</button>
+                    <button class="toggle-btn" id="btn-qt" onclick="changePnlTrend('quarterly')">Quarterly</button>
+                </div>
+                <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
             <div class="chart-box">
                 <h3 class="chart-title">P&L Impact by Company</h3>
@@ -221,7 +222,7 @@
             <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
             <div class="mini-tile"><span id="vOverLabel">Avg Overdue</span><div id="vOver" style="color:var(--red)">0 Days</div></div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px;">
+        <div class="viz-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Global Compliance</h3>
                 <div class="gauge-container"><canvas id="mixChart"></canvas></div>
@@ -268,7 +269,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
-    let currentTrendType = 'monthly';
+    let currentTrendView = 'weekly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -286,7 +287,6 @@
     
     const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
-    const getQuarter = (d) => `Q${Math.floor(d.getMonth() / 3) + 1}`;
 
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -296,21 +296,30 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    function setTrendType(type) {
-        currentTrendType = type;
-        document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`toggle-${type}`).classList.add('active');
-        updateDashboard();
-    }
-
     function drillToLedger(costCenter) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         if(ccKey) tableFilters[ccKey] = [costCenter];
+        syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
     }
+
+    function syncFilterIcons() {
+        document.querySelectorAll('.header-filter-icon').forEach(icon => {
+            const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
+            icon.classList.remove('active');
+            for (let filterKey in tableFilters) {
+                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre')))) {
+                    icon.classList.add('active');
+                }
+            }
+        });
+    }
+
+    function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
+    window.onclick = function(event) { if (!event.target.matches('.multiselect-container') && !event.target.closest('.dropdown-content') && !event.target.closest('.col-dropdown-container') && !event.target.matches('.header-filter-icon')) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show')); } }
 
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     function fetchSheet(sheetName) {
@@ -366,7 +375,7 @@
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccDriverMap = {}, monthlyAgg = {}, trendAgg = {}, companyAgg = {};
+        let ccDriverMap = {}, monthlyAgg = {}, companyAgg = {};
 
         appData.forEach(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
@@ -385,17 +394,8 @@
             if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
-            
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
-            ccDriverMap[rCC || "Misc"] = (ccDriverMap[rCC || "Misc"] || 0) + amt;
-            
-            // Trend logic
-            let trendKey;
-            if (currentTrendType === 'weekly') trendKey = rDate ? `W${getWeekNumber(rDate)}` : null;
-            else if (currentTrendType === 'monthly') trendKey = rMo;
-            else if (currentTrendType === 'quarterly') trendKey = rDate ? getQuarter(rDate) : null;
-            
-            if (trendKey) trendAgg[trendKey] = (trendAgg[trendKey] || 0) + amt;
+            if (rCC) ccDriverMap[rCC] = (ccDriverMap[rCC] || 0) + amt;
             if (rMo) { if(!monthlyAgg[rMo]) monthlyAgg[rMo] = { cost: 0, sales: 0 }; monthlyAgg[rMo].cost += amt; }
             if (rComp) { companyAgg[rComp] = (companyAgg[rComp] || 0) + amt; }
         });
@@ -408,7 +408,6 @@
             if (sMo) { if(!monthlyAgg[sMo]) monthlyAgg[sMo] = { cost: 0, sales: 0 }; monthlyAgg[sMo].sales += q; }
         });
 
-        // Compliance data logic...
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -440,44 +439,58 @@
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
-        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty);
+        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, companyAgg, pnl, totalSalesQty);
+        changePnlTrend(currentTrendView);
     }
 
-    function updateCostDashboardVisuals(monthlyMap, ccMap, trendMap, compMap, totalPnl, totalQty) {
+    function changePnlTrend(mode) {
+        currentTrendView = mode;
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(mode === 'weekly' ? 'btn-wk' : (mode === 'monthly' ? 'btn-mo' : 'btn-qt')).classList.add('active');
+
+        const filters = { start: document.getElementById('dStart').value ? new Date(document.getElementById('dStart').value) : null, end: document.getElementById('dEnd').value ? new Date(document.getElementById('dEnd').value) : null, yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
+        let agg = {};
+
+        pnlData.forEach(r => {
+            const d = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
+            if (!d) return;
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
+            
+            let key;
+            if (mode === 'weekly') key = `W${getWeekNumber(d)}`;
+            else if (mode === 'monthly') key = monthNames[d.getMonth()].substring(0,3) + ' ' + d.getFullYear().toString().slice(-2);
+            else { const q = Math.floor(d.getMonth() / 3) + 1; key = `Q${q} ${d.getFullYear()}`; }
+            
+            agg[key] = (agg[key] || 0) + cleanNum(getCol(r, 'Amount (USD)'));
+        });
+
+        const sortedKeys = Object.keys(agg).sort((a, b) => {
+            if (mode === 'weekly') return parseInt(a.slice(1)) - parseInt(b.slice(1));
+            return 0; // Natural object order for others or specific logic
+        });
+
+        weeklyPnlChart.data.labels = sortedKeys;
+        weeklyPnlChart.data.datasets[0].data = sortedKeys.map(k => agg[k]);
+        weeklyPnlChart.update();
+    }
+
+    function updateCostDashboardVisuals(monthlyMap, ccMap, compMap, totalPnl, totalQty) {
         const sortedMonths = monthNames.filter(m => monthlyMap[m]);
         trendChart.data.labels = sortedMonths;
         trendChart.data.datasets[0].data = sortedMonths.map(m => monthlyMap[m].sales);
         trendChart.data.datasets[1].data = sortedMonths.map(m => monthlyMap[m].sales > 0 ? (monthlyMap[m].cost / monthlyMap[m].sales) : 0);
         trendChart.update();
 
-        // Toggled Trend Chart
-        let sortedTrendKeys;
-        if (currentTrendType === 'monthly') sortedTrendKeys = monthNames.filter(m => trendMap[m]);
-        else sortedTrendKeys = Object.keys(trendMap).sort();
-
-        weeklyPnlChart.data.labels = sortedTrendKeys;
-        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
-        weeklyPnlChart.update();
-
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
+        
         sortedCC.forEach(([cc, val]) => {
-            const pct = totalPnl > 0 ? ((val / totalPnl) * 100).toFixed(1) : 0;
-            const barPct = (val / sortedCC[0][1] * 100).toFixed(0);
-            dl.insertAdjacentHTML('beforeend', `
-                <div class="rank-item">
-                    <div class="rank-top-row">
-                        <div class="rank-label" title="${cc}">${cc}</div>
-                        <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
-                    </div>
-                    <div class="rank-bar-bg">
-                        <div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div>
-                    </div>
-                    <div class="rank-footer">
-                        <div>Share: <span class="rank-pct">${pct}%</span></div>
-                        <div>Cost / Sale: <span style="color:var(--orange)">$${totalQty > 0 ? (val/totalQty).toFixed(2) : "0.00"}</span></div>
-                    </div>
-                </div>`);
+            const totalPct = totalPnl > 0 ? ((val / totalPnl) * 100).toFixed(1) : 0;
+            const barPct = (val / maxVal * 100).toFixed(0);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div></div></div>`);
         });
 
         const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
@@ -486,31 +499,36 @@
         companyDistChart.update();
     }
 
-    // Common UI and Table functions...
     function renderApprovalsTable(sourceData) {
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
-        const rawCols = Object.keys(appData[0] || {}); if(rawCols.length === 0) return;
-        let displayCols = []; rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
-        displayCols.unshift('Department', 'Cost Center');
-        
-        if(head.children.length === 0) {
-            let trH = '<tr>'; displayCols.forEach(c => { trH += `<th>${c}</th>`; }); trH += '<th>Action</th></tr>'; head.innerHTML = trH;
-        }
-        
-        body.innerHTML = ''; let ledgerTotal = 0;
-        sourceData.filter(row => {
+        const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 if(!tableFilters[col].includes((cellVal || "-").toString())) return false;
             }
             return true;
-        }).forEach(row => {
+        });
+        const rawCols = Object.keys(appData[0] || {}); if(rawCols.length === 0) return;
+        let displayCols = []; rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
+        displayCols.unshift('Department', 'Cost Center');
+        
+        if(head.children.length === 0) {
+            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_${uid}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
+            trH += '<th>Action</th></tr>'; head.innerHTML = trH;
+            displayCols.forEach(c => {
+                const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
+                const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+                const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort();
+                vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); });
+            });
+        }
+        body.innerHTML = ''; let ledgerTotal = 0;
+        filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             displayCols.forEach(c => {
-                let val = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
-                if (c.toLowerCase().includes('amount')) val = cleanNum(val).toLocaleString('en-US', { minimumFractionDigits: 2 });
-                else if (c.toLowerCase().includes('date')) val = formatDateStr(parseExcelDate(val));
-                trB += `<td>${val || '-'}</td>`;
+                let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
+                if (c.toLowerCase().includes('date')) cellValue = formatDateStr(parseExcelDate(cellValue));
+                trB += `<td>${cellValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
@@ -519,6 +537,9 @@
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
     }
 
+    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { const txt = item.innerText.toLowerCase(); item.style.display = txt.includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
+    function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
+    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); } else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); } renderApprovalsTable(appData); }
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad'); tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
 
@@ -528,16 +549,43 @@
         Object.keys(deptMap).sort((a,b) => (deptMap[b].sum/deptMap[b].count) - (deptMap[a].sum/deptMap[a].count)).slice(0, 5).forEach(dept => { const sc = (deptMap[dept].sum / deptMap[dept].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${dept}">${dept}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); });
     }
 
-    function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
-
     window.onload = () => {
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0]; const total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0]; const x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6'], borderRadius: 4 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
-        fetchData();
+        
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
+            type: 'line', 
+            data: { 
+                labels: [], 
+                datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] 
+            }, 
+            options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } 
+        });
+        
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
+            type: 'bar', 
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    data: [], 
+                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6'],
+                    borderRadius: 4
+                }] 
+            }, 
+            options: { 
+                indexAxis: 'y',
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' } },
+                    y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }
+                }, 
+                plugins: { legend: { display: false } } 
+            } 
+        });
+        
+        fetchData(); setInterval(fetchData, 30000);
     };
 </script>
 </body>
