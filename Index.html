@@ -525,31 +525,31 @@
 
     function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
         const sortKeys = (keys, gran) => {
-             return keys.sort((a,b) => {
+             let sorted = keys.sort((a,b) => {
                  if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
                  if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
                  return a.localeCompare(b);
              });
+             if(gran === 'weekly' && sorted.length > 0) {
+                 const maxW = Math.max(...sorted.map(k => parseInt(k.substring(1))));
+                 const fullSet = [];
+                 for(let i=1; i<=maxW; i++) fullSet.push(`W${i}`);
+                 return fullSet;
+             }
+             return sorted;
         };
 
         const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
-        
-        // P&L Trend Logic - ensure it matches Sales Keys
-        let syncPnlKeys = [...sortedSalesKeys];
-        if (trendGranularity === 'weekly') {
-            const maxW = Math.max(...syncPnlKeys.filter(k => k.startsWith('W')).map(k => parseInt(k.substring(1))), 1);
-            syncPnlKeys = Array.from({length: maxW}, (_, i) => `W${i+1}`);
-        }
-
-        weeklyPnlChart.data.labels = syncPnlKeys;
-        weeklyPnlChart.data.datasets[0].data = syncPnlKeys.map(k => trendMap[k] || 0);
-        weeklyPnlChart.data.datasets[1].data = syncPnlKeys.map(k => trendMap[k] || 0);
-        weeklyPnlChart.update();
-
         trendChart.data.labels = sortedSalesKeys;
         trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
+
+        const sortedTrendKeys = sortKeys(Object.keys(trendMap), trendGranularity);
+        weeklyPnlChart.data.labels = sortedTrendKeys;
+        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.update();
 
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
