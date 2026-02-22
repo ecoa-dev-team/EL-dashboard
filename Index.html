@@ -21,29 +21,30 @@
         }
         
         * { box-sizing: border-box; }
-        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 12px; color: var(--text-main); font-size: 14px; line-height: 1.5; }
+        /* ENLARGED BASE FONT */
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 15px; line-height: 1.5; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-        .header h3 { font-weight: 800; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
+        .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 20px; }
         
         .tab-container { display: flex; gap: 8px; margin-bottom: 15px; }
-        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 24px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 5px 5px 0 0; font-size: 13px; }
+        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 12px 25px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 14px; }
         .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
         .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 160px; flex: 1; position: relative; }
-        .f-group label { font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .f-group label { font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
         
         .multiselect-container { 
-            background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 13px; height: 38px; 
+            background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 13px; height: 40px; 
             cursor: pointer; display: flex; align-items: center; padding: 0 12px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis;
         }
         .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
 
         .dropdown-content {
-            display: none; position: absolute; top: 60px; left: 0; background: #1e293b; border: 1px solid var(--primary); 
+            display: none; position: absolute; top: 60px; left: 0; background: #1e293b; border: 2px solid var(--primary); 
             width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
         }
         .dropdown-content.show { display: block; }
@@ -51,94 +52,89 @@
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: 16px; width: 16px; cursor: pointer; }
 
-        .date-group-header { background: #0f172a; padding: 6px 12px; font-weight: 800; color: var(--primary); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-        .date-month-header { padding: 6px 18px; font-weight: bold; font-size: 11px; background: #1e293b; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .date-group-header { background: #0f172a; padding: 6px 12px; font-weight: 800; color: var(--primary); font-size: 12px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+        .date-month-header { padding: 6px 15px; font-weight: bold; font-size: 12px; background: #1e293b; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 12px; border: 1px solid var(--primary); border-radius: 5px; font-size: 13px; height: 38px; outline: none; font-weight: 800; cursor: pointer; width: 100%; }
+        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 12px; border: 1px solid var(--primary); border-radius: 5px; font-size: 13px; height: 40px; outline: none; font-weight: 800; cursor: pointer; width: 100%; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .tile { background: var(--card); padding: 20px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .tile-label { font-size: 12px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .tile-label { font-size: 13px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .tile-val { font-size: 2.2rem; font-weight: 900; color: #ffffff; margin: 6px 0; }
-        .breakdown { display: flex; justify-content: space-around; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 6px; }
-        .breakdown b { color: var(--primary); font-weight: 900; font-size: 13px; }
+        .breakdown { display: flex; justify-content: space-around; font-size: 12px; border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 8px; }
+        .breakdown b { color: var(--primary); font-weight: 900; font-size: 14px; }
 
         .pnl-card-container { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
         .pnl-col-main { flex: 1.2; text-align: center; border-right: 1px solid var(--border); }
         .pnl-col-stats { flex: 0.8; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding-left: 20px; text-align: left; }
         .pnl-main-val { font-size: 2.2rem; font-weight: 900; color: #ffffff; line-height: 1.2; }
         .pnl-stat-item { display: flex; flex-direction: column; }
-        .pnl-stat-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
+        .pnl-stat-label { font-size: 12px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
         .pnl-stat-val { font-size: 1.4rem; font-weight: 900; color: var(--green); line-height: 1.1; }
 
         .recon-health { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px; }
         .mini-tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .mini-tile span { font-size: 11px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
-        .mini-tile div { font-size: 1.8rem; font-weight: 900; color: #fff; margin-top: 5px; }
+        .mini-tile span { font-size: 12px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+        .mini-tile div { font-size: 1.8rem; font-weight: 900; color: #fff; margin-top: 6px; }
 
-        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 380px 380px; gap: 15px; margin-bottom: 15px; }
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 350px 350px; gap: 15px; margin-bottom: 15px; }
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 420px; margin-bottom: 15px; }
         
         .chart-box { background: var(--card); padding: 20px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
-        h3.chart-title { margin: 0 0 18px 0; font-size: 13px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
+        h3.chart-title { margin: 0 0 18px 0; font-size: 14px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .gauge-container { position: relative; width: 100%; height: 180px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
-        .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .status-mix-footer { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 15px; }
         .status-row { display: flex; justify-content: space-around; margin-bottom: 12px; text-align: center; }
         .status-col { display: flex; flex-direction: column; align-items: center; }
         .status-count { font-size: 2rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; }
-        .status-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
-        .status-label { font-size: 12px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
+        .status-dot { width: 15px; height: 15px; border-radius: 50%; display: inline-block; }
+        .status-label { font-size: 13px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
         .status-usd { font-size: 14px; color: var(--primary); font-weight: 800; margin-top: 4px; }
         .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 14px; margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 12px; text-transform: uppercase; }
-        #usdTotalMix { font-size: 2.5rem; display: block; margin-top: 6px; color: var(--red); font-weight: 900; }
+        #usdTotalMix { font-size: 2.5rem; display: block; margin-top: 8px; color: var(--red); font-weight: 900; }
 
-        /* FIXED SCROLLBAR PADDING & CLICKABLE ELEMENTS */
         .health-rank-container { display: flex; flex-direction: column; gap: 15px; margin-top: 8px; overflow-y: scroll; padding-right: 25px; flex: 1; }
         .rank-item { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
-        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        .rank-impact-val { font-size: 12px; font-weight: 900; color: var(--primary); cursor: pointer; transition: transform 0.2s; }
-        .rank-impact-val:hover { transform: scale(1.1); text-decoration: underline; color: var(--green); }
-        .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
-        .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+        .rank-label { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        /* DRILL DOWN STYLE */
+        .rank-impact-val { font-size: 14px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .rank-impact-val:hover { color: var(--green); }
+        
+        .rank-bar-bg { width: 100%; background: #0f172a; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #475569; position: relative; }
+        .rank-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .rank-pct { color: var(--green); }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 30px; position: relative; clear: both; }
-        .exec-header { background: #334155; padding: 15px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 15px; color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .exec-header { background: #334155; padding: 15px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 16px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
         
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
         .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .ledger-table { font-size: 14px !important; table-layout: auto; }
+        .ledger-table { font-size: 15px !important; table-layout: auto; }
         .ledger-table th { padding: 15px 12px !important; }
         .ledger-table td { padding: 15px 12px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
         .header-filter-icon { margin-left: 10px; cursor: pointer; color: var(--primary); font-size: 12px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.3); }
-        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 12px; font-weight: 900; padding: 15px 18px; border-bottom: 1px solid var(--border); }
-        .exec-table td { padding: 18px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
+        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 13px; font-weight: 900; padding: 15px; border-bottom: 1px solid var(--border); }
+        .exec-table td { padding: 18px 15px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 1200px; overflow-y: auto; background: var(--card); position: relative; }
 
         .pdf-btn { background: var(--primary); color: #000; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 11px; font-weight: 900; display: inline-block; transition: background 0.3s; }
-        .pdf-btn:hover { filter: brightness(1.2); }
-        .pdf-btn.viewed { background: #ff4d4d !important; color: #fff !important; }
-
         .status-cell { font-weight: 900; text-align: center; font-size: 16px; width: 150px; border-radius: 4px; }
-        .trend-pill { padding: 10px 20px; border-radius: 24px; font-size: 12px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 140px; }
-        .bg-bad { background: #7f1d1d; color: #fecaca; border-color: #ef4444; }
-        .bg-good { background: #064e3b; color: #d1fae5; border-color: #10b981; }
+        .trend-pill { padding: 10px 20px; border-radius: 20px; font-size: 12px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 140px; }
+        
+        #status { font-size: 13px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
+        button { background: var(--primary); color: #0f172a; border: none; padding: 0 25px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 40px; font-size: 13px; }
 
-        #status { font-size: 12px; font-weight: 900; color: var(--green); letter-spacing: 1px; }
-        button { background: var(--primary); color: #0f172a; border: none; padding: 0 24px; border-radius: 5px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 13px; }
-
-        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 1px solid var(--primary); width: 280px; z-index: 200; display: none; max-height: 450px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
+        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 280px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
         .col-filter-header { padding: 12px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
-        .col-filter-search { width: 100%; margin-bottom: 10px; height: 32px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 10px; font-size: 13px; }
-        .col-options-list { padding: 6px 0; }
-        #ledger-summary { font-size: 16px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 6px 18px; border-radius: 20px; border: 1px solid var(--green); }
+        .col-filter-search { width: 100%; margin-bottom: 10px; height: 35px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 10px; font-size: 14px; }
+        #ledger-summary { font-size: 16px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 8px 20px; border-radius: 25px; border: 2px solid var(--green); }
     </style>
 </head>
 <body>
@@ -149,9 +145,9 @@
     </div>
 
     <div class="tab-container">
-        <div class="tab-btn active" onclick="switchTab('cost-analysis', this)">Cost Analysis Dashboard</div>
-        <div class="tab-btn" id="compliance-tab-btn" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
-        <div class="tab-btn" id="ledger-tab-btn" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
+        <div class="tab-btn active" id="btn-cost" onclick="switchTab('cost-analysis', this)">Cost Analysis Dashboard</div>
+        <div class="tab-btn" id="btn-dashboard" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
+        <div class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
     </div>
 
     <div id="global-filters" class="filter-section">
@@ -162,22 +158,22 @@
         <div class="f-group"><label>Entity</label><div id="fCompLabel" class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
-        <button onclick="resetGlobalFilters()" style="height:38px;">RESET DASH FILTERS</button>
+        <button onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
     </div>
 
     <div id="cost-analysis" class="tab-content active">
         <div class="kpi-grid">
-            <div class="tile" style="border-top: 4px solid var(--primary);">
+            <div class="tile" style="border-top: 5px solid var(--primary);">
                 <span class="tile-label">Committed Spend</span>
                 <div class="tile-val" id="valPRF">$0</div>
                 <div class="breakdown"><span>PRF <b id="subCommPRF">$0</b></span><span>PR <b id="subCommPR">$0</b></span><span>TRF <b id="subCommTRF">$0</b></span></div>
             </div>
-            <div class="tile" style="border-top: 4px solid var(--orange);">
+            <div class="tile" style="border-top: 5px solid var(--orange);">
                 <span class="tile-label">Total Actual Spend</span>
                 <div class="tile-val" id="valActual">$0</div>
                 <div class="breakdown"><span>ECF <b id="subECF">$0</b></span><span>TRF <b id="subTRF">$0</b></span><span>INV <b id="subInv">$0</b></span></div>
             </div>
-            <div class="tile" style="border-top: 4px solid var(--green);">
+            <div class="tile" style="border-top: 5px solid var(--green);">
                 <span class="tile-label">P&L Cost Impact</span>
                 <div class="pnl-card-container">
                     <div class="pnl-col-main"><div class="pnl-main-val" id="valPNL">$0</div></div>
@@ -230,11 +226,11 @@
                 </div>
             </div>
             <div class="chart-box">
-                <h3 style="text-align: left; border-left: 4px solid var(--orange); padding-left: 10px; font-size: 13px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
-                <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
+                <h3 style="text-align: left; border-left: 5px solid var(--orange); padding-left: 12px; font-size: 14px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
+                <div style="flex:1; position:relative; margin-top: 15px;"><canvas id="ageChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 style="text-align: left; border-left: 4px solid var(--primary); padding-left: 10px; font-size: 13px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
+                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 12px; font-size: 14px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
                 <div id="healthRankList" class="health-rank-container"></div>
             </div>
         </div>
@@ -252,9 +248,9 @@
 
     <div id="approvals-tab" class="tab-content">
         <div class="exec-summary-box" style="margin-top: 12px;">
-            <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 18px;">
+            <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
                 <div style="display:flex; align-items:center; gap:25px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 32px; padding: 0 18px; font-size: 12px;">Reset Ledger Filters</button>
+                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 35px; padding: 0 20px; font-size: 13px;">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
@@ -283,8 +279,67 @@
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        document.getElementById(id).classList.add('active'); 
+        if (btn) btn.classList.add('active');
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
+    }
+
+    /**
+     * DRILL DOWN FUNCTION
+     */
+    function drillToLedger(costCenter) {
+        // 1. Reset existing ledger filters
+        tableFilters = {};
+        
+        // 2. Apply Cost Center Filter
+        tableFilters['Cost Center'] = [costCenter];
+        
+        // 3. Apply Document Type Filter (ECF, Invoice, TRF)
+        // Find the actual key for document type in appData
+        const rawCols = Object.keys(appData[0] || {});
+        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
+        if(typeKey) {
+            // Find all values in the data that match ECF, INV, or TRF
+            const validTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))]
+                .filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
+            tableFilters[typeKey] = validTypes;
+        }
+
+        // 4. Apply Global Date Filters to Ledger
+        const dStart = document.getElementById('dStart').value;
+        const dEnd = document.getElementById('dEnd').value;
+        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
+        
+        if (dateKey && (dStart || dEnd)) {
+            const startObj = dStart ? new Date(dStart) : null;
+            const endObj = dEnd ? new Date(dEnd) : null;
+            
+            // Map dates in range to formatted strings used in ledger filter
+            const datesInRange = [...new Set(appData.map(r => {
+                const d = parseExcelDate(r[dateKey]);
+                if (!d) return null;
+                if (startObj && d < startObj) return null;
+                if (endObj && d > endObj) return null;
+                return formatDateStr(d);
+            }))].filter(v => v !== null);
+            
+            tableFilters[dateKey] = datesInRange;
+        }
+
+        // 5. Update UI for the ledger filters (icons)
+        setTimeout(() => {
+            document.querySelectorAll('.header-filter-icon').forEach(icon => {
+                const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
+                // Rough check if this column has a filter applied
+                if (colName.toLowerCase().includes('cost center') || colName.toLowerCase().includes('type') || colName.toLowerCase().includes('date')) {
+                   icon.classList.add('active');
+                }
+            });
+        }, 100);
+
+        // 6. Switch Tab and Render
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
     }
 
     function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
@@ -337,45 +392,6 @@
     }
 
     function resetLedgerFilters() { tableFilters = {}; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
-
-    function drillToLedger(costCenter) {
-        // Switch to Ledger Tab
-        switchTab('approvals-tab', document.getElementById('ledger-tab-btn'));
-        
-        // Reset all existing filters first
-        tableFilters = {};
-        document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false);
-        document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active'));
-        
-        // Find Cost Center Key and Document Type Key
-        const rawCols = Object.keys(appData[0] || {});
-        const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
-        const docKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-
-        // Apply Filters
-        if (ccKey) tableFilters[ccKey] = [costCenter];
-        if (docKey) tableFilters[docKey] = ['ECF', 'Invoice', 'TRF']; // Actual Spend Logic
-
-        // Update UI Checkboxes to reflect filter
-        if (ccKey) {
-            const ccDropId = `colDrop_Cost_Center`;
-            const ccItems = document.querySelectorAll(`#${ccDropId}_list input`);
-            ccItems.forEach(i => { if(i.value === costCenter) i.checked = true; });
-            const icon = document.getElementById('icon_' + ccDropId);
-            if(icon) icon.classList.add('active');
-        }
-
-        if (docKey) {
-            const docDropId = `colDrop_${docKey.replace(/\W/g, '_')}`;
-            const docItems = document.querySelectorAll(`#${docDropId}_list input`);
-            docItems.forEach(i => { if(['ECF', 'Invoice', 'TRF'].includes(i.value)) i.checked = true; });
-            const icon = document.getElementById('icon_' + docDropId);
-            if(icon) icon.classList.add('active');
-        }
-
-        // Re-render table with new filters
-        renderApprovalsTable(appData);
-    }
 
     function updateDashboard() {
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
@@ -472,6 +488,7 @@
             const barPct = (val / maxVal * 100).toFixed(0);
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             
+            // Added onclick for drill down on the total figure
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
@@ -498,7 +515,8 @@
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
-                let cellVal = row[col]; const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
+                let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
+                const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
                 let rowVal = isDateCol ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
                 if(!tableFilters[col].includes(rowVal)) return false;
             }
@@ -563,7 +581,7 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } } } } });
         
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 4 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 12 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 12 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 12 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 11 } } } } } });
+        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 4 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 13 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 12 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 12 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12 } } } } } });
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'Weekly P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 12 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 12 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'polarArea', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'] }] }, options: { maintainAspectRatio: false, scales: { r: { ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.1)' } } }, plugins: { legend: { position: 'right', labels: { color: '#fff', font: { size: 11 } } } } } });
         
