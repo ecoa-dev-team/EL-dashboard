@@ -268,7 +268,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
-    let trendGranularity = 'weekly';
+    let trendGranularity = 'weekly'; 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -618,18 +618,39 @@
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
         
-        // Replacement: Horizontal Bar Chart for Company Distribution
+        // BETTER ALTERNATIVE: Horizontal Bar Chart with Appropriate Colors
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: 'var(--primary)', borderColor: 'var(--primary)', borderWidth: 1 }] }, 
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    data: [], 
+                    backgroundColor: [
+                        '#00d2ff', // Primary Blue
+                        '#00ff9d', // Green
+                        '#ff9f43', // Orange
+                        '#ff4d4d', // Red
+                        '#9b59b6', // Purple
+                        '#34495e'  // Grey
+                    ],
+                    borderRadius: 5
+                }] 
+            }, 
             options: { 
                 indexAxis: 'y',
                 maintainAspectRatio: false, 
                 scales: { 
-                    x: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.05)' }, 
+                        ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' } 
+                    },
+                    y: {
+                        ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }
+                    }
                 }, 
-                plugins: { legend: { display: false } } 
+                plugins: { 
+                    legend: { display: false }
+                } 
             } 
         });
         
