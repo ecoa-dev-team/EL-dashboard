@@ -526,7 +526,6 @@
     }
 
     function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
-        // Updated Sorting for X-Axis
         const sortKeys = (keys, gran) => {
              return keys.sort((a,b) => {
                  if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
@@ -538,6 +537,7 @@
         const sortedTrendKeys = sortKeys(Object.keys(trendMap), trendGranularity);
         weeklyPnlChart.data.labels = sortedTrendKeys;
         weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
+        weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => trendMap[k]);
         weeklyPnlChart.update();
 
         const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
@@ -546,7 +546,6 @@
         trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
 
-        // Top 5 CC Drivers
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
@@ -571,7 +570,6 @@
                 </div>`);
         });
 
-        // Company P&L Impact Distribution - Updated to Bar for clarity
         const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
@@ -672,20 +670,16 @@
             type: 'bar', 
             data: { 
                 labels: [], 
-                datasets: [{ 
-                    label: 'P&L Impact', 
-                    data: [], 
-                    backgroundColor: 'rgba(0, 210, 255, 0.2)', 
-                    borderColor: '#00d2ff', 
-                    borderWidth: 2,
-                    yAxisID: 'y'
-                }] 
+                datasets: [
+                    { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2 },
+                    { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0.3, order: 1 }
+                ] 
             }, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, title: { display: true, text: 'Total Impact (USD)', color: '#00d2ff' } } 
+                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } } 
                 }, 
                 plugins: { legend: { display: false } } 
             } 
