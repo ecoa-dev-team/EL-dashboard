@@ -98,7 +98,6 @@
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 11px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
         
-        /* DRILL DOWN STYLE */
         .rank-impact-val { font-size: 12px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
         
@@ -287,62 +286,57 @@
     }
 
     /**
-     * DRILL DOWN LOGIC
+     * UPDATED DRILL DOWN LOGIC
+     * Maps Global "Period" to Ledger "Month"
+     * Maps Global "Fiscal Year" to Ledger "Year"
      */
     function drillToLedger(costCenter) {
-        // 1. Reset existing ledger filters
         tableFilters = {};
-        
         const rawCols = Object.keys(appData[0] || {});
+        
+        // 1. Column Keys Mapping
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
+        const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
+        const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
 
-        // 2. Apply Cost Center Filter
+        // 2. Cost Center Selection
         if(ccKey) tableFilters[ccKey] = [costCenter];
 
-        // 3. Apply Document Type Filter (P&L relevant types: ECF, Invoice, TRF)
+        // 3. Document Type (P&L relevant)
         if(typeKey) {
-            const allTypesInSource = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypesInSource.filter(v => 
-                v.toUpperCase().includes('ECF') || 
-                v.toUpperCase().includes('INV') || 
-                v.toUpperCase().includes('TRF')
-            );
+            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
+            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
         }
 
-        // 4. SYNC GLOBAL DATE RANGE TO LEDGER (FIXED)
+        // 4. Global Fiscal Year -> Ledger Year
+        const selYears = getSelected('fYearList');
+        if (selYears && yearKey) tableFilters[yearKey] = selYears;
+
+        // 5. Global Period -> Ledger Month
+        const selMonths = getSelected('fMonthList');
+        if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
+
+        // 6. Global Date Range -> Ledger Date Approved
         const dStartVal = document.getElementById('dStart').value;
         const dEndVal = document.getElementById('dEnd').value;
-        
         if (dateKey && (dStartVal || dEndVal)) {
-            const startObj = dStartVal ? new Date(dStartVal) : null;
-            if(startObj) startObj.setHours(0,0,0,0);
-            const endObj = dEndVal ? new Date(dEndVal) : null;
-            if(endObj) endObj.setHours(23,59,59,999);
-
-            // Find all unique dates in the dataset that fall WITHIN the global selection
-            const matchingDates = [...new Set(appData.map(r => {
+            const startObj = dStartVal ? new Date(dStartVal) : null; if(startObj) startObj.setHours(0,0,0,0);
+            const endObj = dEndVal ? new Date(dEndVal) : null; if(endObj) endObj.setHours(23,59,59,999);
+            const matches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
-                if (!d) return null;
-                if (startObj && d < startObj) return null;
-                if (endObj && d > endObj) return null;
+                if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
                 return formatDateStr(d);
-            }))].filter(v => v !== null);
-
-            // Apply these specific dates as the filter criteria for the ledger
-            tableFilters[dateKey] = matchingDates;
+            }))].filter(v => v);
+            tableFilters[dateKey] = matches;
         }
 
-        // 5. Apply Global Entities/Depts/Years if active
-        syncGlobalSelectionToLedger('fYearList', 'Year');
+        // 7. Entity & Department Sync
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
 
-        // 6. Update Header Icons Visual State
         syncFilterIcons();
-
-        // 7. Render & Switch
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
     }
@@ -361,10 +355,11 @@
             const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
             icon.classList.remove('active');
             for (let filterKey in tableFilters) {
-                // Check for loose match between filter keys and display names
                 if (filterKey === colName || 
                    (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) ||
-                   (colName === 'Date Approved' && filterKey.toLowerCase().includes('date'))
+                   (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) ||
+                   (colName === 'Month' && filterKey.toLowerCase() === 'month') ||
+                   (colName === 'Year' && filterKey.toLowerCase() === 'year')
                 ) {
                     icon.classList.add('active');
                 }
