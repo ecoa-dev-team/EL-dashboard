@@ -82,7 +82,6 @@
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
-        /* Toggle Styling */
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
         .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 2px 8px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; }
         .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
@@ -269,7 +268,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
-    let trendGranularity = 'weekly'; // Default
+    let trendGranularity = 'weekly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -506,7 +505,6 @@
         trendChart.data.datasets[1].data = sortedMonths.map(m => monthlyMap[m].sales > 0 ? (monthlyMap[m].cost / monthlyMap[m].sales) : 0);
         trendChart.update();
 
-        // Updated Trend Logic for Weekly/Monthly/Quarterly
         const sortedTrendKeys = Object.keys(trendMap).sort((a,b) => {
              if(trendGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
              if(trendGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
@@ -620,7 +618,20 @@
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
         
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'polarArea', data: { labels: [], datasets: [{ data: [], backgroundColor: ['rgba(0, 210, 255, 0.6)', 'rgba(0, 255, 157, 0.6)', 'rgba(255, 159, 67, 0.6)', 'rgba(255, 77, 77, 0.6)', 'rgba(155, 89, 182, 0.6)', 'rgba(52, 73, 94, 0.6)'] }] }, options: { maintainAspectRatio: false, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false } } }, plugins: { legend: { position: 'right', labels: { color: '#ffffff', font: { size: 9 }, boxWidth: 12 } } } } });
+        // Replacement: Horizontal Bar Chart for Company Distribution
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
+            type: 'bar', 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: 'var(--primary)', borderColor: 'var(--primary)', borderWidth: 1 }] }, 
+            options: { 
+                indexAxis: 'y',
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+                }, 
+                plugins: { legend: { display: false } } 
+            } 
+        });
         
         fetchData(); setInterval(fetchData, 30000);
     };
