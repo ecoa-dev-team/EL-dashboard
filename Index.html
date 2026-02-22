@@ -82,6 +82,11 @@
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
+        /* Toggle Styling */
+        .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
+        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 2px 8px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; }
+        .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
         .status-row { display: flex; justify-content: space-around; margin-bottom: 8px; text-align: center; }
@@ -195,7 +200,12 @@
             </div>
 
             <div class="chart-box">
-                <h3 class="chart-title">Weekly P&L Cost Impact Trends</h3>
+                <h3 class="chart-title">P&L Cost Impact Trends</h3>
+                <div class="chart-controls">
+                    <button class="toggle-btn active" onclick="setTrendGranularity('weekly', this)">Weekly</button>
+                    <button class="toggle-btn" onclick="setTrendGranularity('monthly', this)">Monthly</button>
+                    <button class="toggle-btn" onclick="setTrendGranularity('quarterly', this)">Quarterly</button>
+                </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
             <div class="chart-box">
@@ -259,6 +269,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
+    let trendGranularity = 'weekly'; // Default
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -276,6 +287,7 @@
     
     const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
+    const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
 
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -285,29 +297,30 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
+    function setTrendGranularity(type, btn) {
+        trendGranularity = type;
+        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDashboard();
+    }
+
     function drillToLedger(costCenter) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
-        
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
         const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-
         if(ccKey) tableFilters[ccKey] = [costCenter];
-
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
         }
-
         const selYears = getSelected('fYearList');
         if (selYears && yearKey) tableFilters[yearKey] = selYears;
-
         const selMonths = getSelected('fMonthList');
         if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
-
         const dStartVal = document.getElementById('dStart').value;
         const dEndVal = document.getElementById('dEnd').value;
         if (dateKey && (dStartVal || dEndVal)) {
@@ -320,10 +333,8 @@
             }))].filter(v => v);
             tableFilters[dateKey] = matches;
         }
-
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
-
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
@@ -412,7 +423,7 @@
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccDriverMap = {}, monthlyAgg = {}, weeklyAgg = {}, companyAgg = {};
+        let ccDriverMap = {}, monthlyAgg = {}, trendAgg = {}, companyAgg = {};
 
         appData.forEach(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
@@ -435,7 +446,14 @@
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             if (rMo) { if(!monthlyAgg[rMo]) monthlyAgg[rMo] = { cost: 0, sales: 0 }; monthlyAgg[rMo].cost += amt; }
-            if (rDate) { const wk = `W${getWeekNumber(rDate)}`; weeklyAgg[wk] = (weeklyAgg[wk] || 0) + amt; }
+            
+            if (rDate) { 
+                let trendKey;
+                if(trendGranularity === 'weekly') trendKey = `W${getWeekNumber(rDate)}`;
+                else if(trendGranularity === 'monthly') trendKey = monthNames[rDate.getMonth()].substring(0,3);
+                else trendKey = getQuarter(rDate);
+                trendAgg[trendKey] = (trendAgg[trendKey] || 0) + amt; 
+            }
             if (rComp) { companyAgg[rComp] = (companyAgg[rComp] || 0) + amt; }
         });
 
@@ -478,19 +496,24 @@
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
-        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, weeklyAgg, companyAgg, pnl, totalSalesQty);
+        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty);
     }
 
-    function updateCostDashboardVisuals(monthlyMap, ccMap, weeklyMap, compMap, totalPnl, totalQty) {
+    function updateCostDashboardVisuals(monthlyMap, ccMap, trendMap, compMap, totalPnl, totalQty) {
         const sortedMonths = monthNames.filter(m => monthlyMap[m]);
         trendChart.data.labels = sortedMonths;
         trendChart.data.datasets[0].data = sortedMonths.map(m => monthlyMap[m].sales);
         trendChart.data.datasets[1].data = sortedMonths.map(m => monthlyMap[m].sales > 0 ? (monthlyMap[m].cost / monthlyMap[m].sales) : 0);
         trendChart.update();
 
-        const sortedWeeks = Object.keys(weeklyMap).sort((a,b) => parseInt(a.substring(1)) - parseInt(b.substring(1)));
-        weeklyPnlChart.data.labels = sortedWeeks;
-        weeklyPnlChart.data.datasets[0].data = sortedWeeks.map(w => weeklyMap[w]);
+        // Updated Trend Logic for Weekly/Monthly/Quarterly
+        const sortedTrendKeys = Object.keys(trendMap).sort((a,b) => {
+             if(trendGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+             if(trendGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
+             return a.localeCompare(b);
+        });
+        weeklyPnlChart.data.labels = sortedTrendKeys;
+        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
         weeklyPnlChart.update();
 
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
@@ -595,31 +618,9 @@
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'Weekly P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
         
-        // Replaced Polar chart with Horizontal Bar Chart
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [{ 
-                    data: [], 
-                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'],
-                    borderRadius: 4
-                }] 
-            }, 
-            options: { 
-                indexAxis: 'y',
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#cbd5e1', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
-                }, 
-                plugins: { 
-                    legend: { display: false } 
-                } 
-            } 
-        });
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'polarArea', data: { labels: [], datasets: [{ data: [], backgroundColor: ['rgba(0, 210, 255, 0.6)', 'rgba(0, 255, 157, 0.6)', 'rgba(255, 159, 67, 0.6)', 'rgba(255, 77, 77, 0.6)', 'rgba(155, 89, 182, 0.6)', 'rgba(52, 73, 94, 0.6)'] }] }, options: { maintainAspectRatio: false, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false } } }, plugins: { legend: { position: 'right', labels: { color: '#ffffff', font: { size: 9 }, boxWidth: 12 } } } } });
         
         fetchData(); setInterval(fetchData, 30000);
     };
