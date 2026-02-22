@@ -285,40 +285,29 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    /**
-     * UPDATED DRILL DOWN LOGIC
-     * Maps Global "Period" to Ledger "Month"
-     * Maps Global "Fiscal Year" to Ledger "Year"
-     */
     function drillToLedger(costCenter) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         
-        // 1. Column Keys Mapping
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
         const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
 
-        // 2. Cost Center Selection
         if(ccKey) tableFilters[ccKey] = [costCenter];
 
-        // 3. Document Type (P&L relevant)
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
         }
 
-        // 4. Global Fiscal Year -> Ledger Year
         const selYears = getSelected('fYearList');
         if (selYears && yearKey) tableFilters[yearKey] = selYears;
 
-        // 5. Global Period -> Ledger Month
         const selMonths = getSelected('fMonthList');
         if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
 
-        // 6. Global Date Range -> Ledger Date Approved
         const dStartVal = document.getElementById('dStart').value;
         const dEndVal = document.getElementById('dEnd').value;
         if (dateKey && (dStartVal || dEndVal)) {
@@ -332,7 +321,6 @@
             tableFilters[dateKey] = matches;
         }
 
-        // 7. Entity & Department Sync
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
 
@@ -608,7 +596,30 @@
         
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'Weekly P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'polarArea', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'] }] }, options: { maintainAspectRatio: false, scales: { r: { ticks: { display: false }, grid: { color: 'rgba(255,255,255,0.1)' } } }, plugins: { legend: { position: 'right', labels: { color: '#fff', font: { size: 9 } } } } } });
+        
+        // Replaced Polar chart with Horizontal Bar Chart
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
+            type: 'bar', 
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    data: [], 
+                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'],
+                    borderRadius: 4
+                }] 
+            }, 
+            options: { 
+                indexAxis: 'y',
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#cbd5e1', font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+                }, 
+                plugins: { 
+                    legend: { display: false } 
+                } 
+            } 
+        });
         
         fetchData(); setInterval(fetchData, 30000);
     };
