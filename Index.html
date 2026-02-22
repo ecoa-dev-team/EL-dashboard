@@ -76,7 +76,7 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
 
-        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 320px 320px; gap: 15px; margin-bottom: 15px; }
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 300px 300px; gap: 15px; margin-bottom: 15px; }
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
         
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
@@ -192,8 +192,9 @@
             <div class="chart-box">
                 <h3 class="chart-title">Trends: Sales Vol vs Cost Per Unit</h3>
                 <div class="chart-controls">
-                    <button class="toggle-btn active" onclick="setTrendGranularity('monthly', this, 'trendChart')">Monthly</button>
-                    <button class="toggle-btn" onclick="setTrendGranularity('quarterly', this, 'trendChart')">Quarterly</button>
+                    <button class="toggle-btn active" id="btn-sales-weekly" onclick="setSalesGranularity('weekly', this)">Weekly</button>
+                    <button class="toggle-btn" id="btn-sales-monthly" onclick="setSalesGranularity('monthly', this)">Monthly</button>
+                    <button class="toggle-btn" id="btn-sales-quarterly" onclick="setSalesGranularity('quarterly', this)">Quarterly</button>
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
@@ -205,9 +206,9 @@
             <div class="chart-box">
                 <h3 class="chart-title">P&L Cost Impact Trends</h3>
                 <div class="chart-controls">
-                    <button class="toggle-btn active" onclick="setTrendGranularity('weekly', this, 'weeklyPnlChart')">Weekly</button>
-                    <button class="toggle-btn" onclick="setTrendGranularity('monthly', this, 'weeklyPnlChart')">Monthly</button>
-                    <button class="toggle-btn" onclick="setTrendGranularity('quarterly', this, 'weeklyPnlChart')">Quarterly</button>
+                    <button class="toggle-btn active" id="btn-pnl-weekly" onclick="setTrendGranularity('weekly', this)">Weekly</button>
+                    <button class="toggle-btn" id="btn-pnl-monthly" onclick="setTrendGranularity('monthly', this)">Monthly</button>
+                    <button class="toggle-btn" id="btn-pnl-quarterly" onclick="setTrendGranularity('quarterly', this)">Quarterly</button>
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
@@ -272,8 +273,8 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
-    let trendGranularity = 'monthly'; 
-    let weeklyPnlGranularity = 'weekly';
+    let trendGranularity = 'weekly'; 
+    let salesGranularity = 'monthly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -301,12 +302,15 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    function setTrendGranularity(type, btn, targetChartId) {
-        if (targetChartId === 'trendChart') {
-            trendGranularity = type;
-        } else {
-            weeklyPnlGranularity = type;
-        }
+    function setTrendGranularity(type, btn) {
+        trendGranularity = type;
+        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDashboard();
+    }
+
+    function setSalesGranularity(type, btn) {
+        salesGranularity = type;
         btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         updateDashboard();
@@ -431,7 +435,7 @@
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccDriverMap = {}, trendSalesAgg = {}, trendCostAgg = {}, weeklyPnlAgg = {}, companyAgg = {};
+        let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {};
 
         appData.forEach(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
@@ -455,18 +459,19 @@
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             
             if (rDate) {
-                // Shared Drill: Sales vs Unit Cost
-                let key;
-                if(trendGranularity === 'monthly') key = monthNames[rDate.getMonth()];
-                else key = getQuarter(rDate) + " " + rDate.getFullYear();
-                trendCostAgg[key] = (trendCostAgg[key] || 0) + amt;
+                // Sales vs Cost Trend Agg
+                let sKey;
+                if(salesGranularity === 'weekly') sKey = `W${getWeekNumber(rDate)}`;
+                else if(salesGranularity === 'monthly') sKey = monthNames[rDate.getMonth()].substring(0,3);
+                else sKey = getQuarter(rDate);
+                costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
 
-                // Dedicated Pnl Trend Drill
-                let pnlKey;
-                if(weeklyPnlGranularity === 'weekly') pnlKey = `W${getWeekNumber(rDate)} ${rDate.getFullYear()}`;
-                else if(weeklyPnlGranularity === 'monthly') pnlKey = monthNames[rDate.getMonth()];
-                else pnlKey = getQuarter(rDate) + " " + rDate.getFullYear();
-                weeklyPnlAgg[pnlKey] = (weeklyPnlAgg[pnlKey] || 0) + amt;
+                // P&L Trend Agg
+                let tKey;
+                if(trendGranularity === 'weekly') tKey = `W${getWeekNumber(rDate)}`;
+                else if(trendGranularity === 'monthly') tKey = monthNames[rDate.getMonth()].substring(0,3);
+                else tKey = getQuarter(rDate);
+                trendAgg[tKey] = (trendAgg[tKey] || 0) + amt; 
             }
             if (rComp) { companyAgg[rComp] = (companyAgg[rComp] || 0) + amt; }
         });
@@ -476,11 +481,12 @@
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return; if (filters.comp && !filters.comp.includes(sComp)) return;
             const q = cleanNum(getCol(r, 'Sales QTY')); totalSalesQty += q;
-            if (sDate) {
-                let key;
-                if(trendGranularity === 'monthly') key = monthNames[sDate.getMonth()];
-                else key = getQuarter(sDate) + " " + sDate.getFullYear();
-                trendSalesAgg[key] = (trendSalesAgg[key] || 0) + q;
+            if (sDate) { 
+                let sKey;
+                if(salesGranularity === 'weekly') sKey = `W${getWeekNumber(sDate)}`;
+                else if(salesGranularity === 'monthly') sKey = monthNames[sDate.getMonth()].substring(0,3);
+                else sKey = getQuarter(sDate);
+                salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
             }
         });
 
@@ -515,23 +521,28 @@
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
-        updateCostDashboardVisuals(trendSalesAgg, trendCostAgg, ccDriverMap, weeklyPnlAgg, companyAgg, pnl, totalSalesQty);
+        updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty);
     }
 
-    function updateCostDashboardVisuals(trendSalesMap, trendCostMap, ccMap, weeklyMap, compMap, totalPnl, totalQty) {
-        const sortedLabels = Object.keys({...trendSalesMap, ...trendCostMap}).sort((a,b) => {
-            if (trendGranularity === 'monthly') return monthNames.indexOf(a) - monthNames.indexOf(b);
-            return a.localeCompare(b);
+    function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
+        const sortedTrendKeys = Object.keys(trendMap).sort((a,b) => {
+             if(trendGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+             if(trendGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
+             return a.localeCompare(b);
         });
-        trendChart.data.labels = sortedLabels;
-        trendChart.data.datasets[0].data = sortedLabels.map(l => trendSalesMap[l] || 0);
-        trendChart.data.datasets[1].data = sortedLabels.map(l => (trendSalesMap[l] > 0) ? (trendCostMap[l] / trendSalesMap[l]) : 0);
-        trendChart.update();
-
-        const sortedWeekly = Object.keys(weeklyMap).sort();
-        weeklyPnlChart.data.labels = sortedWeekly;
-        weeklyPnlChart.data.datasets[0].data = sortedWeekly.map(l => weeklyMap[l]);
+        weeklyPnlChart.data.labels = sortedTrendKeys;
+        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
         weeklyPnlChart.update();
+
+        const sortedSalesKeys = Object.keys(salesTrend).length > 0 ? Object.keys(salesTrend).sort((a,b) => {
+             if(salesGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+             if(salesGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
+             return a.localeCompare(b);
+        }) : sortedTrendKeys;
+        trendChart.data.labels = sortedSalesKeys;
+        trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
+        trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
+        trendChart.update();
 
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
@@ -638,14 +649,31 @@
         
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'], borderRadius: 4 }] }, 
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    data: [], 
+                    backgroundColor: [
+                        '#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'
+                    ],
+                    borderRadius: 5
+                }] 
+            }, 
             options: { 
-                indexAxis: 'y', maintainAspectRatio: false, 
+                indexAxis: 'y',
+                maintainAspectRatio: false, 
                 scales: { 
-                    x: { ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } } }
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.05)' }, 
+                        ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' } 
+                    },
+                    y: {
+                        ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }
+                    }
                 }, 
-                plugins: { legend: { display: false } } 
+                plugins: { 
+                    legend: { display: false }
+                } 
             } 
         });
         
