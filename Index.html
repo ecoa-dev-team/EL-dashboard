@@ -460,14 +460,12 @@
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             
             if (rDate) {
-                // Sales vs Cost Trend Agg
                 let sKey;
                 if(salesGranularity === 'weekly') sKey = `W${getWeekNumber(rDate)}`;
                 else if(salesGranularity === 'monthly') sKey = monthNames[rDate.getMonth()].substring(0,3);
                 else sKey = getQuarter(rDate);
                 costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
 
-                // P&L Trend Agg
                 let tKey;
                 if(trendGranularity === 'weekly') tKey = `W${getWeekNumber(rDate)}`;
                 else if(trendGranularity === 'monthly') tKey = monthNames[rDate.getMonth()].substring(0,3);
@@ -534,13 +532,20 @@
              });
         };
 
-        const sortedTrendKeys = sortKeys(Object.keys(trendMap), trendGranularity);
-        weeklyPnlChart.data.labels = sortedTrendKeys;
-        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
-        weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => trendMap[k]);
+        const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
+        
+        // P&L Trend Logic - ensure it matches Sales Keys
+        let syncPnlKeys = [...sortedSalesKeys];
+        if (trendGranularity === 'weekly') {
+            const maxW = Math.max(...syncPnlKeys.filter(k => k.startsWith('W')).map(k => parseInt(k.substring(1))), 1);
+            syncPnlKeys = Array.from({length: maxW}, (_, i) => `W${i+1}`);
+        }
+
+        weeklyPnlChart.data.labels = syncPnlKeys;
+        weeklyPnlChart.data.datasets[0].data = syncPnlKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.datasets[1].data = syncPnlKeys.map(k => trendMap[k] || 0);
         weeklyPnlChart.update();
 
-        const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
         trendChart.data.labels = sortedSalesKeys;
         trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
