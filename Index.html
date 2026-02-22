@@ -562,7 +562,7 @@
                         <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg">
-                        <div class="rank-bar-fill" style="width:${sc}%; background:var(--primary)"></div>
+                        <div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div>
                     </div>
                     <div class="rank-footer">
                         <div>Share: <span class="rank-pct">${totalPct}%</span></div>
@@ -648,7 +648,6 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         
-        // SALES VS COST CHART - Neon High Visibility
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { 
@@ -669,44 +668,26 @@
             } 
         });
 
-        // P&L COST IMPACT TRENDS - UPDATED VISIBILITY (Neon Emerald/Cyan Theme)
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
-            type: 'line', 
+            type: 'bar', 
             data: { 
                 labels: [], 
                 datasets: [{ 
                     label: 'P&L Impact', 
                     data: [], 
-                    borderColor: '#00ff9d', 
-                    backgroundColor: 'rgba(0, 255, 157, 0.15)', 
-                    fill: true, 
-                    tension: 0.35, 
-                    pointRadius: 5,
-                    pointBackgroundColor: '#00d2ff',
-                    pointBorderColor: '#ffffff',
-                    pointHoverRadius: 8,
-                    borderWidth: 3
+                    backgroundColor: 'rgba(0, 210, 255, 0.2)', 
+                    borderColor: '#00d2ff', 
+                    borderWidth: 2,
+                    yAxisID: 'y'
                 }] 
             }, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { 
-                        ticks: { color: '#cbd5e1', font: { weight: 'bold' }, callback: v => '$'+(v/1000)+'k' },
-                        grid: { color: 'rgba(255,255,255,0.05)' } 
-                    } 
+                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, title: { display: true, text: 'Total Impact (USD)', color: '#00d2ff' } } 
                 }, 
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#00d2ff',
-                        bodyColor: '#ffffff',
-                        borderColor: '#00ff9d',
-                        borderWidth: 1
-                    }
-                } 
+                plugins: { legend: { display: false } } 
             } 
         });
         
