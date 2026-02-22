@@ -77,7 +77,8 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 4px; }
 
-        .cost-viz-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 320px 320px; gap: 12px; margin-bottom: 12px; }
+        /* MODIFIED GRID RATIO FOR BETTER VISIBILITY */
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 320px 320px; gap: 12px; margin-bottom: 12px; }
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; height: 380px; margin-bottom: 12px; }
         
         .chart-box { background: var(--card); padding: 16px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
@@ -423,7 +424,6 @@
         weeklyPnlChart.data.datasets[0].data = sortedWeeks.map(w => weeklyMap[w]);
         weeklyPnlChart.update();
 
-        // Drivers (Cost Centers) - SHOW TOP 5
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
