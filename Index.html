@@ -83,8 +83,9 @@
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
-        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 2px 8px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; }
-        .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 4px 10px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; }
+        .toggle-btn:hover { border-color: var(--primary); }
+        .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); box-shadow: 0 0 8px var(--primary); }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -274,7 +275,7 @@
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let trendGranularity = 'weekly'; 
-    let salesGranularity = 'monthly';
+    let salesGranularity = 'weekly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -525,25 +526,27 @@
     }
 
     function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
-        const sortedTrendKeys = Object.keys(trendMap).sort((a,b) => {
-             if(trendGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
-             if(trendGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
-             return a.localeCompare(b);
-        });
+        // Updated Sorting for X-Axis
+        const sortKeys = (keys, gran) => {
+             return keys.sort((a,b) => {
+                 if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+                 if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
+                 return a.localeCompare(b);
+             });
+        };
+
+        const sortedTrendKeys = sortKeys(Object.keys(trendMap), trendGranularity);
         weeklyPnlChart.data.labels = sortedTrendKeys;
         weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k]);
         weeklyPnlChart.update();
 
-        const sortedSalesKeys = Object.keys(salesTrend).length > 0 ? Object.keys(salesTrend).sort((a,b) => {
-             if(salesGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
-             if(salesGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
-             return a.localeCompare(b);
-        }) : sortedTrendKeys;
+        const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
         trendChart.data.labels = sortedSalesKeys;
         trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
 
+        // Top 5 CC Drivers
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
@@ -568,6 +571,7 @@
                 </div>`);
         });
 
+        // Company P&L Impact Distribution - Updated to Bar for clarity
         const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
@@ -644,40 +648,52 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: 'var(--primary)', borderWidth: 1, yAxisID: 'y' }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: 'var(--green)', tension: 0.4, yAxisID: 'y1', pointRadius: 3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y1: { position: 'right', ticks: { color: 'var(--green)', font: { size: 10 }, callback: v => '$'+v.toFixed(2) }, grid: { display: false } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 10 } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#cbd5e1', font: { size: 10 } } }, y: { ticks: { color: '#cbd5e1', font: { size: 10 }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
+        // SALES VS COST CHART - High Contrast Colors
+        trendChart = new Chart(document.getElementById('trendChart'), { 
+            type: 'bar', 
+            data: { 
+                labels: [], 
+                datasets: [
+                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2 },
+                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0.3, yAxisID: 'y1', order: 1 }
+                ] 
+            }, 
+            options: { 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
+                    y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, 
+                    y1: { position: 'right', ticks: { color: '#00ff9d', callback: v => '$'+v.toFixed(1) }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
+                },
+                plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } }
+            } 
+        });
+
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'line', data: { labels: [], datasets: [{ label: 'P&L Impact', data: [], borderColor: 'var(--orange)', backgroundColor: 'rgba(255, 159, 67, 0.2)', fill: true, tension: 0.3, pointRadius: 4 }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } });
         
+        // COMPANY P&L IMPACT - Modern Horizontal Bar Chart
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
             data: { 
                 labels: [], 
                 datasets: [{ 
                     data: [], 
-                    backgroundColor: [
-                        '#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#9b59b6', '#34495e'
-                    ],
-                    borderRadius: 5
+                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#a29bfe', '#fd79a8'],
+                    borderRadius: 4
                 }] 
             }, 
             options: { 
                 indexAxis: 'y',
                 maintainAspectRatio: false, 
                 scales: { 
-                    x: { 
-                        grid: { color: 'rgba(255,255,255,0.05)' }, 
-                        ticks: { color: '#cbd5e1', font: { size: 9 }, callback: v => '$' + (v/1000) + 'k' } 
-                    },
-                    y: {
-                        ticks: { color: '#ffffff', font: { size: 10, weight: 'bold' } }
-                    }
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#cbd5e1', callback: v => '$' + (v/1000) + 'k' } },
+                    y: { ticks: { color: '#ffffff', font: { weight: 'bold' } } }
                 }, 
-                plugins: { 
-                    legend: { display: false }
-                } 
+                plugins: { legend: { display: false } } 
             } 
         });
         
-        fetchData(); setInterval(fetchData, 30000);
+        fetchData(); setInterval(fetchData, 60000);
     };
 </script>
 </body>
