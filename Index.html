@@ -525,30 +525,27 @@
 
     function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
         const sortKeys = (keys, gran) => {
-             let sorted = keys.sort((a,b) => {
+             return keys.sort((a,b) => {
                  if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
                  if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
                  return a.localeCompare(b);
              });
-             if(gran === 'weekly' && sorted.length > 0) {
-                 const maxW = Math.max(...sorted.map(k => parseInt(k.substring(1))));
-                 const fullSet = [];
-                 for(let i=1; i<=maxW; i++) fullSet.push(`W${i}`);
-                 return fullSet;
-             }
-             return sorted;
         };
 
         const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
+        
+        // Match weekly count and sequence from Sales chart to P&L chart
+        const synchronizedPnlKeys = sortedSalesKeys; 
+
         trendChart.data.labels = sortedSalesKeys;
         trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
 
-        const sortedTrendKeys = sortKeys(Object.keys(trendMap), trendGranularity);
-        weeklyPnlChart.data.labels = sortedTrendKeys;
-        weeklyPnlChart.data.datasets[0].data = sortedTrendKeys.map(k => trendMap[k] || 0);
-        weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.labels = synchronizedPnlKeys;
+        // Map values including zero placeholders
+        weeklyPnlChart.data.datasets[0].data = synchronizedPnlKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.datasets[1].data = synchronizedPnlKeys.map(k => trendMap[k] || 0);
         weeklyPnlChart.update();
 
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
@@ -656,7 +653,7 @@
             data: { 
                 labels: [], 
                 datasets: [
-                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2 },
+                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8 },
                     { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0.3, yAxisID: 'y1', order: 1 }
                 ] 
             }, 
@@ -676,7 +673,7 @@
             data: { 
                 labels: [], 
                 datasets: [
-                    { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2 },
+                    { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8 },
                     { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0.3, order: 1 }
                 ] 
             }, 
