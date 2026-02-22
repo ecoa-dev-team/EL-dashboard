@@ -77,7 +77,6 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 4px; }
 
-        /* Cost Dashboard Expanded Grid */
         .cost-viz-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 320px 320px; gap: 12px; margin-bottom: 12px; }
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; height: 380px; margin-bottom: 12px; }
         
@@ -95,12 +94,15 @@
         .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 12px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 10px; text-transform: uppercase; }
         #usdTotalMix { font-size: 2.2rem; display: block; margin-top: 5px; color: var(--red); font-weight: 900; }
 
-        .health-rank-container { display: flex; flex-direction: column; gap: 10px; margin-top: 5px; overflow-y: auto; flex: 1; }
-        .rank-item { display: flex; align-items: center; gap: 12px; }
-        .rank-label { width: 100px; font-size: 9px; font-weight: 800; color: #fff; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .rank-bar-bg { flex: 1; background: #0f172a; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #475569; }
+        .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; flex: 1; }
+        .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+        .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .rank-label { font-size: 10px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        .rank-impact-val { font-size: 10px; font-weight: 900; color: var(--primary); }
+        .rank-bar-bg { width: 100%; background: #0f172a; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #475569; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-        .rank-pct { width: 55px; font-size: 10px; font-weight: 900; color: var(--primary); }
+        .rank-footer { display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+        .rank-pct { color: var(--green); }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 30px; position: relative; clear: both; }
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
@@ -192,7 +194,7 @@
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 class="chart-title">Cost Center Drivers (P&L Impact)</h3>
+                <h3 class="chart-title">Top 5 Cost Center Drivers (P&L Impact)</h3>
                 <div id="driverRankList" class="health-rank-container"></div>
             </div>
 
@@ -342,7 +344,6 @@
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccDriverMap = {}, monthlyAgg = {}, weeklyAgg = {}, companyAgg = {};
 
-        // Aggregate Core Spend
         appData.forEach(row => {
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
@@ -354,7 +355,6 @@
             if (type.includes('ECF')) ecf += amt; if (type.includes('TRF')) trf += amt; if (type.includes('INV')) inv += amt;
         });
 
-        // Aggregate P&L Data
         pnlData.forEach(r => {
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
@@ -369,7 +369,6 @@
             if (rComp) { companyAgg[rComp] = (companyAgg[rComp] || 0) + amt; }
         });
 
-        // Aggregate Sales
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sComp = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -378,7 +377,6 @@
             if (sMo) { if(!monthlyAgg[sMo]) monthlyAgg[sMo] = { cost: 0, sales: 0 }; monthlyAgg[sMo].sales += q; }
         });
 
-        // Compliance Visuals
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
@@ -410,33 +408,47 @@
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
-        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, weeklyAgg, companyAgg);
+        updateCostDashboardVisuals(monthlyAgg, ccDriverMap, weeklyAgg, companyAgg, pnl, totalSalesQty);
     }
 
-    function updateCostDashboardVisuals(monthlyMap, ccMap, weeklyMap, compMap) {
-        // Monthly Trends
+    function updateCostDashboardVisuals(monthlyMap, ccMap, weeklyMap, compMap, totalPnl, totalQty) {
         const sortedMonths = monthNames.filter(m => monthlyMap[m]);
         trendChart.data.labels = sortedMonths;
         trendChart.data.datasets[0].data = sortedMonths.map(m => monthlyMap[m].sales);
         trendChart.data.datasets[1].data = sortedMonths.map(m => monthlyMap[m].sales > 0 ? (monthlyMap[m].cost / monthlyMap[m].sales) : 0);
         trendChart.update();
 
-        // Weekly Trends
         const sortedWeeks = Object.keys(weeklyMap).sort((a,b) => parseInt(a.substring(1)) - parseInt(b.substring(1)));
         weeklyPnlChart.data.labels = sortedWeeks;
         weeklyPnlChart.data.datasets[0].data = sortedWeeks.map(w => weeklyMap[w]);
         weeklyPnlChart.update();
 
-        // Drivers (Cost Centers)
+        // Drivers (Cost Centers) - SHOW TOP 5
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
-        const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+        const sortedCC = Object.entries(ccMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
+        
         sortedCC.forEach(([cc, val]) => {
-            const pct = (val / maxVal * 100).toFixed(0);
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${pct}%; background:var(--primary)"></div></div><div class="rank-pct">$${(val/1000).toFixed(1)}k</div></div>`);
+            const totalPct = totalPnl > 0 ? ((val / totalPnl) * 100).toFixed(1) : 0;
+            const barPct = (val / maxVal * 100).toFixed(0);
+            const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
+            
+            dl.insertAdjacentHTML('beforeend', `
+                <div class="rank-item">
+                    <div class="rank-top-row">
+                        <div class="rank-label" title="${cc}">${cc}</div>
+                        <div class="rank-impact-val">$${(val/1000).toFixed(1)}k</div>
+                    </div>
+                    <div class="rank-bar-bg">
+                        <div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div>
+                    </div>
+                    <div class="rank-footer">
+                        <div>Share: <span class="rank-pct">${totalPct}%</span></div>
+                        <div>Cost / Sale: <span style="color:var(--orange)">$${costSharePU}</span></div>
+                    </div>
+                </div>`);
         });
 
-        // Company Distribution
         const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
@@ -504,7 +516,7 @@
     function updateVisuals(rec, pen, ageData, deptMap) {
         mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
         const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
-        Object.keys(deptMap).sort((a,b) => (deptMap[b].sum/deptMap[b].count) - (deptMap[a].sum/deptMap[a].count)).slice(0, 5).forEach(dept => { const sc = (deptMap[dept].sum / deptMap[dept].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-label" title="${dept}">${dept}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div><div class="rank-pct">${sc}%</div></div>`); });
+        Object.keys(deptMap).sort((a,b) => (deptMap[b].sum/deptMap[b].count) - (deptMap[a].sum/deptMap[a].count)).slice(0, 5).forEach(dept => { const sc = (deptMap[dept].sum / deptMap[dept].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${dept}">${dept}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); });
     }
 
     window.onload = () => {
