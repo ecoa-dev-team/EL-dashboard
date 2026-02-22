@@ -21,7 +21,6 @@
         }
         
         * { box-sizing: border-box; }
-        /* ENLARGED BASE FONT */
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 15px; line-height: 1.5; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
@@ -98,7 +97,6 @@
         .rank-item { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 13px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        /* DRILL DOWN STYLE */
         .rank-impact-val { font-size: 14px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
         
@@ -270,10 +268,11 @@
         const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
         if (gDateMatch) { const [_, y, m, d] = gDateMatch; return new Date(y, m, d, 0, 0, 0, 0); }
         const dotMatch = s.split('.'); if (dotMatch.length === 3) { return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0); }
+        const slashMatch = s.split('/'); if (slashMatch.length === 3) { return new Date(slashMatch[2], slashMatch[1] - 1, slashMatch[0], 0, 0, 0, 0); }
         const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); }
         return null;
     };
-    const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+    const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; };
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
 
     function switchTab(id, btn) {
@@ -285,61 +284,78 @@
     }
 
     /**
-     * DRILL DOWN FUNCTION
+     * DRILL DOWN FUNCTION - FIXING DATE RANGE SYNC
      */
     function drillToLedger(costCenter) {
-        // 1. Reset existing ledger filters
+        // 1. Reset existing ledger filters completely
         tableFilters = {};
-        
-        // 2. Apply Cost Center Filter
-        tableFilters['Cost Center'] = [costCenter];
-        
-        // 3. Apply Document Type Filter (ECF, Invoice, TRF)
-        // Find the actual key for document type in appData
+        document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active'));
+        document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false);
+
         const rawCols = Object.keys(appData[0] || {});
-        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-        if(typeKey) {
-            // Find all values in the data that match ECF, INV, or TRF
-            const validTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))]
-                .filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
-            tableFilters[typeKey] = validTypes;
-        }
-
-        // 4. Apply Global Date Filters to Ledger
-        const dStart = document.getElementById('dStart').value;
-        const dEnd = document.getElementById('dEnd').value;
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
-        if (dateKey && (dStart || dEnd)) {
-            const startObj = dStart ? new Date(dStart) : null;
-            const endObj = dEnd ? new Date(dEnd) : null;
-            
-            // Map dates in range to formatted strings used in ledger filter
-            const datesInRange = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d) return null;
-                if (startObj && d < startObj) return null;
-                if (endObj && d > endObj) return null;
-                return formatDateStr(d);
-            }))].filter(v => v !== null);
-            
-            tableFilters[dateKey] = datesInRange;
+        // 2. Identify Keys
+        const ccKey = rawCols.find(k => { const kl = k.toLowerCase(); return kl === 'cost center' || kl === 'cost centre' || kl === 'department'; });
+        const typeKey = rawCols.find(k => { const kl = k.toLowerCase(); return kl === 'document type' || kl === 'type'; });
+        const dateKey = rawCols.find(k => { const kl = k.toLowerCase(); return kl === 'date approved' || kl === 'approval date'; });
+
+        // 3. Apply Cost Center Filter
+        if(ccKey) {
+            tableFilters[ccKey] = [costCenter];
+            syncCheckboxes(`colDrop_${ccKey.replace(/\W/g, '_')}`, [costCenter]);
         }
 
-        // 5. Update UI for the ledger filters (icons)
-        setTimeout(() => {
-            document.querySelectorAll('.header-filter-icon').forEach(icon => {
-                const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
-                // Rough check if this column has a filter applied
-                if (colName.toLowerCase().includes('cost center') || colName.toLowerCase().includes('type') || colName.toLowerCase().includes('date')) {
-                   icon.classList.add('active');
+        // 4. Apply Document Type Filter (ECF, Invoice, TRF)
+        if(typeKey) {
+            const validTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))]
+                .filter(v => {
+                    const uv = v.toUpperCase();
+                    return uv.includes('ECF') || uv.includes('INV') || uv.includes('INVOICE') || uv.includes('TRF');
+                });
+            tableFilters[typeKey] = validTypes;
+            syncCheckboxes(`colDrop_${typeKey.replace(/\W/g, '_')}`, validTypes);
+        }
+
+        // 5. Apply Dashboard Date Range to Ledger Filter
+        const dStartVal = document.getElementById('dStart').value;
+        const dEndVal = document.getElementById('dEnd').value;
+        
+        if (dateKey && (dStartVal || dEndVal)) {
+            const startLimit = dStartVal ? new Date(dStartVal) : new Date(1900, 0, 1);
+            const endLimit = dEndVal ? new Date(dEndVal) : new Date(2100, 0, 1);
+            
+            // Collect EVERY unique date string in appData that falls within the dashboard range
+            const matchedDates = [...new Set(appData.map(r => {
+                const d = parseExcelDate(r[dateKey]);
+                if (d && d >= startLimit && d <= endLimit) {
+                    return formatDateStr(d);
                 }
-            });
-        }, 100);
+                return null;
+            }))].filter(v => v !== null);
+
+            if (matchedDates.length > 0) {
+                tableFilters[dateKey] = matchedDates;
+                syncCheckboxes(`colDrop_${dateKey.replace(/\W/g, '_')}`, matchedDates);
+            }
+        }
 
         // 6. Switch Tab and Render
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
+    }
+
+    // Helper to check the correct boxes in the ledger UI after drill-down
+    function syncCheckboxes(dropId, values) {
+        const container = document.getElementById(dropId + '_list');
+        if (!container) return;
+        const icon = document.getElementById('icon_' + dropId);
+        if (icon) icon.classList.add('active');
+        
+        container.querySelectorAll('input').forEach(input => {
+            if (values.includes(input.value)) {
+                input.checked = true;
+            }
+        });
     }
 
     function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
@@ -488,7 +504,6 @@
             const barPct = (val / maxVal * 100).toFixed(0);
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             
-            // Added onclick for drill down on the total figure
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
@@ -559,7 +574,7 @@
             listElement.insertAdjacentHTML('beforeend', `<div class="date-group-header">${yr}</div>`);
             Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
                 listElement.insertAdjacentHTML('beforeend', `<div class="date-month-header">${mo}</div>`);
-                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 25px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
+                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 25px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('.')[0]}</div>`); });
             });
         });
     }
