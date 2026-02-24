@@ -550,7 +550,9 @@
     function updateCostDashboardVisuals(salesTrend, costTrend, ccDriver, trendMap, compMap, totalPnl, totalQty) {
         const sortKeys = (keys, gran) => {
              return keys.sort((a,b) => {
-                 if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+                 if (gran === 'weekly') {
+    return new Date(a.split(' - ')[0]) - new Date(b.split(' - ')[0]);
+}
                  if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
                  return a.localeCompare(b);
              });
