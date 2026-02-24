@@ -461,8 +461,7 @@
             
             if (rDate) {
                 let sKey;
-     if(currentGranularity === 'weekly') 
-    sKey = `W${getWeekNumber(rDate)}`;
+                if(currentGranularity === 'weekly') sKey = `W${getWeekNumber(rDate)}`;
                 else if(currentGranularity === 'monthly') sKey = monthNames[rDate.getMonth()].substring(0,3);
                 else sKey = getQuarter(rDate);
                 costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
@@ -478,8 +477,7 @@
             const q = cleanNum(getCol(r, 'Sales QTY')); totalSalesQty += q;
             if (sDate) { 
                 let sKey;
-          if(currentGranularity === 'weekly') 
-    sKey = `W${getWeekNumber(rDate)}`;
+                if(currentGranularity === 'weekly') sKey = `W${getWeekNumber(sDate)}`;
                 else if(currentGranularity === 'monthly') sKey = monthNames[sDate.getMonth()].substring(0,3);
                 else sKey = getQuarter(sDate);
                 salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
@@ -667,7 +665,7 @@
                     { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
                     { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0, yAxisID: 'y1', order: 1, 
                         // UPDATED: Visible Data Labels on dots
-                        datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + v.toFixed(2) } 
+                        datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: 'bold', size: 10 }, formatter: (v) => '$' + v.toFixed(2) } 
                     }
                 ] 
             }, 
@@ -676,11 +674,7 @@
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
                     y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, 
-                    y1: { position: 'right', ticks: { 
-  color: '#00ff9d',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+v.toFixed(1)
-}, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
+                    y1: { position: 'right', ticks: { color: '#00ff9d', callback: v => '$'+v.toFixed(1) }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
                 },
                 plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } }
             } 
@@ -694,7 +688,7 @@
                     { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
                     { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0, order: 1,
                         // UPDATED: Visible Data Labels on dots
-                        datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
+                        datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 9 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
                     }
                 ] 
             }, 
@@ -702,11 +696,7 @@
                 maintainAspectRatio: false, 
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { 
-  color: '#cbd5e1',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+(v/1000)+'k'
-}, grid: { color: 'rgba(255,255,255,0.05)' } } 
+                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } } 
                 }, 
                 plugins: { legend: { display: false } } 
             } 
