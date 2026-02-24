@@ -461,7 +461,19 @@
             
             if (rDate) {
                 let sKey;
-                if(currentGranularity === 'weekly') sKey = `W${getWeekNumber(rDate)}`;
+                if (currentGranularity === 'weekly') {
+    const start = new Date(rDate);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const format = (d) => 
+        d.getFullYear() + '/' +
+        String(d.getMonth()+1).padStart(2,'0') + '/' +
+        String(d.getDate()).padStart(2,'0');
+
+    sKey = format(start) + ' - ' + format(end);
+}
                 else if(currentGranularity === 'monthly') sKey = monthNames[rDate.getMonth()].substring(0,3);
                 else sKey = getQuarter(rDate);
                 costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
@@ -477,7 +489,19 @@
             const q = cleanNum(getCol(r, 'Sales QTY')); totalSalesQty += q;
             if (sDate) { 
                 let sKey;
-                if(currentGranularity === 'weekly') sKey = `W${getWeekNumber(sDate)}`;
+               if (currentGranularity === 'weekly') {
+    const start = new Date(rDate);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const format = (d) => 
+        d.getFullYear() + '/' +
+        String(d.getMonth()+1).padStart(2,'0') + '/' +
+        String(d.getDate()).padStart(2,'0');
+
+    sKey = format(start) + ' - ' + format(end);
+}
                 else if(currentGranularity === 'monthly') sKey = monthNames[sDate.getMonth()].substring(0,3);
                 else sKey = getQuarter(sDate);
                 salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
