@@ -692,7 +692,7 @@
                     { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
                     { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0, order: 1,
                         // UPDATED: Visible Data Labels on dots
-                        datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 9 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
+                        datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
                     }
                 ] 
             }, 
@@ -700,7 +700,11 @@
                 maintainAspectRatio: false, 
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } } 
+                    y: { ticks: { 
+  color: '#cbd5e1',
+  font: { size: 13, weight: 'bold' },
+  callback: v => '$'+(v/1000)+'k'
+}, grid: { color: 'rgba(255,255,255,0.05)' } } 
                 }, 
                 plugins: { legend: { display: false } } 
             } 
