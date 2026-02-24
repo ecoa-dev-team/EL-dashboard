@@ -663,7 +663,7 @@
                 labels: [], 
                 datasets: [
                     { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
-                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0.3, yAxisID: 'y1', order: 1, 
+                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0, yAxisID: 'y1', order: 1, 
                         // UPDATED: Visible Data Labels on dots
                         datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: 'bold', size: 10 }, formatter: (v) => '$' + v.toFixed(2) } 
                     }
@@ -686,7 +686,7 @@
                 labels: [], 
                 datasets: [
                     { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
-                    { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0.3, order: 1,
+                    { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0, order: 1,
                         // UPDATED: Visible Data Labels on dots
                         datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 9 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
                     }
