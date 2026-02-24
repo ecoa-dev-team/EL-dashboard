@@ -534,7 +534,31 @@
 
         const sortedKeys = sortKeys(Object.keys(salesTrend), currentGranularity);
 
-        trendChart.data.labels = sortedKeys;
+        let displayLabels = sortedKeys;
+
+if (currentGranularity === 'weekly') {
+    displayLabels = sortedKeys.map(w => {
+        const weekNum = parseInt(w.substring(1));
+        const year = new Date().getFullYear();
+
+        const firstDay = new Date(year, 0, 1);
+        const start = new Date(firstDay);
+        start.setDate(firstDay.getDate() + (weekNum - 1) * 7);
+
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+
+        const format = (d) =>
+            d.getFullYear() + '/' +
+            String(d.getMonth()+1).padStart(2,'0') + '/' +
+            String(d.getDate()).padStart(2,'0');
+
+        return format(start) + ' - ' + format(end);
+    });
+}
+
+trendChart.data.labels = displayLabels;
+weeklyPnlChart.data.labels = displayLabels;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
