@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ELECTRIC SMT Command Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         :root { 
@@ -131,6 +132,9 @@
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
+        .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green); border: 1px solid var(--green); }
+        .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red); border: 1px solid var(--red); }
+
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
         button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; }
 
@@ -193,9 +197,9 @@
             <div class="chart-box">
                 <h3 class="chart-title">Trends: Sales Vol vs Cost Per Unit</h3>
                 <div class="chart-controls">
-                    <button class="toggle-btn active" id="btn-sales-weekly" onclick="setSalesGranularity('weekly', this)">Weekly</button>
-                    <button class="toggle-btn" id="btn-sales-monthly" onclick="setSalesGranularity('monthly', this)">Monthly</button>
-                    <button class="toggle-btn" id="btn-sales-quarterly" onclick="setSalesGranularity('quarterly', this)">Quarterly</button>
+                    <button class="toggle-btn active" id="btn-weekly" onclick="setGlobalGranularity('weekly')">Weekly</button>
+                    <button class="toggle-btn" id="btn-monthly" onclick="setGlobalGranularity('monthly')">Monthly</button>
+                    <button class="toggle-btn" id="btn-quarterly" onclick="setGlobalGranularity('quarterly')">Quarterly</button>
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
@@ -206,11 +210,6 @@
 
             <div class="chart-box">
                 <h3 class="chart-title">P&L Cost Impact Trends</h3>
-                <div class="chart-controls">
-                    <button class="toggle-btn active" id="btn-pnl-weekly" onclick="setTrendGranularity('weekly', this)">Weekly</button>
-                    <button class="toggle-btn" id="btn-pnl-monthly" onclick="setTrendGranularity('monthly', this)">Monthly</button>
-                    <button class="toggle-btn" id="btn-pnl-quarterly" onclick="setTrendGranularity('quarterly', this)">Quarterly</button>
-                </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
             <div class="chart-box">
@@ -244,7 +243,7 @@
                 <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
+                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking (Cost Centers)</h3>
                 <div id="healthRankList" class="health-rank-container"></div>
             </div>
         </div>
@@ -274,8 +273,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
-    let trendGranularity = 'weekly'; 
-    let salesGranularity = 'weekly';
+    let currentGranularity = 'weekly'; 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -303,17 +301,12 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    function setTrendGranularity(type, btn) {
-        trendGranularity = type;
-        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        updateDashboard();
-    }
-
-    function setSalesGranularity(type, btn) {
-        salesGranularity = type;
-        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    function setGlobalGranularity(type) {
+        currentGranularity = type;
+        document.querySelectorAll('.toggle-btn').forEach(b => {
+            b.classList.remove('active');
+            if(b.id === 'btn-' + type) b.classList.add('active');
+        });
         updateDashboard();
     }
 
@@ -321,45 +314,10 @@
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
-        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-        const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
-        const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         if(ccKey) tableFilters[ccKey] = [costCenter];
-        if(typeKey) {
-            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
-        }
-        const selYears = getSelected('fYearList');
-        if (selYears && yearKey) tableFilters[yearKey] = selYears;
-        const selMonths = getSelected('fMonthList');
-        if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
-        const dStartVal = document.getElementById('dStart').value;
-        const dEndVal = document.getElementById('dEnd').value;
-        if (dateKey && (dStartVal || dEndVal)) {
-            const startObj = dStartVal ? new Date(dStartVal) : null; if(startObj) startObj.setHours(0,0,0,0);
-            const endObj = dEndVal ? new Date(dEndVal) : null; if(endObj) endObj.setHours(23,59,59,999);
-            const matches = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
-                return formatDateStr(d);
-            }))].filter(v => v);
-            tableFilters[dateKey] = matches;
-        }
-        syncGlobalSelectionToLedger('fCompList', 'Burn Company');
-        syncGlobalSelectionToLedger('fDeptList', 'Department');
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
-    }
-
-    function syncGlobalSelectionToLedger(dropdownId, ledgerKeyPart) {
-        const selected = getSelected(dropdownId);
-        if (selected) {
-            const rawCols = Object.keys(appData[0] || {});
-            const actualKey = rawCols.find(k => k.toLowerCase().includes(ledgerKeyPart.toLowerCase()));
-            if(actualKey) tableFilters[actualKey] = selected;
-        }
     }
 
     function syncFilterIcons() {
@@ -367,12 +325,7 @@
             const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
             icon.classList.remove('active');
             for (let filterKey in tableFilters) {
-                if (filterKey === colName || 
-                   (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) ||
-                   (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) ||
-                   (colName === 'Month' && filterKey.toLowerCase() === 'month') ||
-                   (colName === 'Year' && filterKey.toLowerCase() === 'year')
-                ) {
+                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center')))) {
                     icon.classList.add('active');
                 }
             }
@@ -460,17 +413,12 @@
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             
             if (rDate) {
-                let sKey;
-                if(salesGranularity === 'weekly') sKey = `W${getWeekNumber(rDate)}`;
-                else if(salesGranularity === 'monthly') sKey = monthNames[rDate.getMonth()].substring(0,3);
-                else sKey = getQuarter(rDate);
-                costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
-
-                let tKey;
-                if(trendGranularity === 'weekly') tKey = `W${getWeekNumber(rDate)}`;
-                else if(trendGranularity === 'monthly') tKey = monthNames[rDate.getMonth()].substring(0,3);
-                else tKey = getQuarter(rDate);
-                trendAgg[tKey] = (trendAgg[tKey] || 0) + amt; 
+                let key;
+                if(currentGranularity === 'weekly') key = `W${getWeekNumber(rDate)}`;
+                else if(currentGranularity === 'monthly') key = monthNames[rDate.getMonth()].substring(0,3);
+                else key = getQuarter(rDate);
+                costTrendAgg[key] = (costTrendAgg[key] || 0) + amt;
+                trendAgg[key] = (trendAgg[key] || 0) + amt; 
             }
             if (rComp) { companyAgg[rComp] = (companyAgg[rComp] || 0) + amt; }
         });
@@ -481,15 +429,15 @@
             if (filters.mo && !filters.mo.includes(sMo)) return; if (filters.comp && !filters.comp.includes(sComp)) return;
             const q = cleanNum(getCol(r, 'Sales QTY')); totalSalesQty += q;
             if (sDate) { 
-                let sKey;
-                if(salesGranularity === 'weekly') sKey = `W${getWeekNumber(sDate)}`;
-                else if(salesGranularity === 'monthly') sKey = monthNames[sDate.getMonth()].substring(0,3);
-                else sKey = getQuarter(sDate);
-                salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
+                let key;
+                if(currentGranularity === 'weekly') key = `W${getWeekNumber(sDate)}`;
+                else if(currentGranularity === 'monthly') key = monthNames[sDate.getMonth()].substring(0,3);
+                else key = getQuarter(sDate);
+                salesTrendAgg[key] = (salesTrendAgg[key] || 0) + q; 
             }
         });
 
-        let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, deptMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
+        let recSum = 0, penSum = 0, recCount = 0, penCount = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
@@ -497,11 +445,11 @@
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return false; if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return false;
             if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return false; return true;
         }).forEach(r => {
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), dept = getCol(r, 'Department')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
+            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
             if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
-            effAgg += eff; mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
+            mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
             if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
-            if (!deptMap[dept]) deptMap[dept] = { sum: 0, count: 0 }; deptMap[dept].sum += eff; deptMap[dept].count++;
+            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += eff; ccMap[cc].count++;
         });
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
@@ -513,39 +461,38 @@
         document.getElementById('valUnitPNL').innerText = totalSalesQty > 0 ? fmtDec(pnl/totalSalesQty) : "$0.00";
 
         const avgMax = count > 0 ? (mDays/count) : 0, avgPend = count > 0 ? (pDays/count) : 0;
-        document.getElementById('vEff').innerText = count > 0 ? (effAgg/count).toFixed(0) + "%" : "0%"; document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
+        const compliancePct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount) * 100) : 0;
+        
+        document.getElementById('vEff').innerText = compliancePct.toFixed(0) + "%"; 
+        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
         const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
         if (ovDiff <= 0) { ovLbl.innerText = "Days to Deadline"; ovVal.innerText = Math.abs(ovDiff).toFixed(0) + " Days"; ovVal.style.color = "var(--green)"; } else { ovLbl.innerText = "Avg Overdue"; ovVal.innerText = ovDiff.toFixed(0) + " Days"; ovVal.style.color = "var(--red)"; }
         document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
-        updateVisuals(recCount, penCount, [a1, a2, a3], deptMap);
+        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap, compliancePct);
         updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty);
     }
 
     function updateCostDashboardVisuals(salesTrend, costTrend, ccMap, trendMap, compMap, totalPnl, totalQty) {
-        const sortKeys = (keys, gran) => {
+        const sortKeys = (keys) => {
              return keys.sort((a,b) => {
-                 if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
-                 if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
+                 if(currentGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1));
+                 if(currentGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b));
                  return a.localeCompare(b);
              });
         };
 
-        const sortedSalesKeys = sortKeys(Object.keys(salesTrend), salesGranularity);
-        
-        // Match weekly count and sequence from Sales chart to P&L chart
-        const synchronizedPnlKeys = sortedSalesKeys; 
+        const sortedKeys = sortKeys([...new Set([...Object.keys(salesTrend), ...Object.keys(trendMap)])]);
 
-        trendChart.data.labels = sortedSalesKeys;
-        trendChart.data.datasets[0].data = sortedSalesKeys.map(k => salesTrend[k] || 0);
-        trendChart.data.datasets[1].data = sortedSalesKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
+        trendChart.data.labels = sortedKeys;
+        trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
+        trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
 
-        weeklyPnlChart.data.labels = synchronizedPnlKeys;
-        // Map values including zero placeholders
-        weeklyPnlChart.data.datasets[0].data = synchronizedPnlKeys.map(k => trendMap[k] || 0);
-        weeklyPnlChart.data.datasets[1].data = synchronizedPnlKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.labels = sortedKeys;
+        weeklyPnlChart.data.datasets[0].data = sortedKeys.map(k => trendMap[k] || 0);
+        weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => trendMap[k] || 0);
         weeklyPnlChart.update();
 
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
@@ -555,20 +502,14 @@
         sortedCC.forEach(([cc, val]) => {
             const totalPct = totalPnl > 0 ? ((val / totalPnl) * 100).toFixed(1) : 0;
             const barPct = (val / maxVal * 100).toFixed(0);
-            const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
                         <div class="rank-label" title="${cc}">${cc}</div>
                         <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
-                    <div class="rank-bar-bg">
-                        <div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div>
-                    </div>
-                    <div class="rank-footer">
-                        <div>Share: <span class="rank-pct">${totalPct}%</span></div>
-                        <div>Cost / Sale: <span style="color:var(--orange)">$${costSharePU}</span></div>
-                    </div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div></div>
+                    <div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div></div>
                 </div>`);
         });
 
@@ -578,12 +519,33 @@
         companyDistChart.update();
     }
 
+    function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
+    
+    function setExecRow(id, val, target, lowerIsBetter, unit) { 
+        const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); 
+        if(!vEl || !tEl) return; 
+        const isGood = lowerIsBetter ? val <= target : val >= target; 
+        vEl.innerText = val.toFixed(0) + unit; 
+        vEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad'); 
+        tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; 
+    }
+
+    function updateVisuals(rec, pen, ageData, ccEffMap, compPct) {
+        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
+        const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
+        Object.keys(ccEffMap).sort((a,b) => (ccEffMap[b].sum/ccEffMap[b].count) - (ccEffMap[a].sum/ccEffMap[a].count)).slice(0, 5).forEach(cc => { 
+            const sc = (ccEffMap[cc].sum / ccEffMap[cc].count).toFixed(0); 
+            let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
+            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
+        });
+    }
+
     function renderApprovalsTable(sourceData) {
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
-                const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
+                const isDateCol = (col.toLowerCase().includes('date'));
                 let rowVal = isDateCol ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
                 if(!tableFilters[col].includes(rowVal)) return false;
             }
@@ -599,8 +561,7 @@
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
                 const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
-                if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
+                const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); });
             });
         }
         body.innerHTML = ''; let ledgerTotal = 0;
@@ -610,62 +571,37 @@
                 let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
                 let formattedValue = cellValue;
                 if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                else if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
-            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW PDF</a>` : '-'}</td></tr>`;
+            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
     }
 
-    function renderDateHierarchy(originalKey, dropId, listElement) {
-        const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
-        Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
-            listElement.insertAdjacentHTML('beforeend', `<div class="date-group-header">${yr}</div>`);
-            Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
-                listElement.insertAdjacentHTML('beforeend', `<div class="date-month-header">${mo}</div>`);
-                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
-            });
-        });
-    }
-
-    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); const headers = container.querySelectorAll('.date-group-header, .date-month-header'); items.forEach(item => { const txt = item.innerText.toLowerCase(); item.style.display = txt.includes(query.toLowerCase()) ? 'flex' : 'none'; }); headers.forEach(h => h.style.display = query.trim() === "" ? 'block' : 'none'); }
+    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { const txt = item.innerText.toLowerCase(); item.style.display = txt.includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
     function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
     function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); } else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); } renderApprovalsTable(appData); }
-    function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
-    function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.className = 'status-cell ' + (isGood ? 'bg-good' : 'bg-bad'); tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good' : 'bg-bad'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
-
-    function updateVisuals(rec, pen, ageData, deptMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
-        const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
-        Object.keys(deptMap).sort((a,b) => (deptMap[b].sum/deptMap[b].count) - (deptMap[a].sum/deptMap[a].count)).slice(0, 5).forEach(dept => { const sc = (deptMap[dept].sum / deptMap[dept].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${dept}">${dept}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); });
-    }
 
     window.onload = () => {
+        Chart.register(ChartDataLabels);
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0]; const total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0]; const x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
-        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false } } } });
-        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
+        
+        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
+        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } }, datalabels: { display: false } } } });
         
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { 
                 labels: [], 
                 datasets: [
-                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8 },
-                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0.3, yAxisID: 'y1', order: 1 }
+                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
+                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, yAxisID: 'y1', order: 1, datalabels: { display: true, color: '#00ff9d', align: 'top', font: { weight: 'bold', size: 10 }, formatter: v => '$' + v.toFixed(2) } }
                 ] 
             }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, 
-                    y1: { position: 'right', ticks: { color: '#00ff9d', callback: v => '$'+v.toFixed(1) }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
-                },
-                plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } }
-            } 
+            options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' }, grid: { display: false } }, y: { ticks: { color: '#00d2ff' } }, y1: { position: 'right', ticks: { color: '#00ff9d' } } }, plugins: { legend: { labels: { color: '#fff' } } } } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
@@ -673,40 +609,14 @@
             data: { 
                 labels: [], 
                 datasets: [
-                    { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8 },
-                    { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0.3, order: 1 }
+                    { label: 'P&L Impact', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
+                    { label: 'Trend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, order: 1, datalabels: { display: true, color: '#00ff9d', align: 'top', font: { weight: 'bold', size: 10 }, formatter: v => '$' + (v/1000).toFixed(1) + 'k' } }
                 ] 
             }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } } 
-                }, 
-                plugins: { legend: { display: false } } 
-            } 
+            options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { ticks: { color: '#cbd5e1', callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { display: false } } } 
         });
         
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [{ 
-                    data: [], 
-                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#a29bfe', '#fd79a8'],
-                    borderRadius: 4
-                }] 
-            }, 
-            options: { 
-                indexAxis: 'y',
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#cbd5e1', callback: v => '$' + (v/1000) + 'k' } },
-                    y: { ticks: { color: '#ffffff', font: { weight: 'bold' } } }
-                }, 
-                plugins: { legend: { display: false } } 
-            } 
-        });
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43'], borderRadius: 4 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false } } } });
         
         fetchData(); setInterval(fetchData, 60000);
     };
