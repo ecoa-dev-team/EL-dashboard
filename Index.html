@@ -131,7 +131,6 @@
         .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
         
-        /* New Conditional Coloring Styles */
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
         
@@ -384,16 +383,20 @@
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     function fetchSheet(sheetName) {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-        return fetch(url).then(res => res.text()).then(text => {
+        return fetch(url).then(res => {
+            if (!res.ok) throw new Error("Fetch failed");
+            return res.text();
+        }).then(text => {
             const json = JSON.parse(text.substring(47).slice(0, -2));
             const cols = json.table.cols.map(c => (c.label || "").trim());
-            return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
+            return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
         });
     }
 
     async function fetchData() {
         try {
-            [appData, recData, pnlData, salesData] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
+            const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
+            appData = a; recData = b; pnlData = c; salesData = d;
             document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
             initFilters(); updateDashboard(); renderApprovalsTable(appData);
         } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
@@ -508,18 +511,15 @@
         document.getElementById('valUnitPNL').innerText = totalSalesQty > 0 ? fmtDec(pnl/totalSalesQty) : "$0.00";
 
         const avgMax = count > 0 ? (mDays/count) : 0, avgPend = count > 0 ? (pDays/count) : 0;
-        
-        // UPDATED: Recon Health matches Compliance (needle calc uses same percentages)
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
-        
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
         const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
         if (ovDiff <= 0) { ovLbl.innerText = "Days to Deadline"; ovVal.innerText = Math.abs(ovDiff).toFixed(0) + " Days"; ovVal.style.color = "var(--green)"; } else { ovLbl.innerText = "Avg Overdue"; ovVal.innerText = ovDiff.toFixed(0) + " Days"; ovVal.style.color = "var(--red)"; }
         document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
-        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap); // ccMap instead of deptMap
+        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty);
     }
 
@@ -533,7 +533,6 @@
         };
 
         const sortedKeys = sortKeys(Object.keys(salesTrend), currentGranularity);
-
         trendChart.data.labels = sortedKeys;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
@@ -575,6 +574,7 @@
     }
 
     function renderApprovalsTable(sourceData) {
+        if (!sourceData || sourceData.length === 0) return;
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
@@ -585,7 +585,7 @@
             }
             return true;
         });
-        const rawCols = Object.keys(appData[0] || {}); if(rawCols.length === 0) return;
+        const rawCols = Object.keys(appData[0] || {});
         let displayCols = []; rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
         displayCols.unshift('Department', 'Cost Center');
         
@@ -596,7 +596,7 @@
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
                 const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
                 if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${dropId}')"> ${v}</div>`); }); }
+                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
             });
         }
         body.innerHTML = ''; let ledgerTotal = 0;
@@ -631,7 +631,6 @@
     function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
     function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); } else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); } renderApprovalsTable(appData); }
     
-    // UPDATED: Color Coding for KPI Matrix
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { 
         const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); 
@@ -658,78 +657,15 @@
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         
         trendChart = new Chart(document.getElementById('trendChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [
-                    { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
-                    { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0, yAxisID: 'y1', order: 1, 
-                        // UPDATED: Visible Data Labels on dots
-                        datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + v.toFixed(2) } 
-                    }
-                ] 
-            }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, 
-                    y1: { position: 'right', ticks: { 
-  color: '#00ff9d',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+v.toFixed(1)
-}, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
-                },
-                plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } }
-            } 
+            type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, categoryPercentage: 0.8, datalabels: { display: false } }, { label: 'Cost Per Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 8, tension: 0, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + v.toFixed(2) } }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, y1: { position: 'right', ticks: { color: '#00ff9d', font: { size: 13, weight: 'bold' }, callback: v => '$'+v.toFixed(1) }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } }, plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } } } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [
-                    { label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } },
-                    { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0, order: 1,
-                        // UPDATED: Visible Data Labels on dots
-                        datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } 
-                    }
-                ] 
-            }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
-                    y: { ticks: { 
-  color: '#cbd5e1',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+(v/1000)+'k'
-}, grid: { color: 'rgba(255,255,255,0.05)' } } 
-                }, 
-                plugins: { legend: { display: false } } 
-            } 
+            type: 'bar', data: { labels: [], datasets: [{ label: 'P&L Impact (Bar)', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, categoryPercentage: 0.8, datalabels: { display: false } }, { label: 'Trendline', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: 'bold', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, y: { ticks: { color: '#cbd5e1', font: { size: 13, weight: 'bold' }, callback: v => '$'+(v/1000)+'k' }, grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } } 
         });
         
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [{ 
-                    data: [], 
-                    backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#a29bfe', '#fd79a8'],
-                    borderRadius: 4,
-                    datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { weight: 'bold' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' }
-                }] 
-            }, 
-            options: { 
-                indexAxis: 'y',
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#cbd5e1', callback: v => '$' + (v/1000) + 'k' } },
-                    y: { ticks: { color: '#ffffff', font: { weight: 'bold' } } }
-                }, 
-                plugins: { legend: { display: false } } 
-            } 
+            type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d', '#a29bfe', '#fd79a8'], borderRadius: 4, datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { weight: 'bold' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#cbd5e1', callback: v => '$' + (v/1000) + 'k' } }, y: { ticks: { color: '#ffffff', font: { weight: 'bold' } } } }, plugins: { legend: { display: false } } } 
         });
         
         fetchData(); setInterval(fetchData, 60000);
