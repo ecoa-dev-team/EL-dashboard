@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>ELECTRIC SMT Command Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
         :root { 
@@ -130,11 +129,6 @@
 
         .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
-        
-        /* New Conditional Coloring Styles */
-        .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
-        .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
-        
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
@@ -145,6 +139,8 @@
         .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
         .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; }
         #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
+        .bg-good { background-color: rgba(0, 255, 157, 0.2) !important; color: var(--green) !important; border: 1px solid var(--green) !important; }
+        .bg-bad { background-color: rgba(255, 77, 77, 0.2) !important; color: var(--red) !important; border: 1px solid var(--red) !important; }
     </style>
 </head>
 <body>
@@ -199,9 +195,9 @@
             <div class="chart-box">
                 <h3 class="chart-title">Trends: Sales Vol vs Cost Per Unit</h3>
                 <div class="chart-controls">
-                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Weekly</button>
-                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Monthly</button>
-                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Quarterly</button>
+                    <button class="toggle-btn active" id="btn-sales-weekly" onclick="setSalesGranularity('weekly', this)">Weekly</button>
+                    <button class="toggle-btn" id="btn-sales-monthly" onclick="setSalesGranularity('monthly', this)">Monthly</button>
+                    <button class="toggle-btn" id="btn-sales-quarterly" onclick="setSalesGranularity('quarterly', this)">Quarterly</button>
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
@@ -213,9 +209,9 @@
             <div class="chart-box">
                 <h3 class="chart-title">P&L Cost Impact Trends</h3>
                 <div class="chart-controls">
-                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Weekly</button>
-                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Monthly</button>
-                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Quarterly</button>
+                    <button class="toggle-btn active" id="btn-pnl-weekly" onclick="setTrendGranularity('weekly', this)">Weekly</button>
+                    <button class="toggle-btn" id="btn-pnl-monthly" onclick="setTrendGranularity('monthly', this)">Monthly</button>
+                    <button class="toggle-btn" id="btn-pnl-quarterly" onclick="setTrendGranularity('quarterly', this)">Quarterly</button>
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
@@ -250,7 +246,7 @@
                 <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking (CC)</h3>
+                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking</h3>
                 <div id="healthRankList" class="health-rank-container"></div>
             </div>
         </div>
@@ -277,11 +273,11 @@
     </div>
 
 <script>
-    Chart.register(ChartDataLabels);
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
+    let salesGranularity = 'weekly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -309,11 +305,17 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    // UPDATED: Sync all toggles together
-    function syncGranularity(type) {
+    function setTrendGranularity(type, btn) {
         currentGranularity = type;
-        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
+        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateDashboard();
+    }
+
+    function setSalesGranularity(type, btn) {
+        currentGranularity = type;
+        btn.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         updateDashboard();
     }
 
@@ -675,10 +677,10 @@
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
                     y: { ticks: { color: '#00d2ff' }, title: { display: true, text: 'Sales Volume', color: '#00d2ff' } }, 
                     y1: { position: 'right', ticks: { 
-  color: '#00ff9d',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+v.toFixed(1)
-}, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
+                        color: '#00ff9d',
+                        font: { size: 13, weight: 'bold' },
+                        callback: v => '$'+v.toFixed(1)
+                    }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Cost/Unit', color: '#00ff9d' } } 
                 },
                 plugins: { legend: { labels: { color: '#fff', boxWidth: 15, font: { weight: 'bold' } } } }
             } 
@@ -701,10 +703,10 @@
                 scales: { 
                     x: { ticks: { color: '#ffffff', font: { weight: 'bold' } }, grid: { display: false } }, 
                     y: { ticks: { 
-  color: '#cbd5e1',
-  font: { size: 13, weight: 'bold' },
-  callback: v => '$'+(v/1000)+'k'
-}, grid: { color: 'rgba(255,255,255,0.05)' } } 
+                        color: '#cbd5e1',
+                        font: { size: 13, weight: 'bold' },
+                        callback: v => '$'+(v/1000)+'k'
+                    }, grid: { color: 'rgba(255,255,255,0.05)' } } 
                 }, 
                 plugins: { legend: { display: false } } 
             } 
