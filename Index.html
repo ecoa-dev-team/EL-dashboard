@@ -309,7 +309,6 @@
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
     }
 
-    // UPDATED: Sync all toggles together
     function syncGranularity(type) {
         currentGranularity = type;
         document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
@@ -409,7 +408,8 @@
             el.appendChild(sa);
             vals.forEach(v => { const item = document.createElement('div'); item.className = 'dropdown-item'; item.innerHTML = `<input type="checkbox" value="${v}" onchange="updateFilterLabel('${id}', '${labelId}', '${placeholder}')"> ${v}`; el.appendChild(item); });
         };
-        fill('fCompList', 'fCompLabel', appData, ['Burn Company', 'Company'], 'Entities'); fill('fDeptList', 'fDeptLabel', appData, ['Department'], 'Departments'); fill('fCCList', 'fCCLabel', appData, ['Cost Center', 'Cost Centre'], 'Cost Centers'); fill('fMonthList', 'fMonthLabel', appData, ['Month'], 'Months'); fill('fYearList', 'fYearLabel', appData, ['Year'], 'Years');
+        fill('fCompList', 'fCompLabel', appData, ['Burn Company', 'Company'], 'Entities'); 
+        fill('fDeptList', 'fDeptLabel', appData, ['Department'], 'Departments'); fill('fCCList', 'fCCLabel', appData, ['Cost Center', 'Cost Centre'], 'Cost Centers'); fill('fMonthList', 'fMonthLabel', appData, ['Month'], 'Months'); fill('fYearList', 'fYearLabel', appData, ['Year'], 'Years');
     }
 
     function updateFilterLabel(containerId, labelId, placeholder) {
@@ -596,7 +596,7 @@
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
                 const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
                 if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
+                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${dropId}')"> ${v}</div>`); }); }
             });
         }
         body.innerHTML = ''; let ledgerTotal = 0;
