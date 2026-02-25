@@ -77,7 +77,9 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
 
-        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 300px 300px; gap: 15px; margin-bottom: 15px; }
+        /* UPDATED CONTAINER HEIGHTS */
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: 400px 400px; gap: 15px; margin-bottom: 15px; }
+        
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
         
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; }
@@ -99,7 +101,10 @@
         .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 11px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; text-transform: uppercase; }
         #usdTotalMix { font-size: 1.8rem; display: block; margin-top: 4px; color: var(--red); font-weight: 900; }
 
-        .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: scroll; padding-right: 20px; flex: 1; }
+        .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
+        /* Prevent scroll in Cost Analysis drivers list */
+        #cost-analysis .health-rank-container { overflow-y: visible; }
+
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 11px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
