@@ -450,7 +450,7 @@
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
-            const amt = cleanNum(getCol(row, 'Amount (USD)', 'Amount')); const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const amt = cleanNum(getCol(row, 'Amount (USD)')); const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             
             let isCommittedType = false;
             if (type.includes('PRF')) { commPRF += amt; isCommittedType = true; } 
@@ -475,7 +475,7 @@
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
             
-            const amt = cleanNum(getCol(r, 'Amount (USD)', 'Amount')); pnl += amt;
+            const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             
             if (rDate) {
@@ -511,7 +511,7 @@
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return false; if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return false;
             if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return false; return true;
         }).forEach(r => {
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)', 'Amount')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
+            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
             if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
             effAgg += eff; mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
             if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
@@ -593,7 +593,7 @@
 
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
-        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
+        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -604,42 +604,22 @@
             return true;
         });
         const rawCols = Object.keys(appData[0] || {});
-        
-        // Define Display Columns - Filtering out the raw 'Link' column from showing as text
-        let displayCols = []; 
-        rawCols.forEach(c => { 
-            const cl = c.toLowerCase().trim(); 
-            if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && cl !== 'link') {
-                displayCols.push(c); 
-            }
-        });
+        let displayCols = []; rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
         displayCols.unshift('Department', 'Cost Center');
         
         if(head.children.length === 0) {
-            let trH = '<tr>'; 
-            displayCols.forEach(c => { 
-                const uid = `colDrop_${c.replace(/\W/g, '_')}`; 
-                trH += `<th style="position:relative;">${c} <span id="icon_${uid}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
-            });
-            trH += '<th>Action</th></tr>'; 
-            head.innerHTML = trH;
-            
+            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_${uid}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
+            trH += '<th>Action</th></tr>'; head.innerHTML = trH;
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-                const oKey = rawCols.find(rk => { 
-                    const rkc = rk.toLowerCase().trim(); 
-                    return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); 
-                });
+                const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
                 if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) { renderDateHierarchy(oKey, uid, list); }
                 else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
             });
         }
-        
-        body.innerHTML = ''; 
-        let ledgerTotal = 0;
+        body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
-            let trB = '<tr>'; 
-            ledgerTotal += cleanNum(getCol(row, 'Amount (USD)', 'Amount'));
+            let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             displayCols.forEach(c => {
                 let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
                 let formattedValue = cellValue;
@@ -647,9 +627,7 @@
                 else if (c.toLowerCase().includes('date') || c.toLowerCase().includes('last modified')) formattedValue = formatDateStr(parseExcelDate(cellValue));
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
-            
-            // Strictly grabbing from the "Link" header for Column R
-            let pdf = getCol(row, 'Link');
+            let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn" onclick="this.classList.add('viewed')">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
