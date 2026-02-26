@@ -27,13 +27,6 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
         .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
         
-        /* Department Group Toggle Styles */
-        .dept-group-toggle { display: flex; background: var(--card); padding: 5px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 15px; gap: 5px; align-items: center; }
-        .dept-group-label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin: 0 10px; letter-spacing: 1px; }
-        .group-btn { flex: 1; background: transparent; border: 1px solid transparent; color: var(--text-light); padding: 8px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 4px; font-size: 10px; transition: all 0.2s; }
-        .group-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
-        .group-btn:hover:not(.active) { background: rgba(255,255,255,0.05); }
-
         .tab-container { display: flex; gap: 8px; margin-bottom: 15px; }
         .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; }
         .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
@@ -163,10 +156,6 @@
         <div id="status">ESTABLISHING LINK...</div>
     </div>
 
-    <div class="dept-group-toggle" id="deptGroupContainer">
-        <span class="dept-group-label">Department Group:</span>
-        </div>
-
     <div class="tab-container">
         <div class="tab-btn active" id="btn-cost" onclick="switchTab('cost-analysis', this)">Cost Analysis Dashboard</div>
         <div class="tab-btn" id="btn-dashboard" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
@@ -295,7 +284,6 @@
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
-    let selectedDeptGroup = 'Selling & Distribution'; // Default Dept Group
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -321,16 +309,6 @@
         document.getElementById(id).classList.add('active'); 
         if (btn) btn.classList.add('active');
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
-    }
-
-    // Toggle logic for Department Group
-    function setDeptGroup(group) {
-        selectedDeptGroup = group;
-        document.querySelectorAll('.group-btn').forEach(b => {
-            b.classList.toggle('active', b.innerText === group);
-        });
-        updateDashboard();
-        renderApprovalsTable(appData);
     }
 
     function syncGranularity(type) {
@@ -423,24 +401,8 @@
             const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
             appData = a; recData = b; pnlData = c; salesData = d;
             document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-            initDeptToggle(); initFilters(); updateDashboard(); renderApprovalsTable(appData);
+            initFilters(); updateDashboard(); renderApprovalsTable(appData);
         } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
-    }
-
-    // Initialize the Department Group Toggle buttons
-    function initDeptToggle() {
-        const container = document.getElementById('deptGroupContainer');
-        const groups = [...new Set(appData.map(r => getCol(r, 'Department group')).filter(v => v))].sort();
-        // If "Selling & Distribution" isn't in data, add it manually or select first available
-        if (groups.length > 0) {
-            groups.forEach(g => {
-                const btn = document.createElement('button');
-                btn.className = 'group-btn' + (g === selectedDeptGroup ? ' active' : '');
-                btn.innerText = g;
-                btn.onclick = () => setDeptGroup(g);
-                container.appendChild(btn);
-            });
-        }
     }
 
     function initFilters() {
@@ -483,9 +445,6 @@
         let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {};
 
         appData.forEach(row => {
-            // Apply Mandatory Dept Group Toggle
-            if (getCol(row, 'Department group') !== selectedDeptGroup) return;
-
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
@@ -510,9 +469,6 @@
         });
 
         pnlData.forEach(r => {
-            // Apply Mandatory Dept Group Toggle
-            if (getCol(r, 'Department group') !== selectedDeptGroup) return;
-
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
@@ -534,7 +490,6 @@
         });
 
         salesData.forEach(r => {
-            // Note: Sales usually isn't split by Dept Group, but we check if filter logic applies
             const sDate = parseExcelDate(getCol(r, 'Date')), sComp = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return; if (filters.comp && !filters.comp.includes(sComp)) return;
@@ -550,9 +505,6 @@
 
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
-            // Apply Mandatory Dept Group Toggle
-            if (getCol(r, 'Department group') !== selectedDeptGroup) return false;
-
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return false; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return false;
@@ -642,11 +594,7 @@
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
-        
-        // Filter source data by both Table Filters AND the Dept Group Toggle
         const filteredData = sourceData.filter(row => {
-            if (getCol(row, 'Department group') !== selectedDeptGroup) return false;
-
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 const isDateCol = (col.toLowerCase().includes('date') || col.toLowerCase().includes('last modified'));
