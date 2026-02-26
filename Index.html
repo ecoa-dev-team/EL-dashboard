@@ -27,16 +27,22 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
         .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
         
-        .tab-container { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-container { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-end; }
         .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; }
         .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Dept Group Toggle Styles */
-        .dept-group-toggle { display: flex; background: #0f172a; border-radius: 20px; padding: 3px; border: 1px solid var(--border); margin-bottom: 15px; width: fit-content; }
-        .dept-btn { padding: 6px 15px; border-radius: 17px; border: none; background: transparent; color: var(--text-light); font-size: 10px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
-        .dept-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
+        /* DEPT GROUP TOGGLE STYLES */
+        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 15px; width: fit-content; }
+        .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .toggle-switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #0f172a; transition: .4s; border-radius: 18px; border: 1px solid var(--primary); }
+        .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px; background-color: var(--primary); transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(16px); background-color: var(--green); }
+        .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 120px; }
 
         .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 160px; flex: 1; position: relative; }
@@ -167,6 +173,17 @@
         <div class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
     </div>
 
+    <div id="dept-toggle-container" style="display: block; margin-bottom: 10px;">
+        <div class="dept-toggle-wrap">
+            <span class="dept-toggle-label">DEPT GROUP:</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="deptGroupToggle" onchange="toggleDeptGroup()">
+                <span class="slider"></span>
+            </label>
+            <span id="activeDeptText" class="active-dept-text">Selling & Distribution</span>
+        </div>
+    </div>
+
     <div id="global-filters" class="filter-section">
         <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
@@ -179,11 +196,6 @@
     </div>
 
     <div id="cost-analysis" class="tab-content active">
-        <div class="dept-group-toggle">
-            <button class="dept-btn active" onclick="setDeptGroup('Selling & Distribution', this)">Selling & Distribution</button>
-            <button class="dept-btn" onclick="setDeptGroup('Administration', this)">Administration</button>
-        </div>
-
         <div class="kpi-grid">
             <div class="tile" style="border-top: 5px solid var(--primary);">
                 <span class="tile-label">Committed Spend</span>
@@ -294,7 +306,7 @@
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
-    let activeDeptGroup = 'Selling & Distribution'; // Default Dept Group
+    let selectedDeptGroup = "Selling & Distribution"; // Default Dept Group
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -314,26 +326,27 @@
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
     const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
 
+    function toggleDeptGroup() {
+        const isChecked = document.getElementById('deptGroupToggle').checked;
+        selectedDeptGroup = isChecked ? "General & Admin" : "Selling & Distribution";
+        document.getElementById('activeDeptText').innerText = selectedDeptGroup;
+        updateDashboard();
+    }
+
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active'); 
         if (btn) btn.classList.add('active');
         document.getElementById('global-filters').style.display = (id === 'approvals-tab') ? 'none' : 'flex';
+        // Hide Dept Toggle if not on Cost Analysis
+        document.getElementById('dept-toggle-container').style.display = (id === 'cost-analysis') ? 'block' : 'none';
     }
 
     function syncGranularity(type) {
         currentGranularity = type;
         document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
-        updateDashboard();
-    }
-
-    // New Function for Dept Group Selection
-    function setDeptGroup(group, btn) {
-        activeDeptGroup = group;
-        document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
         updateDashboard();
     }
 
@@ -464,9 +477,9 @@
         let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {};
 
         appData.forEach(row => {
-            // Apply Dept Group filter for Cost Analysis logic
-            const rowDeptGroup = getCol(row, 'Department Group');
-            if (rowDeptGroup !== activeDeptGroup) return;
+            // Apply Dept Group Filter for Cost Analysis
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
 
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
@@ -492,9 +505,9 @@
         });
 
         pnlData.forEach(r => {
-            // Apply Dept Group filter
-            const rDeptGroup = getCol(r, 'Department Group');
-            if (rDeptGroup !== activeDeptGroup) return;
+            // Apply Dept Group Filter for Cost Analysis
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            if (rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
 
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
