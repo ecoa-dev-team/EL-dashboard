@@ -147,6 +147,14 @@
         .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
         .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; }
         #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
+        
+        /* New Toggle Style */
+        .dept-group-toggle { display: flex; gap: 10px; align-items: center; background: rgba(0, 210, 255, 0.05); padding: 10px 15px; border-radius: 8px; border: 1px dashed var(--primary); width: 100%; margin-bottom: 15px; }
+        .dept-group-toggle label { font-size: 11px; font-weight: 900; color: var(--primary); text-transform: uppercase; }
+        .dept-group-options { display: flex; flex-wrap: wrap; gap: 6px; }
+        .dept-opt { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 10px; font-weight: 800; color: var(--text-light); transition: all 0.2s; }
+        .dept-opt:hover { border-color: var(--primary); }
+        .dept-opt.selected { background: var(--primary); color: #000; border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
     </style>
 </head>
 <body>
@@ -163,6 +171,12 @@
     </div>
 
     <div id="global-filters" class="filter-section">
+        <div class="dept-group-toggle">
+            <label>Department Group:</label>
+            <div id="deptGroupOptions" class="dept-group-options">
+                </div>
+        </div>
+        
         <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
         <div class="f-group"><label>Fiscal Year</label><div id="fYearLabel" class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
@@ -284,6 +298,7 @@
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
+    let selectedDeptGroup = "Selling & Distribution"; // Default set here
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -401,8 +416,29 @@
             const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
             appData = a; recData = b; pnlData = c; salesData = d;
             document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-            initFilters(); updateDashboard(); renderApprovalsTable(appData);
+            initFilters(); 
+            initDeptGroupToggle(); // Setup toggle options
+            updateDashboard(); 
+            renderApprovalsTable(appData);
         } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
+    }
+
+    function initDeptGroupToggle() {
+        const container = document.getElementById('deptGroupOptions');
+        if (!container || container.children.length > 0) return;
+        const groups = [...new Set(appData.map(r => getCol(r, 'Department Group')).filter(v => v))].sort();
+        groups.forEach(g => {
+            const btn = document.createElement('div');
+            btn.className = 'dept-opt' + (g === selectedDeptGroup ? ' selected' : '');
+            btn.innerText = g;
+            btn.onclick = () => {
+                document.querySelectorAll('.dept-opt').forEach(opt => opt.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedDeptGroup = g;
+                updateDashboard();
+            };
+            container.appendChild(btn);
+        });
     }
 
     function initFilters() {
@@ -439,12 +475,15 @@
 
     function updateDashboard() {
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
-        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
+        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGrp: selectedDeptGroup };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {};
 
         appData.forEach(row => {
+            // Department Group Filter
+            if (filters.deptGrp && getCol(row, 'Department Group') !== filters.deptGrp) return;
+            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
@@ -469,6 +508,9 @@
         });
 
         pnlData.forEach(r => {
+            // Department Group Filter
+            if (filters.deptGrp && getCol(r, 'Department Group') !== filters.deptGrp) return;
+            
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
@@ -505,6 +547,9 @@
 
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
+            // Department Group Filter
+            if (filters.deptGrp && getCol(r, 'Department Group') !== filters.deptGrp) return false;
+            
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return false; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return false;
