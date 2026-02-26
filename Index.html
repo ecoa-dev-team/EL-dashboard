@@ -33,6 +33,11 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        /* Dept Group Toggle Styles */
+        .dept-group-toggle { display: flex; background: #0f172a; border-radius: 20px; padding: 3px; border: 1px solid var(--border); margin-bottom: 15px; width: fit-content; }
+        .dept-btn { padding: 6px 15px; border-radius: 17px; border: none; background: transparent; color: var(--text-light); font-size: 10px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+        .dept-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); }
+
         .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 160px; flex: 1; position: relative; }
         .f-group label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
@@ -88,11 +93,6 @@
         .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 4px 10px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; }
         .toggle-btn:hover { border-color: var(--primary); }
         .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); box-shadow: 0 0 8px var(--primary); }
-
-        /* New Dept Group Toggle Styles */
-        .dept-toggle-container { background: var(--card); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border); display: flex; align-items: center; gap: 15px; }
-        .dept-toggle-label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
-        .dept-btn-group { display: flex; gap: 5px; }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -179,11 +179,9 @@
     </div>
 
     <div id="cost-analysis" class="tab-content active">
-        <div class="dept-toggle-container">
-            <span class="dept-toggle-label">Department Group View:</span>
-            <div id="deptGroupBtns" class="dept-btn-group">
-                <button class="toggle-btn active" onclick="syncDeptGroup('All')">All</button>
-            </div>
+        <div class="dept-group-toggle">
+            <button class="dept-btn active" onclick="setDeptGroup('Selling & Distribution', this)">Selling & Distribution</button>
+            <button class="dept-btn" onclick="setDeptGroup('Administration', this)">Administration</button>
         </div>
 
         <div class="kpi-grid">
@@ -296,7 +294,7 @@
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart;
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
-    let currentDeptGroup = 'All'; // New Variable
+    let activeDeptGroup = 'Selling & Distribution'; // Default Dept Group
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -326,20 +324,16 @@
 
     function syncGranularity(type) {
         currentGranularity = type;
-        document.querySelectorAll('.chart-box .toggle-btn').forEach(b => {
-            if(b.innerText.toLowerCase() === type) b.classList.add('active');
-            else if (['weekly','monthly','quarterly'].includes(b.innerText.toLowerCase())) b.classList.remove('active');
-        });
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
         updateDashboard();
     }
 
-    // New Dept Group Sync Function
-    function syncDeptGroup(group) {
-        currentDeptGroup = group;
-        document.querySelectorAll('#deptGroupBtns button').forEach(b => {
-            if(b.innerText === group) b.classList.add('active');
-            else b.classList.remove('active');
-        });
+    // New Function for Dept Group Selection
+    function setDeptGroup(group, btn) {
+        activeDeptGroup = group;
+        document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         updateDashboard();
     }
 
@@ -426,21 +420,8 @@
             const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
             appData = a; recData = b; pnlData = c; salesData = d;
             document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-            initFilters(); 
-            initDeptGroupToggle(); // New Init
-            updateDashboard(); 
-            renderApprovalsTable(appData);
+            initFilters(); updateDashboard(); renderApprovalsTable(appData);
         } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
-    }
-
-    // New Init Function for Dept Group Buttons
-    function initDeptGroupToggle() {
-        const container = document.getElementById('deptGroupBtns');
-        const groups = [...new Set(pnlData.map(r => getCol(r, 'Department Group')).filter(v => v))].sort();
-        container.innerHTML = `<button class="toggle-btn active" onclick="syncDeptGroup('All')">All</button>`;
-        groups.forEach(g => {
-            container.insertAdjacentHTML('beforeend', `<button class="toggle-btn" onclick="syncDeptGroup('${g}')">${g}</button>`);
-        });
     }
 
     function initFilters() {
@@ -483,18 +464,15 @@
         let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {};
 
         appData.forEach(row => {
+            // Apply Dept Group filter for Cost Analysis logic
+            const rowDeptGroup = getCol(row, 'Department Group');
+            if (rowDeptGroup !== activeDeptGroup) return;
+
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
-            
-            // Dept Group Logic for committed spend
-            if (currentDeptGroup !== 'All') {
-                const rowGrp = getCol(row, 'Department Group');
-                if (rowGrp !== currentDeptGroup) return;
-            }
-
             const amt = cleanNum(getCol(row, 'Amount (USD)')); const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             
             let isCommittedType = false;
@@ -514,18 +492,16 @@
         });
 
         pnlData.forEach(r => {
+            // Apply Dept Group filter
+            const rDeptGroup = getCol(r, 'Department Group');
+            if (rDeptGroup !== activeDeptGroup) return;
+
             const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return;
             if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
             
-            // Dept Group Logic for actual spend
-            if (currentDeptGroup !== 'All') {
-                const rowGrp = getCol(r, 'Department Group');
-                if (rowGrp !== currentDeptGroup) return;
-            }
-
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
             
