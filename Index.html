@@ -168,6 +168,7 @@
         <div class="f-group"><label>Fiscal Year</label><div id="fYearLabel" class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Period</label><div id="fMonthLabel" class="multiselect-container" onclick="toggleDropdown('fMonthList')">Select Months...</div><div id="fMonthList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Entity</label><div id="fCompLabel" class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Dept Group</label><div id="fDeptGroupLabel" class="multiselect-container" onclick="toggleDropdown('fDeptGroupList')">Select Groups...</div><div id="fDeptGroupList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
         <button onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
@@ -415,6 +416,7 @@
             vals.forEach(v => { const item = document.createElement('div'); item.className = 'dropdown-item'; item.innerHTML = `<input type="checkbox" value="${v}" onchange="updateFilterLabel('${id}', '${labelId}', '${placeholder}')"> ${v}`; el.appendChild(item); });
         };
         fill('fCompList', 'fCompLabel', appData, ['Burn Company', 'Company'], 'Entities'); 
+        fill('fDeptGroupList', 'fDeptGroupLabel', appData, ['Department Group'], 'Groups');
         fill('fDeptList', 'fDeptLabel', appData, ['Department'], 'Departments'); fill('fCCList', 'fCCLabel', appData, ['Cost Center', 'Cost Centre'], 'Cost Centers'); fill('fMonthList', 'fMonthLabel', appData, ['Month'], 'Months'); fill('fYearList', 'fYearLabel', appData, ['Year'], 'Years');
     }
 
@@ -431,7 +433,7 @@
     function resetGlobalFilters() {
         document.getElementById('dStart').value = ''; document.getElementById('dEnd').value = '';
         document.querySelectorAll('#global-filters .dropdown-content input').forEach(i => i.checked = false);
-        [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers']].forEach(c => { const labelEl = document.getElementById(c[1]); labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); });
+        [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptGroupList', 'fDeptGroupLabel', 'Groups'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers']].forEach(c => { const labelEl = document.getElementById(c[1]); labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); });
         updateDashboard();
     }
 
@@ -439,7 +441,7 @@
 
     function updateDashboard() {
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
-        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
+        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), deptGrp: getSelected('fDeptGroupList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {};
@@ -448,7 +450,9 @@
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.deptGrp && !filters.deptGrp.includes(getCol(row, 'Department Group'))) return;
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
             const amt = cleanNum(getCol(row, 'Amount (USD)')); const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             
@@ -469,11 +473,14 @@
         });
 
         pnlData.forEach(r => {
-            const rComp = getCol(r, 'Burn Company', 'Company'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
+            const rComp = getCol(r, 'Burn Company', 'Company'), rDeptGrp = getCol(r, 'Department Group'), rDept = getCol(r, 'Department'), rCC = getCol(r, 'Cost Center', 'Cost Centre'), rYr = String(getCol(r, 'Year')), rMo = getCol(r, 'Month');
             const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year', 'Approval Date'));
             if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
             if (filters.yr && !filters.yr.includes(rYr)) return; if (filters.mo && !filters.mo.includes(rMo)) return;
-            if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(rDept)) return; if (filters.cc && !filters.cc.includes(rCC)) return;
+            if (filters.comp && !filters.comp.includes(rComp)) return; 
+            if (filters.deptGrp && !filters.deptGrp.includes(rDeptGrp)) return;
+            if (filters.dept && !filters.dept.includes(rDept)) return; 
+            if (filters.cc && !filters.cc.includes(rCC)) return;
             
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
             const cc = rCC || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
@@ -508,7 +515,9 @@
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return false; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return false;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return false; if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return false; 
+            if (filters.deptGrp && !filters.deptGrp.includes(getCol(r, 'Department Group'))) return false;
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return false;
             if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return false; return true;
         }).forEach(r => {
             const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
