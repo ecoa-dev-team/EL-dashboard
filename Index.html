@@ -88,14 +88,12 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
 
-        /* Cost Dashboard Visual Layout */
         .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; margin-bottom: 15px; }
         .cost-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
         
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 380px; }
-        .chart-box.empty { border: 1px dashed var(--border); background: transparent; }
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
@@ -118,10 +116,8 @@
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 11px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        
         .rank-impact-val { font-size: 12px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
-        
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
@@ -129,35 +125,25 @@
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
-        
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .ledger-table { font-size: 12px !important; table-layout: auto; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        
         .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
         .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
-
         .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
-        
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
-        
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
-        
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
         button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; }
-
         .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
-        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
-        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; }
         #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
     </style>
 </head>
@@ -246,8 +232,10 @@
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
-            <div class="chart-box empty">
-                </div>
+            <div class="chart-box">
+                <h3 class="chart-title" id="subDriverTitle">Top 5 Cost Drivers</h3>
+                <div id="subDriverRankList" class="health-rank-container"></div>
+            </div>
         </div>
 
         <div class="cost-lower-grid">
@@ -319,6 +307,7 @@
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
+    let drillDownCC = null;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -375,32 +364,9 @@
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
-        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-        const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
-        const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         if(ccKey) tableFilters[ccKey] = [costCenter];
-        if(typeKey) {
-            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('ECF') || v.toUpperCase().includes('INV') || v.toUpperCase().includes('TRF'));
-        }
-        const selYears = getSelected('fYearList'); if (selYears && yearKey) tableFilters[yearKey] = selYears;
-        const selMonths = getSelected('fMonthList'); if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
-        const dStartVal = document.getElementById('dStart').value;
-        const dEndVal = document.getElementById('dEnd').value;
-        if (dateKey && (dStartVal || dEndVal)) {
-            const startObj = dStartVal ? new Date(dStartVal) : null; if(startObj) startObj.setHours(0,0,0,0);
-            const endObj = dEndVal ? new Date(dEndVal) : null; if(endObj) endObj.setHours(23,59,59,999);
-            const matches = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
-                return formatDateStr(d);
-            }))].filter(v => v);
-            tableFilters[dateKey] = matches;
-        }
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
-        syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
     }
@@ -412,18 +378,6 @@
             const actualKey = rawCols.find(k => k.toLowerCase().includes(ledgerKeyPart.toLowerCase()));
             if(actualKey) tableFilters[actualKey] = selected;
         }
-    }
-
-    function syncFilterIcons() {
-        document.querySelectorAll('.header-filter-icon').forEach(icon => {
-            const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
-            icon.classList.remove('active');
-            for (let filterKey in tableFilters) {
-                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) || (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) || (colName === 'Month' && filterKey.toLowerCase() === 'month') || (colName === 'Year' && filterKey.toLowerCase() === 'year')) {
-                    icon.classList.add('active');
-                }
-            }
-        });
     }
 
     function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
@@ -485,7 +439,9 @@
         updateDashboard();
     }
 
-    function resetLedgerFilters() { tableFilters = {}; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
+    function resetLedgerFilters() { tableFilters = {}; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); renderApprovalsTable(appData); }
+
+    function setDrillDownCC(cc) { drillDownCC = cc; updateDashboard(); }
 
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
@@ -493,22 +449,19 @@
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGroup: getSelected('fDeptGroupList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {}, companySalesMap = {};
+        let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {}, companySalesMap = {}, subDriverMap = {};
 
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
             else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
-
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
-            
             const amt = cleanNum(getCol(row, 'Amount (USD)')); const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             if (type.includes('PRF')) commPRF += amt; else if (type.includes('PR')) commPR += amt; else if (type.includes('TRF')) commTRF += amt;
-
             if (d && (type.includes('PRF') || type.includes('PR') || type.includes('TRF'))) {
                 let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(d)}` : (currentGranularity === 'monthly' ? monthNames[d.getMonth()].substring(0,3) : getQuarter(d));
                 commitTrendAgg[sKey] = (commitTrendAgg[sKey] || 0) + amt;
@@ -525,7 +478,15 @@
             if (filters.comp && !filters.comp.includes(rComp)) return; if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return; if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return;
             
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
-            const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
+            const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc"; 
+            const driver = getCol(r, 'Description', 'Item', 'Line Description') || "Unknown";
+            
+            ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
+            
+            if (!drillDownCC || cc === drillDownCC) {
+                subDriverMap[driver] = (subDriverMap[driver] || 0) + amt;
+            }
+
             if (rDate) {
                 let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(rDate)}` : (currentGranularity === 'monthly' ? monthNames[rDate.getMonth()].substring(0,3) : getQuarter(rDate));
                 costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
@@ -549,8 +510,7 @@
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false; } 
-            else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return false; }
+            if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return false; }
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return false; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return false;
@@ -572,22 +532,20 @@
         document.getElementById('valPNL').innerText = fmt(pnl); document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNL').innerText = totalSalesQty > 0 ? fmtDec(pnl/totalSalesQty) : "$0.00";
 
-        const avgMax = count > 0 ? (mDays/count) : 0, avgPend = count > 0 ? (pDays/count) : 0;
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
-        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
-        const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
-        if (ovDiff <= 0) { ovLbl.innerText = "Days to Deadline"; ovVal.innerText = Math.abs(ovDiff).toFixed(0) + " Days"; ovVal.style.color = "var(--green)"; } else { ovLbl.innerText = "Avg Overdue"; ovVal.innerText = ovDiff.toFixed(0) + " Days"; ovVal.style.color = "var(--red)"; }
+        document.getElementById('vMax').innerText = (count > 0 ? mDays/count : 0).toFixed(0) + " Days"; 
+        document.getElementById('vPend').innerText = (count > 0 ? pDays/count : 0).toFixed(0) + " Days";
         document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
-        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
+        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, (count > 0 ? pDays/count : 0)); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
-        updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty, commitTrendAgg, companySalesMap);
+        updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty, commitTrendAgg, companySalesMap, subDriverMap);
     }
 
-    function updateCostDashboardVisuals(salesTrend, costTrend, ccDriver, trendMap, compMap, totalPnl, totalQty, commitTrend, compSales) {
-        const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
-        const sortedKeys = sortKeys(Object.keys(salesTrend), currentGranularity);
+    function updateCostDashboardVisuals(salesTrend, costTrend, ccDriver, trendMap, compMap, totalPnl, totalQty, commitTrend, compSales, subDrivers) {
+        const sortedKeys = Object.keys(salesTrend).sort((a,b) => { if(currentGranularity === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(currentGranularity === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); });
+        
         trendChart.data.labels = sortedKeys;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((costTrend[k] || 0) / salesTrend[k]) : 0);
@@ -610,11 +568,32 @@
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
-                        <div class="rank-label" title="${cc}">${cc}</div>
+                        <div class="rank-label" title="${cc}" style="cursor:pointer; color:var(--primary)" onclick="setDrillDownCC('${cc}')">${cc}</div>
                         <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div></div>
-                    <div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div><div>Cost / Sale: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
+                    <div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div><div>Cost/Sale: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
+                </div>`);
+        });
+
+        const sl = document.getElementById('subDriverRankList'); sl.innerHTML = '';
+        document.getElementById('subDriverTitle').innerText = drillDownCC ? `Top 5 Drivers: ${drillDownCC}` : "Top 5 Cost Drivers (Global)";
+        const sortedSub = Object.entries(subDrivers).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const maxSubVal = sortedSub.length > 0 ? sortedSub[0][1] : 1;
+        const subTotal = Object.values(subDrivers).reduce((a,b) => a+b, 0);
+        
+        sortedSub.forEach(([drv, val]) => {
+            const pct = subTotal > 0 ? ((val / subTotal) * 100).toFixed(1) : 0;
+            const bPct = (val / maxSubVal * 100).toFixed(0);
+            const pu = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
+            sl.insertAdjacentHTML('beforeend', `
+                <div class="rank-item">
+                    <div class="rank-top-row">
+                        <div class="rank-label" title="${drv}">${drv}</div>
+                        <div class="rank-impact-val">$${(val/1000).toFixed(1)}k</div>
+                    </div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${bPct}%; background:var(--green)"></div></div>
+                    <div class="rank-footer"><div>Share: <span class="rank-pct">${pct}%</span></div><div>Cost/Sale: <span style="color:var(--orange)">$${pu}</span></div></div>
                 </div>`);
         });
 
@@ -623,10 +602,7 @@
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
-        const unitCostEntries = compEntries.map(e => {
-            const qty = compSales[e[0]] || 0;
-            return [e[0], qty > 0 ? (e[1] / qty) : 0];
-        });
+        const unitCostEntries = compEntries.map(e => [e[0], (compSales[e[0]] || 0) > 0 ? (e[1] / compSales[e[0]]) : 0]);
         unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
         unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
         unitCostCompChart.update();
@@ -634,38 +610,29 @@
 
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
-        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
+        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
-                let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
-                if(!tableFilters[col].includes(rowVal)) return false;
+                if(!tableFilters[col].includes((cellVal || "-").toString())) return false;
             }
             return true;
         });
         const rawCols = Object.keys(appData[0] || {});
-        let displayCols = []; rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
-        displayCols.unshift('Department', 'Cost Center');
+        let displayCols = ['Department', 'Cost Center'];
+        rawCols.forEach(c => { if(!['department','cost center','cost centre','link','pdf link','url'].includes(c.toLowerCase().trim())) displayCols.push(c); });
         
         if(head.children.length === 0) {
-            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_${uid}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
+            let trH = '<tr>'; displayCols.forEach(c => trH += `<th>${c}</th>`);
             trH += '<th>Action</th></tr>'; head.innerHTML = trH;
-            displayCols.forEach(c => {
-                const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-                const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
-                if (c.toLowerCase().includes('date')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
-            });
         }
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             displayCols.forEach(c => {
                 let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
-                let formattedValue = cellValue;
-                if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
-                trB += `<td>${formattedValue || '-'}</td>`;
+                if (c.toLowerCase().includes('amount')) cellValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                trB += `<td>${cellValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
@@ -674,21 +641,6 @@
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
     }
 
-    function renderDateHierarchy(originalKey, dropId, listElement) {
-        const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
-        Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
-            listElement.insertAdjacentHTML('beforeend', `<div class="date-group-header">${yr}</div>`);
-            Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
-                listElement.insertAdjacentHTML('beforeend', `<div class="date-month-header">${mo}</div>`);
-                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
-            });
-        });
-    }
-
-    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
-    function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
-    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); } else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); } renderApprovalsTable(appData); }
-    
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { 
         const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; 
@@ -700,7 +652,7 @@
         const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
         Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
             const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
-            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
+            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
         });
     }
 
