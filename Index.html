@@ -33,7 +33,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* DEPT GROUP TOGGLE STYLES - SLEEK TRI-STATE */
         .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 10px; width: fit-content; }
         .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
         
@@ -89,11 +88,14 @@
         .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
 
-        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; grid-template-rows: auto auto; gap: 15px; margin-bottom: 15px; }
+        /* Cost Dashboard Visual Layout */
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .cost-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         
         .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
         
-        .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 400px; }
+        .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 380px; }
+        .chart-box.empty { border: 1px dashed var(--border); background: transparent; }
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
@@ -113,14 +115,9 @@
         #usdTotalMix { font-size: 1.8rem; display: block; margin-top: 4px; color: var(--red); font-weight: 900; }
 
         .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
-        #cost-analysis .health-rank-container { overflow-y: visible; }
-
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 11px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        
-        .rank-cc-name { cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }
-        .rank-cc-name:hover { color: var(--primary); }
         
         .rank-impact-val { font-size: 12px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
@@ -233,15 +230,13 @@
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
-            
             <div class="chart-box">
                 <h3 class="chart-title">Top 5 Cost Center Drivers (P&L Impact)</h3>
-                <div id="driverRankList" class="health-rank-container" style="max-height: 250px; flex: none; margin-bottom: 20px;"></div>
-                
-                <h3 class="chart-title" id="driverTitle" style="border-top: 1px solid var(--border); padding-top: 15px;">Top 5 Cost Drivers</h3>
-                <div id="itemDriverRankList" class="health-rank-container" style="max-height: 250px; flex: none;"></div>
+                <div id="driverRankList" class="health-rank-container"></div>
             </div>
+        </div>
 
+        <div class="cost-viz-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Spend & P&L Impact Trends</h3>
                 <div class="chart-controls">
@@ -251,16 +246,18 @@
                 </div>
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="chart-box">
-                    <h3 class="chart-title">P&L Impact by Company</h3>
-                    <div style="flex:1; position:relative;"><canvas id="companyDistChart"></canvas></div>
+            <div class="chart-box empty">
                 </div>
-                <div class="chart-box">
-                    <h3 class="chart-title">Unit Cost per Country</h3>
-                    <div style="flex:1; position:relative;"><canvas id="unitCostCompChart"></canvas></div>
-                </div>
+        </div>
+
+        <div class="cost-lower-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">P&L Impact by Company</h3>
+                <div style="flex:1; position:relative;"><canvas id="companyDistChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="chart-title">Unit Cost per Country</h3>
+                <div style="flex:1; position:relative;"><canvas id="unitCostCompChart"></canvas></div>
             </div>
         </div>
     </div>
@@ -322,7 +319,6 @@
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
-    let selectedCostCenterDrill = null;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -497,7 +493,7 @@
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGroup: getSelected('fDeptGroupList') };
 
         let ecf = 0, trf = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {}, companySalesMap = {}, itemDriverMap = {};
+        let ccDriverMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyAgg = {}, commitTrendAgg = {}, companySalesMap = {};
 
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
@@ -530,13 +526,6 @@
             
             const amt = cleanNum(getCol(r, 'Amount (USD)')); pnl += amt;
             const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Misc"; ccDriverMap[cc] = (ccDriverMap[cc] || 0) + amt;
-            
-            // Item Level Drill Down Logic
-            if (!selectedCostCenterDrill || cc === selectedCostCenterDrill) {
-                const item = getCol(r, 'Description', 'Vendor', 'Expense Type') || "Other";
-                itemDriverMap[item] = (itemDriverMap[item] || 0) + amt;
-            }
-
             if (rDate) {
                 let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(rDate)}` : (currentGranularity === 'monthly' ? monthNames[rDate.getMonth()].substring(0,3) : getQuarter(rDate));
                 costTrendAgg[sKey] = (costTrendAgg[sKey] || 0) + amt;
@@ -593,15 +582,10 @@
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
-        updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty, commitTrendAgg, companySalesMap, itemDriverMap);
+        updateCostDashboardVisuals(salesTrendAgg, costTrendAgg, ccDriverMap, trendAgg, companyAgg, pnl, totalSalesQty, commitTrendAgg, companySalesMap);
     }
 
-    function setCostCenterDrill(cc) {
-        selectedCostCenterDrill = (selectedCostCenterDrill === cc) ? null : cc;
-        updateDashboard();
-    }
-
-    function updateCostDashboardVisuals(salesTrend, costTrend, ccDriver, trendMap, compMap, totalPnl, totalQty, commitTrend, compSales, itemDriver) {
+    function updateCostDashboardVisuals(salesTrend, costTrend, ccDriver, trendMap, compMap, totalPnl, totalQty, commitTrend, compSales) {
         const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
         const sortedKeys = sortKeys(Object.keys(salesTrend), currentGranularity);
         trendChart.data.labels = sortedKeys;
@@ -616,47 +600,21 @@
         weeklyPnlChart.data.datasets[2].data = sortedKeys.map(k => commitTrend[k] || 0);
         weeklyPnlChart.update();
 
-        // Update Cost Center Driver Rank
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        const maxCCVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
+        const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
         sortedCC.forEach(([cc, val]) => {
             const totalPct = totalPnl > 0 ? ((val / totalPnl) * 100).toFixed(1) : 0;
-            const barPct = (val / maxCCVal * 100).toFixed(0);
+            const barPct = (val / maxVal * 100).toFixed(0);
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
-            const isActive = selectedCostCenterDrill === cc;
             dl.insertAdjacentHTML('beforeend', `
-                <div class="rank-item" style="${isActive ? 'border-left: 3px solid var(--primary); padding-left: 8px;' : ''}">
-                    <div class="rank-top-row">
-                        <div class="rank-label rank-cc-name" onclick="setCostCenterDrill('${cc}')" title="Click to drill down items">${isActive ? '▶ ' : ''}${cc}</div>
-                        <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
-                    </div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:${isActive ? 'var(--green)' : 'var(--primary)'}"></div></div>
-                    <div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div><div>Cost / Sale: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
-                </div>`);
-        });
-
-        // Update Item Driver Rank (Drill Down)
-        const idl = document.getElementById('itemDriverRankList'); idl.innerHTML = '';
-        const dt = document.getElementById('driverTitle');
-        dt.innerText = selectedCostCenterDrill ? `Top 5 Cost Drivers: ${selectedCostCenterDrill}` : "Top 5 Cost Drivers (All CCs)";
-        
-        const sortedItems = Object.entries(itemDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        const currentPnlTotal = selectedCostCenterDrill ? (ccDriver[selectedCostCenterDrill] || 1) : (totalPnl || 1);
-        const maxItemVal = sortedItems.length > 0 ? sortedItems[0][1] : 1;
-
-        sortedItems.forEach(([item, val]) => {
-            const shareOfParent = ((val / currentPnlTotal) * 100).toFixed(1);
-            const barPct = (val / maxItemVal * 100).toFixed(0);
-            const itemPU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
-            idl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
-                        <div class="rank-label" title="${item}">${item}</div>
-                        <div class="rank-impact-val" style="text-decoration:none; cursor:default;">$${(val/1000).toFixed(1)}k</div>
+                        <div class="rank-label" title="${cc}">${cc}</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--orange)"></div></div>
-                    <div class="rank-footer"><div>Share: <span class="rank-pct" style="color:var(--orange)">${shareOfParent}%</span></div><div>Cost / Sale: <span>$${itemPU}</span></div></div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div></div>
+                    <div class="rank-footer"><div>Share: <span class="rank-pct">${totalPct}%</span></div><div>Cost / Sale: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
                 </div>`);
         });
 
