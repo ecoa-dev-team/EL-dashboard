@@ -506,7 +506,6 @@
         let ecf = 0, trf_actual = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, companySalesMap = {};
 
-        // 1. Process Approvals (Committed Spend)
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -525,17 +524,14 @@
             const rComp = getCol(row, 'Burn Company', 'Company');
             const rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
 
-            // Aggregate Committed Metrics
             if (type.includes('PRF')) commPRF += amt; 
             else if (type.includes('PR')) commPR += amt; 
             else if (type.includes('TRF')) commTRF += amt;
             
-            // Tracking Actuals for the "Spend" Tile
             if (type.includes('ECF')) ecf += amt; 
             if (type.includes('TRF')) trf_actual += amt; 
             if (type.includes('INV')) inv += amt;
 
-            // Trend & Distribution Logic (STRICTLY COMMITTED)
             if (type.includes('PRF') || type.includes('PR') || type.includes('TRF')) {
                 if (d) {
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(d)}` : (currentGranularity === 'monthly' ? monthNames[d.getMonth()].substring(0,3) : getQuarter(d));
@@ -546,7 +542,6 @@
             }
         });
 
-        // 2. Process Sales Data
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -573,7 +568,6 @@
             }
         });
 
-        // 3. Process P&L Data (For comparison bar chart only)
         pnlData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; }
@@ -592,7 +586,6 @@
             }
         });
 
-        // Compliance Logic (No changes requested here)
         let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
         recData.filter(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -624,7 +617,6 @@
         document.getElementById('subTRF').innerText = fmt(trf_actual); 
         document.getElementById('subInv').innerText = fmt(inv);
         
-        // Update Unit Cost Tile based on Committed
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
@@ -647,19 +639,16 @@
         const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
         const sortedKeys = sortKeys(Object.keys(commitTrend), currentGranularity);
         
-        // Trend Chart: Sales vs Unit Cost (STRICTLY COMMITTED UNIT COST)
         trendChart.data.labels = sortedKeys;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((commitTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
 
-        // P&L Comparison Chart
         weeklyPnlChart.data.labels = sortedKeys;
-        weeklyPnlChart.data.datasets[0].data = sortedKeys.map(k => trendMap[k] || 0); // Actuals
-        weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); // Committed
+        weeklyPnlChart.data.datasets[0].data = sortedKeys.map(k => trendMap[k] || 0); 
+        weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
         weeklyPnlChart.update();
 
-        // Top 5 Cost Centers (COMMITTED)
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
@@ -678,13 +667,11 @@
                 </div>`);
         });
 
-        // Company Distribution
         const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
-        // Unit Cost Per Country (STRICTLY COMMITTED / SALES)
         const unitCostEntries = compEntries.map(e => {
             const qty = compSales[e[0]] || 0;
             return [e[0], qty > 0 ? (e[1] / qty) : 0];
@@ -834,7 +821,53 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 14 }, formatter: (v) => v.toFixed(2) } }]}, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { beginAtZero: true }, y1: { position: 'right', beginAtZero: true, ticks: { color: '#00ff9d' } } }, plugins: { legend: { labels: { color: '#fff' } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.2)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#ff4d4d', backgroundColor: '#ff4d4d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '900', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }]}, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { beginAtZero: true, ticks: { callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff' } } } } });
+        
+        // FIXED CHART: Added bars for Actual P&L and changed trendline to green
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
+            type: 'bar', 
+            data: { 
+                labels: [], 
+                datasets: [
+                    { 
+                        label: 'Actual P&L Spend', 
+                        data: [], 
+                        backgroundColor: 'rgba(0, 210, 255, 0.3)', // Bar color
+                        borderColor: '#00d2ff', 
+                        borderWidth: 2, 
+                        order: 2, 
+                        datalabels: { display: false } 
+                    }, 
+                    { 
+                        label: 'Committed Spend', 
+                        data: [], 
+                        type: 'line', 
+                        borderColor: '#00ff9d', // Changed to green
+                        backgroundColor: '#00ff9d', // Changed to green
+                        pointRadius: 4, 
+                        tension: 0, 
+                        order: 1, 
+                        datalabels: { 
+                            display: true, 
+                            align: 'top', 
+                            color: '#ffffff', 
+                            backgroundColor: '#1e293b', 
+                            borderRadius: 4, 
+                            font: { weight: '900', size: 14 }, 
+                            formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' 
+                        } 
+                    }
+                ]
+            }, 
+            options: { 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: { color: '#ffffff' } }, 
+                    y: { beginAtZero: true, ticks: { color: '#ffffff', callback: v => '$'+(v/1000)+'k' } } 
+                }, 
+                plugins: { legend: { labels: { color: '#fff' } } } 
+            } 
+        });
+
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', formatter: (v) => '$'+v.toFixed(2) } }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         fetchData(); setInterval(fetchData, 60000);
