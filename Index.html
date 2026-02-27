@@ -552,26 +552,47 @@
             if (rComp) companyAgg[rComp] = (companyAgg[rComp] || 0) + amt;
         });
 
+        // Logic for Sales and HQ deduction
         salesData.forEach(r => {
-            const sDate = parseExcelDate(getCol(r, 'Date')), sComp = getCol(r, 'Country'), sMo = getCol(r, 'Month');
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            // Allocation logic for "Kenya" to "Kenya Ltd" filtering
-            if (targetSalesCountries && !targetSalesCountries.includes(sComp)) return;
-
-            const q = cleanNum(getCol(r, 'Sales QTY')); totalSalesQty += q;
+            const q = cleanNum(getCol(r, 'Sales QTY'));
+            const isHQ = (sCountry && sCountry.toUpperCase() === 'HQ');
             
-            // Map sales back to entity name for the "Unit Cost per Country" chart
-            let displayEntityName = sComp;
-            for (let [entity, country] of Object.entries(ENTITY_TO_SALES_COUNTRY_MAP)) {
-                if (country === sComp) displayEntityName = entity;
+            // Logic: 
+            // 1. If NO country filters are active, ignore HQ to avoid double counting.
+            // 2. If HQ is specifically filtered, use HQ and ignore others.
+            // 3. If a specific country (e.g. Kenya) is filtered, use that.
+            
+            let shouldInclude = false;
+            if (targetSalesCountries) {
+                // User has filtered for specific companies/countries
+                if (targetSalesCountries.includes(sCountry)) {
+                    shouldInclude = true;
+                }
+            } else {
+                // Global view (no country filters): Only sum non-HQ entries
+                if (!isHQ) {
+                    shouldInclude = true;
+                }
             }
-            
-            if (displayEntityName) companySalesMap[displayEntityName] = (companySalesMap[displayEntityName] || 0) + q;
-            if (sDate) { 
-                let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
-                salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
+
+            if (shouldInclude) {
+                totalSalesQty += q;
+                
+                // For "Unit Cost per Country" and "Trends" visuals
+                let displayEntityName = sCountry;
+                for (let [entity, country] of Object.entries(ENTITY_TO_SALES_COUNTRY_MAP)) {
+                    if (country === sCountry) displayEntityName = entity;
+                }
+                
+                if (displayEntityName) companySalesMap[displayEntityName] = (companySalesMap[displayEntityName] || 0) + q;
+                if (sDate) { 
+                    let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
+                    salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
+                }
             }
         });
 
@@ -646,13 +667,19 @@
         });
 
         salesData.forEach(r => {
-            const sDate = parseExcelDate(getCol(r, 'Date')), sComp = getCol(r, 'Country'), sMo = getCol(r, 'Month');
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            if (targetSalesCountries && !targetSalesCountries.includes(sComp)) return;
+            const isHQ = (sCountry && sCountry.toUpperCase() === 'HQ');
+            let shouldInclude = false;
+            if (targetSalesCountries) {
+                if (targetSalesCountries.includes(sCountry)) shouldInclude = true;
+            } else {
+                if (!isHQ) shouldInclude = true;
+            }
 
-            totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+            if (shouldInclude) totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
         });
 
         const dl = document.getElementById('costDriverList');
@@ -719,7 +746,6 @@
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
-        // Fix: Use the same company labels for unit cost to ensure Kenya Ltd matches
         const unitCostEntries = compEntries.map(e => {
             const qty = compSales[e[0]] || 0;
             return [e[0], qty > 0 ? (e[1] / qty) : 0];
