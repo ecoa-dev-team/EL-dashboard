@@ -240,7 +240,7 @@
 
         <div class="cost-viz-grid">
             <div class="chart-box">
-                <h3 class="chart-title">Actual P&L vs Committed Trend</h3>
+                <h3 class="chart-title">Committed Trend</h3>
                 <div class="chart-controls">
                     <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Weekly</button>
                     <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Monthly</button>
@@ -822,7 +822,6 @@
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 14 }, formatter: (v) => v.toFixed(2) } }]}, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { beginAtZero: true }, y1: { position: 'right', beginAtZero: true, ticks: { color: '#00ff9d' } } }, plugins: { legend: { labels: { color: '#fff' } } } } });
         
-        // FIXED CHART: Added bars for Actual P&L and changed trendline to green
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
             type: 'bar', 
             data: { 
@@ -831,7 +830,7 @@
                     { 
                         label: 'Actual P&L Spend', 
                         data: [], 
-                        backgroundColor: 'rgba(0, 210, 255, 0.3)', // Bar color
+                        backgroundColor: 'rgba(0, 210, 255, 0.3)', 
                         borderColor: '#00d2ff', 
                         borderWidth: 2, 
                         order: 2, 
@@ -841,8 +840,8 @@
                         label: 'Committed Spend', 
                         data: [], 
                         type: 'line', 
-                        borderColor: '#00ff9d', // Changed to green
-                        backgroundColor: '#00ff9d', // Changed to green
+                        borderColor: '#00ff9d', 
+                        backgroundColor: '#00ff9d', 
                         pointRadius: 4, 
                         tension: 0, 
                         order: 1, 
