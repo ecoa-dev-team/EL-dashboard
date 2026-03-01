@@ -817,6 +817,7 @@
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
             const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
+            // FIXED DRILL-DOWN LOGIC: Passing driver string correctly to drillToLedger
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
