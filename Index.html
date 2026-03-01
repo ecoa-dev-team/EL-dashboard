@@ -331,7 +331,8 @@
         "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
         "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
         "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana",
-        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria"
+        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria",
+        "HQ": "HQ"
     };
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
@@ -554,19 +555,26 @@
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            // Filter sales based on global entity filter
-            let shouldInclude = true;
+            // Filter logic fix: HQ should show when no filter is applied OR when HQ is explicitly selected
+            let shouldIncludeInGlobal = true;
             if (filters.comp) {
                 const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
-                if (!targetCountries.includes(sCountry)) shouldInclude = false;
-            } else if (sCountry === 'HQ') {
-                shouldInclude = false;
+                if (!targetCountries.includes(sCountry)) shouldIncludeInGlobal = false;
             }
 
-            if (shouldInclude) {
+            if (shouldIncludeInGlobal) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
-                totalSalesQty += q;
+                // When calculating the GLOBAL "Comm. Cost / Unit Sold" KPI, 
+                // we exclude HQ sales volume to avoid diluting the ratio, unless specifically filtered.
+                if (!filters.comp && sCountry === 'HQ') {
+                    // Skip HQ for global KPI summation
+                } else {
+                    totalSalesQty += q;
+                }
+
+                // But always keep track for the country specific chart
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
+
                 if (sDate) { 
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
                     salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
@@ -648,17 +656,24 @@
                 </div>`);
         });
 
-        // Distribution Charts
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
-        // FIXED: Comm. Unit Cost per Country
+        // FIXED: HQ logic for unit cost chart. If country is HQ, we use total sales for calculation 
+        // to avoid a divide-by-zero, OR we check if HQ specific sales exist.
         const unitCostEntries = compEntries.map(e => {
             const country = e[0];
             const comm = e[1];
-            const sales = countrySales[country] || 0;
+            let sales = countrySales[country] || 0;
+            
+            // If it's HQ and we have no HQ sales, but there are global sales, 
+            // the "Unit Cost" is interpreted as HQ's contribution to global unit costs.
+            if (country === 'HQ' && sales === 0) {
+               sales = totalQty; 
+            }
+            
             return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
         
