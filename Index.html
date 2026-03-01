@@ -378,6 +378,7 @@
         document.getElementById('global-filters').style.display = isApp ? 'none' : 'flex';
         document.getElementById('dept-toggle-container').style.display = isCost ? 'block' : 'none';
         document.getElementById('fDeptGroupWrapper').style.display = isDash ? 'flex' : 'none';
+        updateDashboard();
     }
 
     function syncGranularity(type) {
@@ -511,11 +512,22 @@
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
-        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGroup: getSelected('fDeptGroupList') };
+        const filters = { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList'), 
+            deptGroup: getSelected('fDeptGroupList') 
+        };
 
-        let ecf = 0, trf_actual = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
+        // Aggregators
+        let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
 
+        // 1. Process Approvals for Cost Analysis
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -553,6 +565,7 @@
             }
         });
 
+        // 2. Process Sales
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -592,26 +605,68 @@
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
-        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDays = 0, pDays = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
+        // 3. Process Reconciliation (Compliance Dashboard)
+        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDays = 0, pDays = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0, overdueTotal = 0;
+        
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (activeTab === 'dashboard' && filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
+            const rowComp = getCol(r, 'Burn Company', 'Company');
+            const rowDept = getCol(r, 'Department');
+            const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rowMo = getCol(r, 'Month');
+            const rowYr = String(getCol(r, 'Year'));
+
+            // Core Dashboard Filters
+            if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
+            if (filters.comp && !filters.comp.includes(rowComp)) return;
+            if (filters.dept && !filters.dept.includes(rowDept)) return;
+            if (filters.cc && !filters.cc.includes(rowCC)) return;
+            if (filters.yr && !filters.yr.includes(rowYr)) return;
+            if (filters.mo && !filters.mo.includes(rowMo)) return;
+
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
 
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
-            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
-            mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
-            if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
-            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
+            const status = (getCol(r, 'Status')||"").toLowerCase(), 
+                  amt = cleanNum(getCol(r, 'PRF Amount (USD)')), 
+                  cc = rowCC || "Misc", 
+                  overdue = cleanNum(getCol(r, 'Days Overdue')), 
+                  daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
+
+            if (status.includes('reconciled')) { 
+                recSum += amt; 
+                recCount++; 
+                if(daysToRec <= 30) recWithin30++; 
+            } else { 
+                penSum += amt; 
+                penCount++; 
+            }
+
+            mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); 
+            pDays += cleanNum(getCol(r, 'Days Pending')); 
+            overdueTotal += overdue;
+            count++;
+
+            if (overdue > 0) { 
+                if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; 
+            }
+            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; 
+            ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); 
+            ccMap[cc].count++;
         });
 
+        // Update Compliance UI
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
         document.getElementById('vMax').innerText = count > 0 ? (mDays/count).toFixed(0) + " Days" : "0 Days"; 
         document.getElementById('vPend').innerText = count > 0 ? (pDays/count).toFixed(0) + " Days" : "0 Days"; 
-        document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
+        document.getElementById('vOver').innerText = count > 0 ? (overdueTotal/count).toFixed(0) + " Days" : "0 Days";
+        
+        document.getElementById('countPen').innerText = penCount + " PRFs"; 
+        document.getElementById('countRec').innerText = recCount + " PRFs"; 
+        document.getElementById('usdPen').innerText = fmt(penSum); 
+        document.getElementById('usdRec').innerText = fmt(recSum); 
+        document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, count > 0 ? (pDays/count) : 0); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
@@ -670,11 +725,8 @@
     function drillToDrivers(ccName = null) {
         selectedCCForDrivers = ccName;
         const titleEl = document.getElementById('itemDriverTitle');
-        if (ccName) {
-            titleEl.innerHTML = `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>`;
-        } else {
-            titleEl.innerHTML = `Top 5 Item Drivers (Committed)`;
-        }
+        if (ccName) { titleEl.innerHTML = `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>`; } 
+        else { titleEl.innerHTML = `Top 5 Item Drivers (Committed)`; }
 
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { 
@@ -721,13 +773,9 @@
             if (filters.comp) {
                 const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
                 if (!target.includes(sCountry)) shouldInclude = false;
-            } else if (sCountry === 'HQ') {
-                shouldInclude = false;
-            }
+            } else if (sCountry === 'HQ') { shouldInclude = false; }
 
-            if (shouldInclude) {
-                totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
-            }
+            if (shouldInclude) { totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); }
         });
 
         const dl = document.getElementById('costDriverList');
@@ -831,11 +879,7 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         
-        const commonScaleOptions = { 
-            ticks: { color: '#ffffff', font: { size: 14, weight: '500', family: 'Inter' } },
-            grid: { display: false },
-            border: { display: false }
-        };
+        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 14, weight: '500', family: 'Inter' } }, grid: { display: false }, border: { display: false } };
 
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
@@ -843,15 +887,7 @@
                 { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
                 { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
             ]}, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: commonScaleOptions, 
-                    y: { ...commonScaleOptions, beginAtZero: true }, 
-                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '500', family: 'Inter' } } } 
-                }, 
-                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
-            } 
+            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '500', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
@@ -860,36 +896,19 @@
                 { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
                 { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
             ] }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: commonScaleOptions, 
-                    y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '500' }, callback: v => '$'+(v/1000)+'k' } } 
-                }, 
-                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
-            } 
+            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '500' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
         });
 
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
-            options: { 
-                indexAxis: 'y', 
-                maintainAspectRatio: false, 
-                scales: { x: commonScaleOptions, y: commonScaleOptions },
-                plugins: { legend: { display: false } } 
-            } 
+            options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
         });
 
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
-            options: { 
-                indexAxis: 'y', 
-                maintainAspectRatio: false, 
-                scales: { x: commonScaleOptions, y: commonScaleOptions },
-                plugins: { legend: { display: false } } 
-            } 
+            options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
         });
 
         fetchData(); setInterval(fetchData, 60000);
