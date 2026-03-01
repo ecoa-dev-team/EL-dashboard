@@ -6,7 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
     <style>
         :root { 
             --primary: #00d2ff; 
@@ -120,13 +120,14 @@
         
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
         .rank-label-link:hover { color: var(--green); }
-        .rank-impact-val { font-size: 13px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
         
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .rank-pct { color: var(--green); }
+        .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
 
         .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
 
@@ -644,7 +645,7 @@
                         <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div>
-                    <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
+                    <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div>
                 </div>`);
         });
 
@@ -747,7 +748,7 @@
                         <div class="rank-impact-val" onclick="drillToLedger('${ccName || ""}', '${driver}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
-                    <div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
+                    <div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div>
                 </div>`);
         });
     }
@@ -768,7 +769,7 @@
         displayCols.unshift('Department', 'Cost Center');
         
         if(head.children.length === 0) {
-            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_${uid}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
+            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
             trH += '<th>Action</th></tr>'; head.innerHTML = trH;
             displayCols.forEach(c => {
                 const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
@@ -831,23 +832,23 @@
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         
         const commonScaleOptions = { 
-            ticks: { color: '#ffffff', font: { size: 14, weight: '600', family: 'Inter' } },
-            grid: { display: false }, // GRID REMOVED
-            border: { display: false } // BORDER REMOVED
+            ticks: { color: '#ffffff', font: { size: 14, weight: '500', family: 'Inter' } },
+            grid: { display: false },
+            border: { display: false }
         };
 
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
                 { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
-                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 16, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
+                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
             ]}, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: commonScaleOptions, 
                     y: { ...commonScaleOptions, beginAtZero: true }, 
-                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: 'bold', family: 'Inter' } } } 
+                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '500', family: 'Inter' } } } 
                 }, 
                 plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
             } 
@@ -857,13 +858,13 @@
             type: 'bar', 
             data: { labels: [], datasets: [
                 { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
-                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '900', size: 16, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
+                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
             ] }, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: commonScaleOptions, 
-                    y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter' }, callback: v => '$'+(v/1000)+'k' } } 
+                    y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '500' }, callback: v => '$'+(v/1000)+'k' } } 
                 }, 
                 plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
             } 
@@ -871,7 +872,7 @@
 
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
             options: { 
                 indexAxis: 'y', 
                 maintainAspectRatio: false, 
@@ -882,7 +883,7 @@
 
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
             options: { 
                 indexAxis: 'y', 
                 maintainAspectRatio: false, 
