@@ -327,7 +327,12 @@
     let selectedDeptGroup = "Selling & Distribution"; 
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-    const ENTITY_TO_SALES_COUNTRY_MAP = { "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda" };
+    const ENTITY_TO_SALES_COUNTRY_MAP = { 
+        "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
+        "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
+        "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana",
+        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria"
+    };
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
     const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
@@ -500,12 +505,10 @@
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGroup: getSelected('fDeptGroupList') };
 
-        let targetSalesCountries = null;
-        if (filters.comp) { targetSalesCountries = filters.comp.map(entity => ENTITY_TO_SALES_COUNTRY_MAP[entity] || entity); }
-
         let ecf = 0, trf_actual = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
-        let ccCommittedMap = {}, salesTrendAgg = {}, costTrendAgg = {}, trendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, companySalesMap = {};
+        let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
 
+        // Aggregate Approval (Committed) Data
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -538,29 +541,32 @@
                     commitTrendAgg[sKey] = (commitTrendAgg[sKey] || 0) + amt;
                 }
                 ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
-                if (rComp) companyCommittedAgg[rComp] = (companyCommittedAgg[rComp] || 0) + amt;
+                
+                // For Unit Cost Mapping: Map Entity to Country
+                const country = ENTITY_TO_SALES_COUNTRY_MAP[rComp] || rComp;
+                companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
 
+        // Aggregate Sales Data
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            const q = cleanNum(getCol(r, 'Sales QTY'));
-            const isHQ = (sCountry && sCountry.toUpperCase() === 'HQ');
-            
-            let shouldInclude = false;
-            if (targetSalesCountries) { if (targetSalesCountries.includes(sCountry)) shouldInclude = true; } 
-            else { if (!isHQ) shouldInclude = true; }
+            // Filter sales based on global entity filter
+            let shouldInclude = true;
+            if (filters.comp) {
+                const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
+                if (!targetCountries.includes(sCountry)) shouldInclude = false;
+            } else if (sCountry === 'HQ') {
+                shouldInclude = false;
+            }
 
             if (shouldInclude) {
+                const q = cleanNum(getCol(r, 'Sales QTY'));
                 totalSalesQty += q;
-                let displayEntityName = sCountry;
-                for (let [entity, country] of Object.entries(ENTITY_TO_SALES_COUNTRY_MAP)) {
-                    if (country === sCountry) displayEntityName = entity;
-                }
-                if (displayEntityName) companySalesMap[displayEntityName] = (companySalesMap[displayEntityName] || 0) + q;
+                countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
                 if (sDate) { 
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
                     salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
@@ -568,42 +574,7 @@
             }
         });
 
-        pnlData.forEach(r => {
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; }
-            const rDate = parseExcelDate(getCol(r, 'Date', 'Month Year'));
-            if ((filters.start && rDate < filters.start) || (filters.end && rDate > filters.end)) return;
-            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return; 
-            if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return;
-            
-            const amt = cleanNum(getCol(r, 'Amount (USD)')); 
-            pnl += amt;
-            if (rDate) {
-                let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(rDate)}` : (currentGranularity === 'monthly' ? monthNames[rDate.getMonth()].substring(0,3) : getQuarter(rDate));
-                trendAgg[sKey] = (trendAgg[sKey] || 0) + amt; 
-            }
-        });
-
-        let recSum = 0, penSum = 0, recCount = 0, penCount = 0, effAgg = 0, mDays = 0, pDays = 0, count = 0, ccMap = {}, a1=0, a2=0, a3=0, recWithin30 = 0;
-        recData.filter(r => {
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false; } 
-            else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return false; }
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
-            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
-            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return false; if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return false;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return false; if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return false;
-            if (filters.cc && !filters.cc.includes(getCol(r, 'Cost Center', 'Cost Centre'))) return false; return true;
-        }).forEach(r => {
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", eff = cleanNum(getCol(r, 'Efficiency %')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
-            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
-            effAgg += eff; mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
-            if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
-            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += eff; ccMap[cc].count++;
-        });
-
+        // KPI Updates
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         
@@ -621,21 +592,34 @@
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
-        const avgMax = count > 0 ? (mDays/count) : 0, avgPend = count > 0 ? (pDays/count) : 0;
+        // Compliance Data
+        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDays = 0, pDays = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
+        recData.forEach(r => {
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            if (activeTab === 'dashboard' && filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
+            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
+
+            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = getCol(r, 'Cost Center', 'Cost Centre')||"Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
+            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
+            mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); pDays += cleanNum(getCol(r, 'Days Pending')); count++;
+            if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
+            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
+        });
+
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
-        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days";
-        const ovLbl = document.getElementById('vOverLabel'), ovVal = document.getElementById('vOver'), ovDiff = avgPend - avgMax;
-        if (ovDiff <= 0) { ovLbl.innerText = "Days to Deadline"; ovVal.innerText = Math.abs(ovDiff).toFixed(0) + " Days"; ovVal.style.color = "var(--green)"; } else { ovLbl.innerText = "Avg Overdue"; ovVal.innerText = ovDiff.toFixed(0) + " Days"; ovVal.style.color = "var(--red)"; }
+        document.getElementById('vMax').innerText = count > 0 ? (mDays/count).toFixed(0) + " Days" : "0 Days"; 
+        document.getElementById('vPend').innerText = count > 0 ? (pDays/count).toFixed(0) + " Days" : "0 Days"; 
         document.getElementById('countPen').innerText = penCount + " PRFs"; document.getElementById('countRec').innerText = recCount + " PRFs"; document.getElementById('usdPen').innerText = fmt(penSum); document.getElementById('usdRec').innerText = fmt(recSum); document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
-        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
+        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, count > 0 ? (pDays/count) : 0); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
-        
-        updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, trendAgg, companyCommittedAgg, totalComm, totalSalesQty, commitTrendAgg, companySalesMap);
+        updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
     }
 
-    function updateCostDashboardVisuals(salesTrend, ccDriver, trendMap, compMap, totalComm, totalQty, commitTrend, compSales) {
+    function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
         const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
         const sortedKeys = sortKeys(Object.keys(commitTrend), currentGranularity);
         
@@ -645,7 +629,6 @@
         trendChart.update();
 
         weeklyPnlChart.data.labels = sortedKeys;
-        weeklyPnlChart.data.datasets[0].data = sortedKeys.map(k => trendMap[k] || 0); 
         weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
         weeklyPnlChart.update();
 
@@ -653,8 +636,6 @@
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
         sortedCC.forEach(([cc, val]) => {
-            const totalPct = totalComm > 0 ? ((val / totalComm) * 100).toFixed(1) : 0;
-            const barPct = (val / maxVal * 100).toFixed(0);
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
@@ -662,47 +643,43 @@
                         <div class="rank-label rank-label-link" onclick="drillToDrivers('${cc}')">${cc}</div>
                         <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--primary)"></div></div>
-                    <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalPct}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div>
+                    <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${costSharePU}</span></div></div>
                 </div>`);
         });
 
-        const compEntries = Object.entries(compMap).sort((a,b) => b[1] - a[1]);
+        // Distribution Charts
+        const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
+        // FIXED: Comm. Unit Cost per Country
         const unitCostEntries = compEntries.map(e => {
-            const qty = compSales[e[0]] || 0;
-            return [e[0], qty > 0 ? (e[1] / qty) : 0];
+            const country = e[0];
+            const comm = e[1];
+            const sales = countrySales[country] || 0;
+            return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
+        
         unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
         unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
         unitCostCompChart.update();
     }
 
     function drillToDrivers(ccName) {
-        const activeTab = document.querySelector('.tab-content.active').id;
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let driverMap = {}, totalForCC = 0, totalSalesQty = 0;
-        let targetSalesCountries = null;
-        if (filters.comp) { targetSalesCountries = filters.comp.map(entity => ENTITY_TO_SALES_COUNTRY_MAP[entity] || entity); }
-
         appData.forEach(r => {
             const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
             if (rowCC !== ccName) return;
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             if (!(type.includes('PRF') || type.includes('PR') || type.includes('TRF'))) return;
 
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return;
-            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -712,14 +689,13 @@
         });
 
         salesData.forEach(r => {
-            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
-            if (filters.mo && !filters.mo.includes(sMo)) return;
-            const isHQ = (sCountry && sCountry.toUpperCase() === 'HQ');
-            let shouldInclude = false;
-            if (targetSalesCountries) { if (targetSalesCountries.includes(sCountry)) shouldInclude = true; } 
-            else { if (!isHQ) shouldInclude = true; }
-            if (shouldInclude) totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+            if (filters.comp) {
+                const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
+                if (!target.includes(sCountry)) return;
+            } else if (sCountry === 'HQ') return;
+            totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
         });
 
         const dl = document.getElementById('costDriverList');
@@ -729,8 +705,6 @@
 
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
-            const sharePct = totalForCC > 0 ? ((val / totalForCC) * 100).toFixed(1) : 0;
-            const barPct = (val / maxVal * 100).toFixed(0);
             const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
@@ -738,8 +712,8 @@
                         <div class="rank-label">${driver}</div>
                         <div class="rank-impact-val">$${(val/1000).toFixed(1)}k</div>
                     </div>
-                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${barPct}%; background:var(--orange)"></div></div>
-                    <div class="rank-footer"><div>CC Share: <span class="rank-pct">${sharePct}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
+                    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
+                    <div class="rank-footer"><div>CC Share: <span class="rank-pct">${totalForCC > 0 ? ((val/totalForCC)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
                 </div>`);
         });
     }
@@ -821,52 +795,7 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 14 }, formatter: (v) => v.toFixed(2) } }]}, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { beginAtZero: true }, y1: { position: 'right', beginAtZero: true, ticks: { color: '#00ff9d' } } }, plugins: { legend: { labels: { color: '#fff' } } } } });
-        
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: [], 
-                datasets: [
-                    { 
-                        label: 'Actual P&L Spend', 
-                        data: [], 
-                        backgroundColor: 'rgba(0, 210, 255, 0.3)', 
-                        borderColor: '#00d2ff', 
-                        borderWidth: 2, 
-                        order: 2, 
-                        datalabels: { display: false } 
-                    }, 
-                    { 
-                        label: 'Committed Spend', 
-                        data: [], 
-                        type: 'line', 
-                        borderColor: '#00ff9d', 
-                        backgroundColor: '#00ff9d', 
-                        pointRadius: 4, 
-                        tension: 0, 
-                        order: 1, 
-                        datalabels: { 
-                            display: true, 
-                            align: 'top', 
-                            color: '#ffffff', 
-                            backgroundColor: '#1e293b', 
-                            borderRadius: 4, 
-                            font: { weight: '900', size: 14 }, 
-                            formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' 
-                        } 
-                    }
-                ]
-            }, 
-            options: { 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { ticks: { color: '#ffffff' } }, 
-                    y: { beginAtZero: true, ticks: { color: '#ffffff', callback: v => '$'+(v/1000)+'k' } } 
-                }, 
-                plugins: { legend: { labels: { color: '#fff' } } } 
-            } 
-        });
-
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '900', size: 14 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }] }, options: { maintainAspectRatio: false, scales: { x: { ticks: { color: '#ffffff' } }, y: { beginAtZero: true, ticks: { color: '#ffffff', callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff' } } } } });
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', formatter: (v) => '$'+v.toFixed(2) } }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         fetchData(); setInterval(fetchData, 60000);
