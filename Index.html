@@ -249,7 +249,7 @@
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 class="chart-title">Top 5 Item Drivers (Committed)</h3>
+                <h3 class="chart-title" id="itemDriverTitle">Top 5 Item Drivers (Committed)</h3>
                 <div id="costDriverList" class="health-rank-container">
                     <div class="empty-placeholder">Click a Cost Center name above to view itemized committed drivers</div>
                 </div>
@@ -385,15 +385,19 @@
         updateDashboard();
     }
 
-    function drillToLedger(costCenter) {
+    function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
+        const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
         const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
+        
         if(ccKey) tableFilters[ccKey] = [costCenter];
+        if(itemDriver && itemKey) tableFilters[itemKey] = [itemDriver];
+        
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
@@ -509,7 +513,6 @@
         let ecf = 0, trf_actual = 0, inv = 0, pnl = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
 
-        // Aggregate Approval (Committed) Data
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -542,20 +545,16 @@
                     commitTrendAgg[sKey] = (commitTrendAgg[sKey] || 0) + amt;
                 }
                 ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
-                
-                // For Unit Cost Mapping: Map Entity to Country
                 const country = ENTITY_TO_SALES_COUNTRY_MAP[rComp] || rComp;
                 companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
 
-        // Aggregate Sales Data
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            // Filter logic fix: HQ should show when no filter is applied OR when HQ is explicitly selected
             let shouldIncludeInGlobal = true;
             if (filters.comp) {
                 const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
@@ -564,17 +563,8 @@
 
             if (shouldIncludeInGlobal) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
-                // When calculating the GLOBAL "Comm. Cost / Unit Sold" KPI, 
-                // we exclude HQ sales volume to avoid diluting the ratio, unless specifically filtered.
-                if (!filters.comp && sCountry === 'HQ') {
-                    // Skip HQ for global KPI summation
-                } else {
-                    totalSalesQty += q;
-                }
-
-                // But always keep track for the country specific chart
+                if (!filters.comp && sCountry === 'HQ') {} else { totalSalesQty += q; }
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
-
                 if (sDate) { 
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
                     salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
@@ -582,7 +572,6 @@
             }
         });
 
-        // KPI Updates
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         
@@ -600,7 +589,6 @@
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
-        // Compliance Data
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDays = 0, pDays = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -661,19 +649,11 @@
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
 
-        // FIXED: HQ logic for unit cost chart. If country is HQ, we use total sales for calculation 
-        // to avoid a divide-by-zero, OR we check if HQ specific sales exist.
         const unitCostEntries = compEntries.map(e => {
             const country = e[0];
             const comm = e[1];
             let sales = countrySales[country] || 0;
-            
-            // If it's HQ and we have no HQ sales, but there are global sales, 
-            // the "Unit Cost" is interpreted as HQ's contribution to global unit costs.
-            if (country === 'HQ' && sales === 0) {
-               sales = totalQty; 
-            }
-            
+            if (country === 'HQ' && sales === 0) { sales = totalQty; }
             return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
         
@@ -683,6 +663,7 @@
     }
 
     function drillToDrivers(ccName) {
+        document.getElementById('itemDriverTitle').innerText = `Top 5 Item Drivers: ${ccName}`;
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
@@ -725,7 +706,7 @@
                 <div class="rank-item">
                     <div class="rank-top-row">
                         <div class="rank-label">${driver}</div>
-                        <div class="rank-impact-val">$${(val/1000).toFixed(1)}k</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${ccName}', '${driver}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
                     <div class="rank-footer"><div>CC Share: <span class="rank-pct">${totalForCC > 0 ? ((val/totalForCC)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
