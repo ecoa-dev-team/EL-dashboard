@@ -322,10 +322,10 @@
 <script>
     Chart.register(ChartDataLabels);
     
-    // Clarity Improvement: Set high resolution global defaults
-    Chart.defaults.devicePixelRatio = 2; // Renders 2x resolution (Standard Retina)
+    // Global Defaults for Clarity
+    Chart.defaults.devicePixelRatio = 2; 
     Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.weight = '600';
+    Chart.defaults.font.weight = '700';
     Chart.defaults.color = '#cbd5e1';
 
     let appData = [], recData = [], pnlData = [], salesData = [];
@@ -896,36 +896,67 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         
-        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 14, weight: '700', family: 'Inter' } }, grid: { display: false }, border: { display: false } };
+        // Common Scale Settings to avoid overlaps
+        const commonScaleOptions = { 
+            ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, 
+            grid: { display: false }, 
+            border: { display: false }
+        };
 
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
-                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '800', size: 15, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
+                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, 
+                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }
             ]}, 
-            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
+            options: { 
+                layout: { padding: { top: 35 } },
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: commonScaleOptions, 
+                    y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, 
+                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } 
+                }, 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } 
+            } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
-                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.8)', padding: 4, borderRadius: 4, font: { weight: '800', size: 15, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
+                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, 
+                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }
             ] }, 
-            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
+            options: { 
+                layout: { padding: { top: 35 } },
+                maintainAspectRatio: false, 
+                scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } 
+            } 
         });
 
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 14, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
-            options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, 
+            options: { 
+                layout: { padding: { right: 60 } },
+                indexAxis: 'y', 
+                maintainAspectRatio: false, 
+                scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, 
+                plugins: { legend: { display: false } } 
+            } 
         });
 
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 14, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
-            options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, 
+            options: { 
+                layout: { padding: { right: 60 } },
+                indexAxis: 'y', 
+                maintainAspectRatio: false, 
+                scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, 
+                plugins: { legend: { display: false } } 
+            } 
         });
 
         fetchData(); setInterval(fetchData, 60000);
