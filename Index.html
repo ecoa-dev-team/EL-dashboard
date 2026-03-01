@@ -274,7 +274,7 @@
             <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
             <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
             <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
-            <div class="mini-tile"><span id="vOverLabel">Avg Overdue</span><div id="vOver" style="color:var(--red)">0 Days</div></div>
+            <div class="mini-tile"><span id="vOverLabel">Avg Days to Deadline</span><div id="vOver" style="color:var(--green)">0 Days</div></div>
         </div>
         <div class="viz-grid">
             <div class="chart-box">
@@ -405,7 +405,16 @@
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
-        if(itemDriver && itemKey) tableFilters[itemKey] = [itemDriver];
+        
+        if(itemDriver && itemKey) {
+            if (itemDriver === "Unspecified") {
+                // Find all unique values in the driver column that represent "Empty" in the source data
+                const emptyMatches = [...new Set(appData.map(r => (r[itemKey] || "").toString()))].filter(v => v.trim() === "" || v === "-");
+                tableFilters[itemKey] = emptyMatches.length > 0 ? emptyMatches : [""];
+            } else {
+                tableFilters[itemKey] = [itemDriver];
+            }
+        }
         
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
@@ -770,12 +779,14 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
-            const driver = getCol(r, 'Cost Drivers', 'Driver') || "Unspecified";
+            const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
+            const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+            
             driverMap[driver] = (driverMap[driver] || 0) + amt;
             totalForScope += amt;
         });
@@ -822,9 +833,15 @@
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody'), excludedCols = ['link', 'pdf link', 'url', 'full file name'];
         const filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
-                let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
-                let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "-").toString();
-                if(!tableFilters[col].includes(rowVal)) return false;
+                let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
+                let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
+                
+                // Special check for "Unspecified" which maps to empty strings
+                if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) {
+                    if (rowVal.trim() !== "" && rowVal !== "-") return false;
+                } else if(!tableFilters[col].includes(rowVal)) {
+                    return false;
+                }
             }
             return true;
         });
