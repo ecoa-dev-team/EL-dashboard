@@ -606,7 +606,7 @@
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
         // 3. Process Reconciliation (Compliance Dashboard)
-        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDays = 0, pDays = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0, overdueTotal = 0;
+        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -616,7 +616,6 @@
             const rowMo = getCol(r, 'Month');
             const rowYr = String(getCol(r, 'Year'));
 
-            // Core Dashboard Filters
             if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
             if (filters.comp && !filters.comp.includes(rowComp)) return;
             if (filters.dept && !filters.dept.includes(rowDept)) return;
@@ -631,7 +630,9 @@
                   amt = cleanNum(getCol(r, 'PRF Amount (USD)')), 
                   cc = rowCC || "Misc", 
                   overdue = cleanNum(getCol(r, 'Days Overdue')), 
-                  daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
+                  daysToRec = cleanNum(getCol(r, 'Actual Recon Days')),
+                  maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')),
+                  pendDays = cleanNum(getCol(r, 'Days Pending'));
 
             if (status.includes('reconciled')) { 
                 recSum += amt; 
@@ -642,9 +643,8 @@
                 penCount++; 
             }
 
-            mDays += cleanNum(getCol(r, 'Max Reconciliation Days')); 
-            pDays += cleanNum(getCol(r, 'Days Pending')); 
-            overdueTotal += overdue;
+            mDaysTotal += maxDays; 
+            pDaysTotal += pendDays; 
             count++;
 
             if (overdue > 0) { 
@@ -655,12 +655,27 @@
             ccMap[cc].count++;
         });
 
-        // Update Compliance UI
+        // Compliance Health KPI Fixes
+        const avgMax = count > 0 ? (mDaysTotal / count) : 0;
+        const avgPend = count > 0 ? (pDaysTotal / count) : 0;
+        
+        const overLabel = document.getElementById('vOverLabel');
+        const overVal = document.getElementById('vOver');
+        
+        if (avgMax > avgPend) {
+            overLabel.innerText = "Avg Days to Deadline";
+            overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days";
+            overVal.style.color = "var(--green)";
+        } else {
+            overLabel.innerText = "Avg Overdue";
+            overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days";
+            overVal.style.color = "var(--red)";
+        }
+
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
-        document.getElementById('vMax').innerText = count > 0 ? (mDays/count).toFixed(0) + " Days" : "0 Days"; 
-        document.getElementById('vPend').innerText = count > 0 ? (pDays/count).toFixed(0) + " Days" : "0 Days"; 
-        document.getElementById('vOver').innerText = count > 0 ? (overdueTotal/count).toFixed(0) + " Days" : "0 Days";
+        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
+        document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
         
         document.getElementById('countPen').innerText = penCount + " PRFs"; 
         document.getElementById('countRec').innerText = recCount + " PRFs"; 
@@ -668,7 +683,7 @@
         document.getElementById('usdRec').innerText = fmt(recSum); 
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
-        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, count > 0 ? (pDays/count) : 0); 
+        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
         
