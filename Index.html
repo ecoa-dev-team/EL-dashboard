@@ -22,7 +22,7 @@
             --border: #475569;
         }
         
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 13px; line-height: 1.4; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
@@ -321,6 +321,13 @@
 
 <script>
     Chart.register(ChartDataLabels);
+    
+    // Clarity Improvement: Set high resolution global defaults
+    Chart.defaults.devicePixelRatio = 2; // Renders 2x resolution (Standard Retina)
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.weight = '600';
+    Chart.defaults.color = '#cbd5e1';
+
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
     let tableFilters = {}; 
@@ -523,11 +530,9 @@
             deptGroup: getSelected('fDeptGroupList') 
         };
 
-        // Aggregators
         let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
 
-        // 1. Process Approvals for Cost Analysis
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -565,7 +570,6 @@
             }
         });
 
-        // 2. Process Sales
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -605,7 +609,6 @@
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
-        // 3. Process Reconciliation (Compliance Dashboard)
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         
         recData.forEach(r => {
@@ -655,7 +658,6 @@
             ccMap[cc].count++;
         });
 
-        // Compliance Health KPI Fixes
         const avgMax = count > 0 ? (mDaysTotal / count) : 0;
         const avgPend = count > 0 ? (pDaysTotal / count) : 0;
         
@@ -894,35 +896,35 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         
-        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 14, weight: '500', family: 'Inter' } }, grid: { display: false }, border: { display: false } };
+        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 14, weight: '700', family: 'Inter' } }, grid: { display: false }, border: { display: false } };
 
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
-                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
+                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
+                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '800', size: 15, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
             ]}, 
-            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '500', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
+            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
-                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '500', size: 16, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
+                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
+                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.8)', padding: 4, borderRadius: 4, font: { weight: '800', size: 15, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
             ] }, 
-            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '500' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
+            options: { maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } } 
         });
 
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 14, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
             options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
         });
 
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '500', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 14, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
             options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: commonScaleOptions, y: commonScaleOptions }, plugins: { legend: { display: false } } } 
         });
 
