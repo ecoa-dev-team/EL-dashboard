@@ -251,7 +251,6 @@
             <div class="chart-box">
                 <h3 class="chart-title" id="itemDriverTitle">Top 5 Item Drivers (Committed)</h3>
                 <div id="costDriverList" class="health-rank-container">
-                    <div class="empty-placeholder">Click a Cost Center name above to view itemized committed drivers</div>
                 </div>
             </div>
         </div>
@@ -325,6 +324,7 @@
     let tableFilters = {}; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
+    let selectedCCForDrivers = null; // Track current selection
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const ENTITY_TO_SALES_COUNTRY_MAP = { 
@@ -395,7 +395,7 @@
         const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
-        if(ccKey) tableFilters[ccKey] = [costCenter];
+        if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
         if(itemDriver && itemKey) tableFilters[itemKey] = [itemDriver];
         
         if(typeKey) {
@@ -500,6 +500,7 @@
         document.getElementById('dStart').value = ''; document.getElementById('dEnd').value = '';
         document.querySelectorAll('#global-filters .dropdown-content input').forEach(i => i.checked = false);
         [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers'],['fDeptGroupList', 'fDeptGroupLabel', 'Dept Groups']].forEach(c => { const labelEl = document.getElementById(c[1]); if(labelEl) { labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); }});
+        selectedCCForDrivers = null;
         updateDashboard();
     }
 
@@ -613,6 +614,9 @@
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, count > 0 ? (pDays/count) : 0); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
+        
+        // REFRESH ITEM DRIVERS AUTOMATICALLY
+        drillToDrivers(selectedCCForDrivers);
     }
 
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
@@ -662,42 +666,77 @@
         unitCostCompChart.update();
     }
 
-    function drillToDrivers(ccName) {
-        document.getElementById('itemDriverTitle').innerText = `Top 5 Item Drivers: ${ccName}`;
-        const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
-        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
+    function drillToDrivers(ccName = null) {
+        selectedCCForDrivers = ccName;
+        const titleEl = document.getElementById('itemDriverTitle');
+        if (ccName) {
+            titleEl.innerHTML = `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>`;
+        } else {
+            titleEl.innerHTML = `Top 5 Item Drivers (Committed)`;
+        }
 
-        let driverMap = {}, totalForCC = 0, totalSalesQty = 0;
+        const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
+        const filters = { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList') 
+        };
+
+        let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
+            
+            // If ccName is provided, filter specifically for it
             const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
-            if (rowCC !== ccName) return;
+            if (ccName && rowCC !== ccName) return;
+
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             if (!(type.includes('PRF') || type.includes('PR') || type.includes('TRF'))) return;
 
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
+            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(rowCC)) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const driver = getCol(r, 'Cost Drivers', 'Driver') || "Unspecified";
             driverMap[driver] = (driverMap[driver] || 0) + amt;
-            totalForCC += amt;
+            totalForScope += amt;
         });
 
         salesData.forEach(r => {
-            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country');
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
+            if (filters.mo && !filters.mo.includes(sMo)) return;
+            
+            let shouldInclude = true;
             if (filters.comp) {
                 const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
-                if (!target.includes(sCountry)) return;
-            } else if (sCountry === 'HQ') return;
-            totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+                if (!target.includes(sCountry)) shouldInclude = false;
+            } else if (sCountry === 'HQ') {
+                shouldInclude = false;
+            }
+
+            if (shouldInclude) {
+                totalSalesQty += cleanNum(getCol(r, 'Sales QTY'));
+            }
         });
 
         const dl = document.getElementById('costDriverList');
         dl.innerHTML = '';
         const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
+        if (sortedDrivers.length === 0) { 
+            dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; 
+            return; 
+        }
 
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
@@ -706,10 +745,10 @@
                 <div class="rank-item">
                     <div class="rank-top-row">
                         <div class="rank-label">${driver}</div>
-                        <div class="rank-impact-val" onclick="drillToLedger('${ccName}', '${driver}')">$${(val/1000).toFixed(1)}k</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${ccName || ""}', '${driver}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
-                    <div class="rank-footer"><div>CC Share: <span class="rank-pct">${totalForCC > 0 ? ((val/totalForCC)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
+                    <div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span style="color:var(--orange)">$${unitCost}</span></div></div>
                 </div>`);
         });
     }
