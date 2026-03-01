@@ -6,6 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
         :root { 
             --primary: #00d2ff; 
@@ -19,18 +20,16 @@
             --text-main: #ffffff;
             --text-light: #cbd5e1;
             --border: #475569;
-            /* Using Inter with a fall-back to clear system fonts for maximum legibility */
-            --font-stack: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
         
         * { box-sizing: border-box; }
-        body { font-family: var(--font-stack); background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 13px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 13px; line-height: 1.4; }
         
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
         .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
         
         .tab-container { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-end; }
-        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; font-family: var(--font-stack); }
+        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; font-family: 'Inter', sans-serif; }
         .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -52,7 +51,7 @@
         
         .multiselect-container { 
             background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
-            cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: var(--font-stack);
+            cursor: pointer; display: flex; align-items: center; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
         }
         .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
 
@@ -68,7 +67,7 @@
         .date-group-header { background: #0f172a; padding: 5px 10px; font-weight: 800; color: var(--primary); font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
         .date-month-header { padding: 4px 12px; font-weight: bold; font-size: 10px; background: #1e293b; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: var(--font-stack); }
+        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -99,7 +98,7 @@
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 10; }
-        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 4px 10px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; font-family: var(--font-stack); }
+        .toggle-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); padding: 4px 10px; cursor: pointer; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; }
         .toggle-btn:hover { border-color: var(--primary); }
         .toggle-btn.active { background: var(--primary); color: #000; border-color: var(--primary); box-shadow: 0 0 8px var(--primary); }
 
@@ -117,7 +116,7 @@
         .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
-        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; font-family: var(--font-stack); }
+        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
         
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
         .rank-label-link:hover { color: var(--green); }
@@ -139,7 +138,7 @@
         .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .ledger-table { font-size: 12px !important; table-layout: auto; }
         .ledger-table th { padding: 12px 10px !important; }
-        .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; font-family: var(--font-stack); }
+        .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
         .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
@@ -147,7 +146,7 @@
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
 
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; }
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
         
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
@@ -156,12 +155,12 @@
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
-        button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: var(--font-stack); }
+        button { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
 
         .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
         .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
-        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: var(--font-stack); }
+        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
         #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
     </style>
 </head>
@@ -829,50 +828,50 @@
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0]; const total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0]; const x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
         
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
-        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold' } } } } } });
+        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         
         const commonScaleOptions = { 
-            ticks: { color: '#ffffff', font: { size: 14, weight: '700' } },
-            /* STRICTLY REMOVED GRID LINES FOR COST ANALYSIS */
-            grid: { display: false, drawBorder: true, borderColor: 'rgba(255,255,255,0.2)' }
+            ticks: { color: '#ffffff', font: { size: 14, weight: '600', family: 'Inter' } },
+            grid: { display: false }, // GRID REMOVED
+            border: { display: false } // BORDER REMOVED
         };
 
         trendChart = new Chart(document.getElementById('trendChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
-                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 16 }, formatter: (v) => v.toFixed(2) } }
+                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.15)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false } }, 
+                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0.1, yAxisID: 'y1', order: 1, datalabels: { display: true, align: 'top', color: '#00ff9d', font: { weight: '900', size: 16, family: 'Inter' }, formatter: (v) => v.toFixed(2) } }
             ]}, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: commonScaleOptions, 
                     y: { ...commonScaleOptions, beginAtZero: true }, 
-                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: 'bold' } } } 
+                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, ticks: { color: '#00ff9d', font: { size: 14, weight: 'bold', family: 'Inter' } } } 
                 }, 
-                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800' } } } } 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
             } 
         });
 
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
             type: 'bar', 
             data: { labels: [], datasets: [
-                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.4)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
-                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#ff4d4d', backgroundColor: '#ff4d4d', pointRadius: 5, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, font: { weight: '900', size: 16 }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
+                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.3)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false } }, 
+                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 4, tension: 0, order: 1, datalabels: { display: true, align: 'top', color: '#ffffff', backgroundColor: '#1e293b', borderRadius: 4, font: { weight: '900', size: 16, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } }
             ] }, 
             options: { 
                 maintainAspectRatio: false, 
                 scales: { 
                     x: commonScaleOptions, 
-                    y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14 }, callback: v => '$'+(v/1000)+'k' } } 
+                    y: { ...commonScaleOptions, beginAtZero: true, ticks: { color: '#ffffff', font: { size: 14, family: 'Inter' }, callback: v => '$'+(v/1000)+'k' } } 
                 }, 
-                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800' } } } } 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 13, weight: '800', family: 'Inter' } } } } 
             } 
         });
 
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k' } }] }, 
             options: { 
                 indexAxis: 'y', 
                 maintainAspectRatio: false, 
@@ -883,7 +882,7 @@
 
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
             type: 'bar', 
-            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], datalabels: { display: true, align: 'right', anchor: 'end', color: '#fff', font: { size: 15, weight: '900', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2) } }] }, 
             options: { 
                 indexAxis: 'y', 
                 maintainAspectRatio: false, 
