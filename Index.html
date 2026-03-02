@@ -85,7 +85,6 @@
             font-family: 'Inter', sans-serif; 
         }
 
-        /* Styling the date picker icon to be white and distinguishable */
         input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
             cursor: pointer;
@@ -748,11 +747,13 @@
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
         sortedCC.forEach(([cc, val]) => {
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
+            // Escaping single quotes for the onclick function to handle "Agents' Commissions" etc.
+            const escapedCC = cc.replace(/'/g, "\\'");
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
-                        <div class="rank-label rank-label-link" onclick="drillToDrivers('${cc}')">${cc}</div>
-                        <div class="rank-impact-val" onclick="drillToLedger('${cc}')">$${(val/1000).toFixed(1)}k</div>
+                        <div class="rank-label rank-label-link" onclick="drillToDrivers('${escapedCC}')">${cc}</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div>
                     <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div>
@@ -846,11 +847,15 @@
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
             const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
+            // Correctly escaping for labels with apostrophes
+            const escapedCC = (ccName || "").replace(/'/g, "\\'");
+            const escapedDriver = driver.replace(/'/g, "\\'");
+
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
                     <div class="rank-top-row">
                         <div class="rank-label">${driver}</div>
-                        <div class="rank-impact-val" onclick="drillToLedger('${ccName || ""}', '${driver}')">$${(val/1000).toFixed(1)}k</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div>
                     </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
                     <div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div>
