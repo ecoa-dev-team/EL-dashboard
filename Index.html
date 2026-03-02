@@ -607,20 +607,25 @@
             }
         });
 
+        // SALES LOGIC: Exclude HQ unless explicitly filtered to prevent double counting
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            let shouldIncludeInGlobal = true;
+            let isSelectedCountry = true;
             if (filters.comp) {
                 const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
-                if (!targetCountries.includes(sCountry)) shouldIncludeInGlobal = false;
+                if (!targetCountries.includes(sCountry)) isSelectedCountry = false;
             }
 
-            if (shouldIncludeInGlobal) {
+            // The fix: if no specific company is selected, ignore HQ rows to avoid double counting country totals.
+            // If a company is selected, we only include that country's rows.
+            let skipHQ = (!filters.comp && sCountry === 'HQ');
+
+            if (isSelectedCountry && !skipHQ) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
-                if (!filters.comp && sCountry === 'HQ') {} else { totalSalesQty += q; }
+                totalSalesQty += q;
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
                 if (sDate) { 
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
@@ -768,6 +773,7 @@
             const country = e[0];
             const comm = e[1];
             let sales = countrySales[country] || 0;
+            // If we are looking at HQ specifically or global total, ensure sales isn't double counted
             if (country === 'HQ' && sales === 0) { sales = totalQty; }
             return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
@@ -809,7 +815,7 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
@@ -821,18 +827,23 @@
             totalForScope += amt;
         });
 
+        // Driver Drill Sales Logic fix (exclude HQ rows for global unit cost)
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             
-            let shouldInclude = true;
+            let isSelectedCountry = true;
             if (filters.comp) {
                 const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
-                if (!target.includes(sCountry)) shouldInclude = false;
-            } else if (sCountry === 'HQ') { shouldInclude = false; }
+                if (!target.includes(sCountry)) isSelectedCountry = false;
+            }
 
-            if (shouldInclude) { totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); }
+            let skipHQ = (!filters.comp && sCountry === 'HQ');
+
+            if (isSelectedCountry && !skipHQ) { 
+                totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
+            }
         });
 
         const dl = document.getElementById('costDriverList');
@@ -864,7 +875,6 @@
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
-        // Added 'last modified' to exclusion list to hide the column
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         
         const filteredData = sourceData.filter(row => {
