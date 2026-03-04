@@ -607,7 +607,6 @@
             }
         });
 
-        // SALES LOGIC: Exclude HQ unless explicitly filtered to prevent double counting
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -619,8 +618,6 @@
                 if (!targetCountries.includes(sCountry)) isSelectedCountry = false;
             }
 
-            // The fix: if no specific company is selected, ignore HQ rows to avoid double counting country totals.
-            // If a company is selected, we only include that country's rows.
             let skipHQ = (!filters.comp && sCountry === 'HQ');
 
             if (isSelectedCountry && !skipHQ) {
@@ -773,7 +770,6 @@
             const country = e[0];
             const comm = e[1];
             let sales = countrySales[country] || 0;
-            // If we are looking at HQ specifically or global total, ensure sales isn't double counted
             if (country === 'HQ' && sales === 0) { sales = totalQty; }
             return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
@@ -815,7 +811,7 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
@@ -827,7 +823,6 @@
             totalForScope += amt;
         });
 
-        // Driver Drill Sales Logic fix (exclude HQ rows for global unit cost)
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -877,7 +872,7 @@
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         
-        const filteredData = sourceData.filter(row => {
+        let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
@@ -891,7 +886,13 @@
             return true;
         });
 
+        // SORTING LOGIC: Sort by Amount (USD) descending
         const rawCols = Object.keys(appData[0] || {});
+        const amtKey = rawCols.find(k => k.toLowerCase().includes('amount') && k.toLowerCase().includes('usd'));
+        if (amtKey) {
+            filteredData.sort((a, b) => cleanNum(b[amtKey]) - cleanNum(a[amtKey]));
+        }
+
         let displayCols = []; 
         rawCols.forEach(c => { 
             const cl = c.toLowerCase().trim(); 
