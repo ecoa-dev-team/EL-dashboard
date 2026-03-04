@@ -53,7 +53,12 @@
             background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
             cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
         }
-        .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
+        .multiselect-container::after {
+            content: "▼";
+            font-size: 8px;
+            color: white;
+            margin-left: 8px;
+        }
         .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
 
         .dropdown-content {
@@ -66,9 +71,25 @@
         .dropdown-item input { height: 14px; width: 14px; cursor: pointer; }
 
         input[type="date"] { 
-            background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; 
+            background: #0f172a !important; 
+            color: #ffffff !important; 
+            padding: 0 10px; 
+            border: 1px solid var(--primary); 
+            border-radius: 5px; 
+            font-size: 11px; 
+            height: 35px; 
+            outline: none; 
+            font-weight: 800; 
+            cursor: pointer; 
+            width: 100%; 
+            font-family: 'Inter', sans-serif; 
         }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.8;
+        }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -100,7 +121,10 @@
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { 
-            background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px;
+            background: transparent; border: none; color: var(--text-light); 
+            padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; 
+            border-radius: 3px; text-transform: uppercase; transition: all 0.2s; 
+            font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px;
         }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
         .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
@@ -121,6 +145,7 @@
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
         .rank-label-link:hover { color: var(--green); }
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
@@ -156,7 +181,6 @@
 
         .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
         
-        /* Updated Status Styling (Words only) */
         .status-text-green { color: var(--green) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
         .status-text-orange { color: var(--orange) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
         
@@ -342,12 +366,16 @@
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const ENTITY_TO_SALES_COUNTRY_MAP = { 
-        "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
-        "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana", "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria", "HQ": "HQ"
+        "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
+        "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
+        "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana",
+        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria",
+        "HQ": "HQ"
     };
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
     const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
+    
     const parseExcelDate = (val) => {
         if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0));
         let s = val.toString().trim();
@@ -357,6 +385,7 @@
         const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); }
         return null;
     };
+    
     const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
     const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
@@ -395,39 +424,34 @@
         updateDashboard();
     }
 
-    // New specific drill function for Status clicking
-    function drillToLedgerByStatus(statusName) {
-        tableFilters = {}; // Reset local ledger filters
+    function drillToLedgerByStatus(statusTarget) {
+        tableFilters = {};
+        const rawCols = Object.keys(appData[0] || {});
         
-        // Define filters based on current global selection
-        const yearKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'year');
-        const monthKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'month');
-        const typeKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
+        // Find matching filenames from reconciliation report based on status
+        const matchingFileNames = recData
+            .filter(r => (getCol(r, 'Status') || "").toLowerCase().includes(statusTarget.toLowerCase()))
+            .map(r => (getCol(r, 'PRF file') || "").toString().trim())
+            .filter(name => name !== "");
 
-        // Apply Status logic
-        // We filter for PRFs primarily as they have status tracking
-        if(typeKey) {
-            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF'));
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        if (fileNameKey) {
+            tableFilters[fileNameKey] = matchingFileNames;
         }
 
-        // Apply Current Global Filters to the Ledger view
-        const selYears = getSelected('fYearList'); if (selYears && yearKey) tableFilters[yearKey] = selYears;
-        const selMonths = getSelected('fMonthList'); if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
+        // Apply Global Filters to the Ledger
+        syncGlobalSelectionToLedger('fYearList', 'Year');
+        syncGlobalSelectionToLedger('fMonthList', 'Month');
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
         syncGlobalSelectionToLedger('fCCList', 'Cost Center');
-        
-        // Note: Ledger table filtering logic in renderApprovalsTable handles the specific status check 
-        // by looking up the filename in recData. We need to pass the status requirement.
-        tableFilters["_status_filter"] = [statusName]; 
         
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
     }
 
-    function drillToDrivers(costCenter, itemDriver = null) {
+    function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
@@ -438,20 +462,39 @@
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
+        
         if(itemDriver && itemKey) {
             if (itemDriver === "Unspecified") {
                 const emptyMatches = [...new Set(appData.map(r => (r[itemKey] || "").toString()))].filter(v => v.trim() === "" || v === "-");
                 tableFilters[itemKey] = emptyMatches.length > 0 ? emptyMatches : [""];
-            } else { tableFilters[itemKey] = [itemDriver]; }
+            } else {
+                tableFilters[itemKey] = [itemDriver];
+            }
         }
+        
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
         }
-        const selYears = getSelected('fYearList'); if (selYears && yearKey) tableFilters[yearKey] = selYears;
-        const selMonths = getSelected('fMonthList'); if (selMonths && monthKey) tableFilters[monthKey] = selMonths;
+        
+        syncGlobalSelectionToLedger('fYearList', 'Year');
+        syncGlobalSelectionToLedger('fMonthList', 'Month');
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
+
+        const dStartVal = document.getElementById('dStart').value;
+        const dEndVal = document.getElementById('dEnd').value;
+        if (dateKey && (dStartVal || dEndVal)) {
+            const startObj = dStartVal ? new Date(dStartVal) : null; if(startObj) startObj.setHours(0,0,0,0);
+            const endObj = dEndVal ? new Date(dEndVal) : null; if(endObj) endObj.setHours(23,59,59,999);
+            const matches = [...new Set(appData.map(r => {
+                const d = parseExcelDate(r[dateKey]);
+                if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
+                return formatDateStr(d);
+            }))].filter(v => v);
+            tableFilters[dateKey] = matches;
+        }
+        
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
@@ -484,7 +527,10 @@
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     function fetchSheet(sheetName) {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-        return fetch(url).then(res => { if (!res.ok) throw new Error("Fetch failed"); return res.text(); }).then(text => {
+        return fetch(url).then(res => {
+            if (!res.ok) throw new Error("Fetch failed");
+            return res.text();
+        }).then(text => {
             const json = JSON.parse(text.substring(47).slice(0, -2));
             const cols = json.table.cols.map(c => (c.label || "").trim());
             return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
@@ -523,6 +569,7 @@
         else { labelEl.innerText = `Select ${placeholder}...`; labelEl.classList.remove('active-filter'); }
         updateDashboard();
     }
+
     function toggleAllFilters(containerId, labelId, placeholder, checked) { document.querySelectorAll(`#${containerId} input`).forEach(i => i.checked = checked); updateFilterLabel(containerId, labelId, placeholder); }
     function getSelected(id) { const checked = Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value).filter(v => v); return checked.length > 0 ? checked : null; }
     
@@ -539,7 +586,16 @@
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
-        const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList'), deptGroup: getSelected('fDeptGroupList') };
+        const filters = { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList'), 
+            deptGroup: getSelected('fDeptGroupList') 
+        };
 
         let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
@@ -548,6 +604,7 @@
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
             else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
+
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
@@ -561,8 +618,13 @@
             const rComp = getCol(row, 'Burn Company', 'Company');
             const rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
 
-            if (type.includes('PRF')) commPRF += amt; else if (type.includes('PR')) commPR += amt; else if (type.includes('TRF')) commTRF += amt;
-            if (type.includes('ECF')) ecf += amt; if (type.includes('TRF')) trf_actual += amt; if (type.includes('INV')) inv += amt;
+            if (type.includes('PRF')) commPRF += amt; 
+            else if (type.includes('PR')) commPR += amt; 
+            else if (type.includes('TRF')) commTRF += amt;
+            
+            if (type.includes('ECF')) ecf += amt; 
+            if (type.includes('TRF')) trf_actual += amt; 
+            if (type.includes('INV')) inv += amt;
 
             if (type.includes('PRF') || type.includes('PR') || type.includes('TRF')) {
                 if (d) {
@@ -579,9 +641,14 @@
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
+            
             let isSelectedCountry = true;
-            if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
-            if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) {
+            if (filters.comp) {
+                const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
+                if (!targetCountries.includes(sCountry)) isSelectedCountry = false;
+            }
+            let skipHQ = (!filters.comp && sCountry === 'HQ');
+            if (isSelectedCountry && !skipHQ) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
                 totalSalesQty += q;
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
@@ -604,33 +671,60 @@
         document.getElementById('subECF').innerText = fmt(ecf); 
         document.getElementById('subTRF').innerText = fmt(trf_actual); 
         document.getElementById('subInv').innerText = fmt(inv);
+        
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
+        
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+            const rowComp = getCol(r, 'Burn Company', 'Company');
+            const rowDept = getCol(r, 'Department');
+            const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
+            const rowMo = getCol(r, 'Month');
+            const rowYr = String(getCol(r, 'Year'));
+
             if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
             if (filters.comp && !filters.comp.includes(rowComp)) return;
             if (filters.dept && !filters.dept.includes(rowDept)) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
             if (filters.yr && !filters.yr.includes(rowYr)) return;
             if (filters.mo && !filters.mo.includes(rowMo)) return;
+
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = rowCC || "Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days')), maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')), pendDays = cleanNum(getCol(r, 'Days Pending'));
-            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } 
-            else { penSum += amt; penCount++; }
+
+            const status = (getCol(r, 'Status')||"").toLowerCase(), 
+                  amt = cleanNum(getCol(r, 'PRF Amount (USD)')), 
+                  cc = rowCC || "Misc", 
+                  overdue = cleanNum(getCol(r, 'Days Overdue')), 
+                  daysToRec = cleanNum(getCol(r, 'Actual Recon Days')),
+                  maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')),
+                  pendDays = cleanNum(getCol(r, 'Days Pending'));
+
+            if (status.includes('reconciled')) { 
+                recSum += amt; 
+                recCount++; 
+                if(daysToRec <= 30) recWithin30++; 
+            } else { 
+                penSum += amt; 
+                penCount++; 
+            }
+
             mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
             if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; 
-            ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
+            ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); 
+            ccMap[cc].count++;
         });
 
-        const avgMax = count > 0 ? (mDaysTotal / count) : 0, avgPend = count > 0 ? (pDaysTotal / count) : 0;
-        const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
+        const avgMax = count > 0 ? (mDaysTotal / count) : 0;
+        const avgPend = count > 0 ? (pDaysTotal / count) : 0;
+        const overLabel = document.getElementById('vOverLabel');
+        const overVal = document.getElementById('vOver');
+        
         if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
         else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
 
@@ -638,6 +732,7 @@
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
+        
         document.getElementById('countPen').innerText = penCount + " PRFs"; 
         document.getElementById('countRec').innerText = recCount + " PRFs"; 
         document.getElementById('usdPen').innerText = fmt(penSum); 
@@ -653,36 +748,44 @@
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
         const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
         const sortedKeys = sortKeys(Object.keys(commitTrend), currentGranularity);
+        
         trendChart.data.labels = sortedKeys;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((commitTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
+
         weeklyPnlChart.data.labels = sortedKeys;
         weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
         weeklyPnlChart.update();
+
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
         sortedCC.forEach(([cc, val]) => {
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             const escapedCC = cc.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link" onclick="drillToDrivers('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedgerByCC('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link" onclick="drillToDrivers('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
         });
-        const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
-        companyDistChart.data.labels = compEntries.map(e => e[0]); companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]); companyDistChart.update();
-        const unitCostEntries = compEntries.map(e => { const country = e[0], comm = e[1]; let sales = countrySales[country] || 0; if (country === 'HQ' && sales === 0) sales = totalQty; return [country, sales > 0 ? (comm / sales) : 0]; }).sort((a,b) => b[1] - a[1]);
-        unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]); unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]); unitCostCompChart.update();
-    }
 
-    // Proxy for original driver drill
-    function drillToLedgerByCC(cc) { drillToDrivers(cc); }
+        const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
+        companyDistChart.data.labels = compEntries.map(e => e[0]);
+        companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
+        companyDistChart.update();
+
+        const unitCostEntries = compEntries.map(e => { const country = e[0], comm = e[1]; let sales = countrySales[country] || 0; if (country === 'HQ' && sales === 0) sales = totalQty; return [country, sales > 0 ? (comm / sales) : 0]; }).sort((a,b) => b[1] - a[1]);
+        unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
+        unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
+        unitCostCompChart.update();
+    }
 
     function drillToDrivers(ccName = null) {
         selectedCCForDrivers = ccName;
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
+
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
+
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -698,8 +801,10 @@
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
-            driverMap[driver] = (driverMap[driver] || 0) + amt; totalForScope += amt;
+            driverMap[driver] = (driverMap[driver] || 0) + amt;
+            totalForScope += amt;
         });
+
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -708,19 +813,18 @@
             if (filters.comp) { const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!target.includes(sCountry)) isSelectedCountry = false; }
             if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
         });
+
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
         const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
+
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
             const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
             const escapedCC = (ccName || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedgerByCCDriver('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
         });
     }
-
-    // Another proxy
-    function drillToLedgerByCCDriver(cc, driver) { drillToDrivers(cc, driver); }
 
     function toggleAmountSort() { amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc'; renderApprovalsTable(appData); }
 
@@ -732,16 +836,7 @@
         recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
 
         let filteredData = sourceData.filter(row => {
-            // Check status specific filter first
-            if (tableFilters["_status_filter"]) {
-                const targetStatus = tableFilters["_status_filter"][0].toLowerCase();
-                const fileName = (getCol(row, 'Full File Name') || "").toString().trim();
-                const rInfo = reconLookup[fileName];
-                if (!rInfo || !rInfo.status || !rInfo.status.toLowerCase().includes(targetStatus)) return false;
-            }
-
             for(let col in tableFilters) {
-                if (col === "_status_filter") continue;
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
                 if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { if (rowVal.trim() !== "" && rowVal !== "-") return false; } 
@@ -781,6 +876,7 @@
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
+
             displayCols.forEach(c => {
                 let formattedValue = '-';
                 if (c === 'Department') formattedValue = row['Department'];
