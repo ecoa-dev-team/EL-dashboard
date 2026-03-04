@@ -171,7 +171,6 @@
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
-        /* Sort Styles */
         .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
         .sortable-header:hover { background: #334155 !important; }
         .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
@@ -182,16 +181,23 @@
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
 
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
+        /* Sleek Button Styles */
+        .pdf-btn { background: var(--primary); color: #0f172a; border: none; padding: 6px 15px; text-decoration: none; border-radius: 6px; font-size: 10px; font-weight: 900; display: inline-block; transition: all 0.2s; font-family: 'Inter', sans-serif; text-transform: uppercase; cursor: pointer; }
+        .pdf-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
+
+        #reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; transition: all 0.2s; }
+        #reset-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
+
+        .ledger-reset-btn { background: var(--primary); color: #0f172a; border: none; height: 30px; padding: 0 15px; font-size: 10px; font-weight: 900; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+        .ledger-reset-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
+
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
-        
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
         
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
-        button#reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
 
         .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
@@ -348,7 +354,7 @@
         <div class="exec-summary-box" style="margin-top: 10px;">
             <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
                 <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
+                <button onclick="resetLedgerFilters()" class="ledger-reset-btn">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
@@ -365,7 +371,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
     let tableFilters = {}; 
-    let amountSortOrder = 'desc'; // Current sort state
+    let amountSortOrder = 'desc'; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
@@ -897,7 +903,6 @@
             return true;
         });
 
-        // SORTING LOGIC FOR AMOUNT
         const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
         if (amountKey) {
             filteredData.sort((a, b) => {
@@ -917,7 +922,6 @@
         });
         displayCols.unshift('Department', 'Cost Center');
         
-        // Re-render Header
         let trH = '<tr>'; displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`;
             const isAmount = c.toLowerCase().trim() === 'amount (usd)';
@@ -929,7 +933,6 @@
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
 
-        // Fill dropdowns only once or refresh icons
         displayCols.forEach(c => {
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
             const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
