@@ -90,6 +90,9 @@
             cursor: pointer;
             opacity: 0.8;
         }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -148,6 +151,7 @@
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
         .rank-label-link:hover { color: var(--green); }
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .rank-impact-val:hover { color: var(--green); }
         
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
@@ -155,12 +159,14 @@
         .rank-pct { color: var(--green); }
         .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
 
+        .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
+
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
         
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; }
+        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .ledger-table { font-size: 12px !important; table-layout: auto; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -280,7 +286,8 @@
             </div>
             <div class="chart-box">
                 <h3 class="chart-title" id="itemDriverTitle">Top 5 Item Drivers (Committed)</h3>
-                <div id="costDriverList" class="health-rank-container"></div>
+                <div id="costDriverList" class="health-rank-container">
+                </div>
             </div>
         </div>
 
@@ -348,6 +355,7 @@
 
 <script>
     Chart.register(ChartDataLabels);
+    
     Chart.defaults.devicePixelRatio = 2; 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.weight = '700';
@@ -372,6 +380,7 @@
 
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
     const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
+    
     const parseExcelDate = (val) => {
         if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0));
         let s = val.toString().trim();
@@ -381,6 +390,7 @@
         const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); }
         return null;
     };
+    
     const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
     const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
@@ -430,6 +440,7 @@
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
+        
         if(itemDriver && itemKey) {
             if (itemDriver === "Unspecified") {
                 const emptyMatches = [...new Set(appData.map(r => (r[itemKey] || "").toString()))].filter(v => v.trim() === "" || v === "-");
@@ -438,6 +449,7 @@
                 tableFilters[itemKey] = [itemDriver];
             }
         }
+        
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
@@ -584,6 +596,7 @@
             if (type.includes('PRF')) commPRF += amt; 
             else if (type.includes('PR')) commPR += amt; 
             else if (type.includes('TRF')) commTRF += amt;
+            
             if (type.includes('ECF')) ecf += amt; 
             if (type.includes('TRF')) trf_actual += amt; 
             if (type.includes('INV')) inv += amt;
@@ -603,12 +616,15 @@
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
+            
             let isSelectedCountry = true;
             if (filters.comp) {
                 const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
                 if (!targetCountries.includes(sCountry)) isSelectedCountry = false;
             }
+
             let skipHQ = (!filters.comp && sCountry === 'HQ');
+
             if (isSelectedCountry && !skipHQ) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
                 totalSalesQty += q;
@@ -622,6 +638,7 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
+        
         const totalComm = commPRF + commPR + commTRF;
         document.getElementById('valPRF').innerText = fmt(totalComm); 
         document.getElementById('subCommPRF').innerText = fmt(commPRF); 
@@ -631,11 +648,13 @@
         document.getElementById('subECF').innerText = fmt(ecf); 
         document.getElementById('subTRF').innerText = fmt(trf_actual); 
         document.getElementById('subInv').innerText = fmt(inv);
+        
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
 
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
+        
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             const rowComp = getCol(r, 'Burn Company', 'Company');
@@ -643,14 +662,17 @@
             const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
             const rowMo = getCol(r, 'Month');
             const rowYr = String(getCol(r, 'Year'));
+
             if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
             if (filters.comp && !filters.comp.includes(rowComp)) return;
             if (filters.dept && !filters.dept.includes(rowDept)) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
             if (filters.yr && !filters.yr.includes(rowYr)) return;
             if (filters.mo && !filters.mo.includes(rowMo)) return;
+
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+
             const status = (getCol(r, 'Status')||"").toLowerCase(), 
                   amt = cleanNum(getCol(r, 'PRF Amount (USD)')), 
                   cc = rowCC || "Misc", 
@@ -658,44 +680,75 @@
                   daysToRec = cleanNum(getCol(r, 'Actual Recon Days')),
                   maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')),
                   pendDays = cleanNum(getCol(r, 'Days Pending'));
-            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } else { penSum += amt; penCount++; }
-            mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
-            if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
+
+            if (status.includes('reconciled')) { 
+                recSum += amt; 
+                recCount++; 
+                if(daysToRec <= 30) recWithin30++; 
+            } else { 
+                penSum += amt; 
+                penCount++; 
+            }
+
+            mDaysTotal += maxDays; 
+            pDaysTotal += pendDays; 
+            count++;
+
+            if (overdue > 0) { 
+                if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; 
+            }
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; 
-            ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
+            ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); 
+            ccMap[cc].count++;
         });
 
         const avgMax = count > 0 ? (mDaysTotal / count) : 0;
         const avgPend = count > 0 ? (pDaysTotal / count) : 0;
-        const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
-        if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
-        else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
+        
+        const overLabel = document.getElementById('vOverLabel');
+        const overVal = document.getElementById('vOver');
+        
+        if (avgMax > avgPend) {
+            overLabel.innerText = "Avg Days to Deadline";
+            overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days";
+            overVal.style.color = "var(--green)";
+        } else {
+            overLabel.innerText = "Avg Overdue";
+            overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days";
+            overVal.style.color = "var(--red)";
+        }
 
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
+        
         document.getElementById('countPen').innerText = penCount + " PRFs"; 
         document.getElementById('countRec').innerText = recCount + " PRFs"; 
         document.getElementById('usdPen').innerText = fmt(penSum); 
         document.getElementById('usdRec').innerText = fmt(recSum); 
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
+        
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
+        
         drillToDrivers(selectedCCForDrivers);
     }
 
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
         const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
         const sortedKeys = sortKeys(Object.keys(commitTrend), currentGranularity);
+        
         trendChart.data.labels = sortedKeys;
         trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
         trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((commitTrend[k] || 0) / salesTrend[k]) : 0);
         trendChart.update();
+
         weeklyPnlChart.data.labels = sortedKeys;
         weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
         weeklyPnlChart.update();
+
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
@@ -712,15 +765,20 @@
                     <div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div>
                 </div>`);
         });
+
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
+
         const unitCostEntries = compEntries.map(e => {
-            const country = e[0]; const comm = e[1]; let sales = countrySales[country] || 0;
+            const country = e[0];
+            const comm = e[1];
+            let sales = countrySales[country] || 0;
             if (country === 'HQ' && sales === 0) { sales = totalQty; }
             return [country, sales > 0 ? (comm / sales) : 0];
         }).sort((a,b) => b[1] - a[1]);
+        
         unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
         unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
         unitCostCompChart.update();
@@ -729,22 +787,31 @@
     function drillToDrivers(ccName = null) {
         selectedCCForDrivers = ccName;
         const titleEl = document.getElementById('itemDriverTitle');
-        titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
+        if (ccName) { titleEl.innerHTML = `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>`; } 
+        else { titleEl.innerHTML = `Top 5 Item Drivers (Committed)`; }
+
         const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
         const filters = { 
             start: norm(document.getElementById('dStart').value), 
             end: norm(document.getElementById('dEnd').value), 
-            yr: getSelected('fYearList'), mo: getSelected('fMonthList'), 
-            comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList') 
         };
+
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
+            
             const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
             if (ccName && rowCC !== ccName) return;
+
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             if (!(type.includes('PRF') || type.includes('PR') || type.includes('TRF'))) return;
+
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
@@ -752,126 +819,177 @@
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
+
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
-            driverMap[driver] = (driverMap[driver] || 0) + amt; totalForScope += amt;
+            
+            driverMap[driver] = (driverMap[driver] || 0) + amt;
+            totalForScope += amt;
         });
+
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
+            
             let isSelectedCountry = true;
             if (filters.comp) {
                 const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e);
                 if (!target.includes(sCountry)) isSelectedCountry = false;
             }
+
             let skipHQ = (!filters.comp && sCountry === 'HQ');
-            if (isSelectedCountry && !skipHQ) { totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); }
+
+            if (isSelectedCountry && !skipHQ) { 
+                totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
+            }
         });
-        const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
+
+        const dl = document.getElementById('costDriverList');
+        dl.innerHTML = '';
         const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-        if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
+        if (sortedDrivers.length === 0) { 
+            dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; 
+            return; 
+        }
+
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
             const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
-            const escapedCC = (ccName || "").replace(/'/g, "\\'"); const escapedDriver = driver.replace(/'/g, "\\'");
+            const escapedCC = (ccName || "").replace(/'/g, "\\'");
+            const escapedDriver = driver.replace(/'/g, "\\'");
+
             dl.insertAdjacentHTML('beforeend', `
                 <div class="rank-item">
-                    <div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div>
+                    <div class="rank-top-row">
+                        <div class="rank-label">${driver}</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div>
+                    </div>
                     <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div>
                     <div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div>
                 </div>`);
         });
     }
 
-    function toggleAmountSort() { amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc'; renderApprovalsTable(appData); }
+    function toggleAmountSort() {
+        amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc';
+        renderApprovalsTable(appData);
+    }
 
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         
-        // Build Reconciliation Lookup Map
-        const reconMap = {};
+        // 1. Prepare Lookup from Reconciliation Report
+        const reconLookup = {};
         recData.forEach(r => {
-            const fileKey = (getCol(r, 'PRF file') || "").toString().trim();
-            if (fileKey) {
-                reconMap[fileKey] = {
-                    status: getCol(r, 'Status') || "-",
-                    daysPending: getCol(r, 'Days Pending') || "0"
+            const prfFile = getCol(r, 'PRF file');
+            if (prfFile) {
+                reconLookup[prfFile.toString().trim()] = {
+                    status: getCol(r, 'Status'),
+                    daysPending: getCol(r, 'Days Pending')
                 };
             }
         });
 
-        let enrichedData = sourceData.map(row => {
-            const fileName = (getCol(row, 'Full File Name') || "").toString().trim();
-            const reconInfo = reconMap[fileName] || { status: "Not Found", daysPending: "-" };
-            return { ...row, "Status": reconInfo.status, "Days Pending": reconInfo.daysPending };
-        });
-
-        let filteredData = enrichedData.filter(row => {
+        // 2. Filter data
+        let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
+                
                 if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) {
                     if (rowVal.trim() !== "" && rowVal !== "-") return false;
-                } else if(!tableFilters[col].includes(rowVal)) { return false; }
+                } else if(!tableFilters[col].includes(rowVal)) {
+                    return false;
+                }
             }
             return true;
         });
 
+        // 3. Amount Sort
         const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
         if (amountKey) {
             filteredData.sort((a, b) => {
-                const valA = cleanNum(a[amountKey]), valB = cleanNum(b[amountKey]);
+                const valA = cleanNum(a[amountKey]);
+                const valB = cleanNum(b[amountKey]);
                 return amountSortOrder === 'desc' ? valB - valA : valA - valB;
             });
         }
 
+        // 4. Construct Column Headers
         const rawCols = Object.keys(appData[0] || {});
-        let displayCols = ['Department', 'Cost Center', 'Amount (USD)', 'Status', 'Days Pending']; 
+        let displayCols = []; 
         rawCols.forEach(c => { 
             const cl = c.toLowerCase().trim(); 
-            if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && cl !== 'amount (usd)' && !excludedCols.includes(cl)) {
+            if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) {
                 displayCols.push(c); 
             }
         });
+        displayCols.unshift('Department', 'Cost Center');
+
+        // Insert new columns after "Amount Advanced (if ECF)"
+        const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
+        if (ecfIdx !== -1) {
+            displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending");
+        } else {
+            displayCols.push("Status", "Days Pending");
+        }
         
         let trH = '<tr>'; displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`;
             const isAmount = c.toLowerCase().trim() === 'amount (usd)';
             const sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
-            trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? `onclick="toggleAmountSort()"` : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
+            const headerClass = isAmount ? 'sortable-header' : '';
+            const headerOnClick = isAmount ? `onclick="toggleAmountSort()"` : '';
+
+            trH += `<th style="position:relative;" class="${headerClass}" ${headerOnClick}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
 
+        // Populate Dropdowns
         displayCols.forEach(c => {
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-            const oKey = (c === 'Status' || c === 'Days Pending') ? c : rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+            const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+            
             if (list.children.length === 0) {
                 if (c.toLowerCase().includes('date')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(enrichedData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
+                else if (c === "Status" || c === "Days Pending") {
+                    // Static values aren't in appData, so we skip standard fill for these specific dynamic filters
+                }
+                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
             }
         });
 
         syncFilterIcons();
+
+        // 5. Build Table Rows
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+            const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fileName = (getCol(row, 'Full File Name') || "").toString().trim();
+            const reconInfo = reconLookup[fileName];
+
             displayCols.forEach(c => {
-                let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
-                let formattedValue = cellValue;
-                if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
-                
-                let cellClass = "";
-                if (c === 'Status') {
-                    const st = (cellValue || "").toLowerCase();
-                    if (st.includes('reconciled')) cellClass = "color: var(--green); font-weight: 900;";
-                    else if (st.includes('pending')) cellClass = "color: var(--orange); font-weight: 900;";
+                let formattedValue = '-';
+                if (c === 'Department') formattedValue = row['Department'];
+                else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
+                else if (c === 'Status') {
+                    formattedValue = (docType === "PRF" && reconInfo) ? reconInfo.status : "";
                 }
-                trB += `<td style="${cellClass}">${formattedValue || '-'}</td>`;
+                else if (c === 'Days Pending') {
+                    formattedValue = (docType === "PRF" && reconInfo) ? reconInfo.daysPending : "";
+                }
+                else {
+                    let cellValue = row[c];
+                    formattedValue = cellValue;
+                    if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                }
+                trB += `<td>${formattedValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
@@ -894,6 +1012,7 @@
     function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
     function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
     function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; } else { delete tableFilters[originalKey]; } renderApprovalsTable(appData); }
+    
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { 
         const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; 
@@ -911,13 +1030,72 @@
 
     window.onload = () => {
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0]; const total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0]; const x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
+        
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
-        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
-        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+        
+        const commonScaleOptions = { 
+            ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, 
+            grid: { display: false }, 
+            border: { display: false }
+        };
+
+        trendChart = new Chart(document.getElementById('trendChart'), { 
+            type: 'bar', 
+            data: { labels: [], datasets: [
+                { label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, 
+                { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }
+            ]}, 
+            options: { 
+                layout: { padding: { top: 35 } },
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: commonScaleOptions, 
+                    y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, 
+                    y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } 
+                }, 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } 
+            } 
+        });
+
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
+            type: 'bar', 
+            data: { labels: [], datasets: [
+                { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, 
+                { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }
+            ] }, 
+            options: { 
+                layout: { padding: { top: 35 } },
+                maintainAspectRatio: false, 
+                scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, 
+                plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } 
+            } 
+        });
+
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { 
+            type: 'bar', 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, 
+            options: { 
+                layout: { padding: { right: 60 } },
+                indexAxis: 'y', 
+                maintainAspectRatio: false, 
+                scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, 
+                plugins: { legend: { display: false } } 
+            } 
+        });
+
+        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { 
+            type: 'bar', 
+            data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, 
+            options: { 
+                layout: { padding: { right: 60 } },
+                indexAxis: 'y', 
+                maintainAspectRatio: false, 
+                scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, 
+                plugins: { legend: { display: false } } 
+            } 
+        });
+
         fetchData(); setInterval(fetchData, 60000);
     };
 </script>
