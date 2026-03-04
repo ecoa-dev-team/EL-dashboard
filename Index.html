@@ -171,6 +171,7 @@
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
+        /* Sort Styles */
         .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
         .sortable-header:hover { background: #334155 !important; }
         .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
@@ -181,34 +182,22 @@
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
 
-        /* Unified Action Button Style */
-        .action-btn { 
-            background: var(--primary); 
-            color: #0f172a; 
-            border: none; 
-            padding: 0 15px; 
-            border-radius: 6px; 
-            font-weight: 900; 
-            cursor: pointer; 
-            text-transform: uppercase; 
-            height: 35px; 
-            font-size: 11px; 
-            font-family: 'Inter', sans-serif; 
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            transition: opacity 0.2s;
-        }
-        .action-btn:hover { opacity: 0.9; }
-        .pdf-btn { height: 30px; font-size: 10px; } /* Slightly smaller for table cells */
-
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
+        
+        /* Ledger Specific Status Badges */
+        .ledger-status { padding: 4px 8px; border-radius: 4px; font-weight: 800; text-transform: uppercase; font-size: 10px; display: inline-block; text-align: center; width: 100%; }
+        .status-reconciled { background: rgba(0, 255, 157, 0.2); color: var(--green); border: 1px solid var(--green); }
+        .status-pending { background: rgba(255, 77, 77, 0.2); color: var(--red); border: 1px solid var(--red); }
+        .status-unknown { background: rgba(71, 85, 105, 0.2); color: var(--text-light); border: 1px solid var(--border); }
+
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
+        
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
+        button#reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
 
         .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
@@ -249,7 +238,7 @@
         <div class="f-group" id="fDeptGroupWrapper" style="display:none;"><label>Dept Group</label><div id="fDeptGroupLabel" class="multiselect-container" onclick="toggleDropdown('fDeptGroupList')">Select Groups...</div><div id="fDeptGroupList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
-        <button id="reset-btn" class="action-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
+        <button id="reset-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
     </div>
 
     <div id="cost-analysis" class="tab-content active">
@@ -365,7 +354,7 @@
         <div class="exec-summary-box" style="margin-top: 10px;">
             <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
                 <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button class="action-btn" onclick="resetLedgerFilters()">Reset Ledger Filters</button>
+                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
@@ -834,8 +823,8 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -900,6 +889,18 @@
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         
+        // Build Lookup Map from Reconciliation Report
+        const reconMap = {};
+        recData.forEach(r => {
+            const fileName = (getCol(r, 'PRF File Name') || "").toString().trim();
+            if (fileName) {
+                reconMap[fileName] = {
+                    status: (getCol(r, 'Status') || "Unknown"),
+                    daysPending: cleanNum(getCol(r, 'Days Pending'))
+                };
+            }
+        });
+
         let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -933,6 +934,9 @@
         });
         displayCols.unshift('Department', 'Cost Center');
         
+        // Add status and days pending to display columns
+        displayCols.push('Status', 'Days Pending');
+        
         let trH = '<tr>'; displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`;
             const isAmount = c.toLowerCase().trim() === 'amount (usd)';
@@ -944,44 +948,40 @@
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
 
-        displayCols.forEach(c => {
-            const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-            const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
-            
-            if (list.children.length === 0) {
-                if (c.toLowerCase().includes('date')) { renderDateHierarchy(oKey, uid, list); }
-                else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
-            }
-        });
-
-        syncFilterIcons();
-
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+            
+            // Get matching lookup data
+            const rowFile = (getCol(row, 'PRF File Name') || "").toString().trim();
+            const lookup = reconMap[rowFile] || { status: 'Unknown', daysPending: 0 };
+
             displayCols.forEach(c => {
-                let cellValue = (c === 'Department') ? row['Department'] : ((c === 'Cost Center') ? getCol(row, 'Cost Center', 'Cost Centre') : row[c]);
+                let cellValue = "";
+                if (c === 'Department') cellValue = row['Department'];
+                else if (c === 'Cost Center') cellValue = getCol(row, 'Cost Center', 'Cost Centre');
+                else if (c === 'Status') {
+                    const s = lookup.status;
+                    const sClass = s.toLowerCase().includes('reconciled') ? 'status-reconciled' : (s.toLowerCase().includes('pending') ? 'status-pending' : 'status-unknown');
+                    cellValue = `<span class="ledger-status ${sClass}">${s}</span>`;
+                }
+                else if (c === 'Days Pending') {
+                    const d = lookup.daysPending;
+                    cellValue = `<span style="color:${d > 30 ? 'var(--red)' : (d > 0 ? 'var(--orange)' : 'var(--green)')}; font-weight:900;">${d}</span>`;
+                }
+                else cellValue = row[c];
+
                 let formattedValue = cellValue;
                 if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
-            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="action-btn pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
+            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
-    }
-
-    function renderDateHierarchy(originalKey, dropId, listElement) {
-        const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
-        Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
-            listElement.insertAdjacentHTML('beforeend', `<div class="date-group-header">${yr}</div>`);
-            Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
-                listElement.insertAdjacentHTML('beforeend', `<div class="date-month-header">${mo}</div>`);
-                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
-            });
-        });
     }
 
     function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
