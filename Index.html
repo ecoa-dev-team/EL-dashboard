@@ -186,6 +186,9 @@
         
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
+        .bg-warn { background: rgba(255, 159, 67, 0.2); color: var(--orange) !important; border: 1px solid var(--orange); }
+
+        .status-pill { padding: 4px 10px; border-radius: 4px; font-weight: 900; display: inline-block; text-align: center; min-width: 90px; }
         
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
@@ -816,8 +819,8 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -882,7 +885,7 @@
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         
-        // 1. Prepare Lookup from Reconciliation Report
+        // Lookup from Reconciliation Report
         const reconLookup = {};
         recData.forEach(r => {
             const prfFile = getCol(r, 'PRF file');
@@ -894,7 +897,7 @@
             }
         });
 
-        // 2. Filter data
+        // Filter data
         let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -909,7 +912,7 @@
             return true;
         });
 
-        // 3. Amount Sort
+        // Amount Sort
         const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
         if (amountKey) {
             filteredData.sort((a, b) => {
@@ -919,7 +922,6 @@
             });
         }
 
-        // 4. Construct Column Headers
         const rawCols = Object.keys(appData[0] || {});
         let displayCols = []; 
         rawCols.forEach(c => { 
@@ -954,18 +956,16 @@
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
             const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
             
-            if (list.children.length === 0) {
+            if (list && list.children.length === 0) {
                 if (c.toLowerCase().includes('date')) { renderDateHierarchy(oKey, uid, list); }
-                else if (c === "Status" || c === "Days Pending") {
-                    // Static values aren't in appData, so we skip standard fill for these specific dynamic filters
-                }
+                else if (c === "Status" || c === "Days Pending") { }
                 else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
             }
         });
 
         syncFilterIcons();
 
-        // 5. Build Table Rows
+        // Build Table Rows
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
@@ -978,10 +978,18 @@
                 if (c === 'Department') formattedValue = row['Department'];
                 else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
                 else if (c === 'Status') {
-                    formattedValue = (docType === "PRF" && reconInfo) ? reconInfo.status : "";
+                    const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
+                    if (statusText) {
+                        let colorClass = "";
+                        if (statusText.toLowerCase().includes("reconciled")) colorClass = "bg-good";
+                        else if (statusText.toLowerCase().includes("pending")) colorClass = "bg-warn";
+                        formattedValue = `<span class="status-pill ${colorClass}">${statusText}</span>`;
+                    } else {
+                        formattedValue = "";
+                    }
                 }
                 else if (c === 'Days Pending') {
-                    formattedValue = (docType === "PRF" && reconInfo) ? reconInfo.daysPending : "";
+                    formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
                 }
                 else {
                     let cellValue = row[c];
