@@ -319,7 +319,7 @@
                 </div>
             </div>
             <div class="chart-box">
-                <h3 style="text-align: left; border-left: 5px solid var(--orange); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing</h3>
+                <h3 style="text-align: left; border-left: 5px solid var(--orange); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing (Pending)</h3>
                 <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
             </div>
             <div class="chart-box">
@@ -427,19 +427,14 @@
     function drillToLedgerByStatus(statusTarget) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
-        
-        // Find matching filenames from reconciliation report based on status
         const matchingFileNames = recData
             .filter(r => (getCol(r, 'Status') || "").toLowerCase().includes(statusTarget.toLowerCase()))
             .map(r => (getCol(r, 'PRF file') || "").toString().trim())
             .filter(name => name !== "");
 
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
-        if (fileNameKey) {
-            tableFilters[fileNameKey] = matchingFileNames;
-        }
+        if (fileNameKey) tableFilters[fileNameKey] = matchingFileNames;
 
-        // Apply Global Filters to the Ledger
         syncGlobalSelectionToLedger('fYearList', 'Year');
         syncGlobalSelectionToLedger('fMonthList', 'Month');
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
@@ -451,14 +446,40 @@
         renderApprovalsTable(appData);
     }
 
+    function drillToLedgerByAgeing(label) {
+        tableFilters = {};
+        const rawCols = Object.keys(appData[0] || {});
+        
+        const filteredFiles = recData.filter(r => {
+            const status = (getCol(r, 'Status') || "").toLowerCase();
+            const overdue = cleanNum(getCol(r, 'Days Overdue'));
+            if (!status.includes('pending') || overdue <= 0) return false;
+            if (label === '1-7d') return overdue <= 7;
+            if (label === '8-14d') return overdue > 7 && overdue <= 14;
+            if (label === '15d+') return overdue > 14;
+            return false;
+        }).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        if (fileNameKey) tableFilters[fileNameKey] = filteredFiles;
+
+        syncGlobalSelectionToLedger('fYearList', 'Year');
+        syncGlobalSelectionToLedger('fMonthList', 'Month');
+        syncGlobalSelectionToLedger('fCompList', 'Burn Company');
+        syncGlobalSelectionToLedger('fDeptList', 'Department');
+        syncGlobalSelectionToLedger('fCCList', 'Cost Center');
+
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
     function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-        const yearKey = rawCols.find(k => k.toLowerCase().trim() === 'year');
-        const monthKey = rawCols.find(k => k.toLowerCase().trim() === 'month');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
@@ -711,10 +732,14 @@
             } else { 
                 penSum += amt; 
                 penCount++; 
+                if (overdue > 0) { 
+                    if (overdue <= 7) a1++; 
+                    else if (overdue <= 14) a2++; 
+                    else a3++; 
+                }
             }
 
             mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
-            if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; }
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; 
             ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); 
             ccMap[cc].count++;
@@ -797,7 +822,7 @@
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
-            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
@@ -938,7 +963,31 @@
     window.onload = () => {
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
-        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
+        
+        ageChart = new Chart(document.getElementById('ageChart'), { 
+            type: 'pie', 
+            data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, 
+            options: { 
+                maintainAspectRatio: false,
+                onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const label = ageChart.data.labels[index];
+                        drillToLedgerByAgeing(label);
+                    }
+                },
+                plugins: { 
+                    datalabels: { 
+                        display: true, 
+                        color: '#fff', 
+                        font: { weight: '900', size: 14 },
+                        formatter: (value) => value > 0 ? value : ''
+                    }, 
+                    legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } 
+                } 
+            } 
+        });
+
         const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
