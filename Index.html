@@ -181,20 +181,31 @@
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
 
-        /* Sleek Button Styles */
-        .pdf-btn { background: var(--primary); color: #0f172a; border: none; padding: 6px 15px; text-decoration: none; border-radius: 6px; font-size: 10px; font-weight: 900; display: inline-block; transition: all 0.2s; font-family: 'Inter', sans-serif; text-transform: uppercase; cursor: pointer; }
-        .pdf-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
-
-        #reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; transition: all 0.2s; }
-        #reset-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
-
-        .ledger-reset-btn { background: var(--primary); color: #0f172a; border: none; height: 30px; padding: 0 15px; font-size: 10px; font-weight: 900; border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
-        .ledger-reset-btn:hover { background: var(--green); box-shadow: 0 0 10px rgba(0, 255, 157, 0.4); }
+        /* Unified Action Button Style */
+        .action-btn { 
+            background: var(--primary); 
+            color: #0f172a; 
+            border: none; 
+            padding: 0 15px; 
+            border-radius: 6px; 
+            font-weight: 900; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            height: 35px; 
+            font-size: 11px; 
+            font-family: 'Inter', sans-serif; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .action-btn:hover { opacity: 0.9; }
+        .pdf-btn { height: 30px; font-size: 10px; } /* Slightly smaller for table cells */
 
         .status-cell { font-weight: 900; text-align: center; font-size: 13px; width: 120px; border-radius: 4px; }
         .bg-good { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); }
         .bg-bad { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); }
-        
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
@@ -238,7 +249,7 @@
         <div class="f-group" id="fDeptGroupWrapper" style="display:none;"><label>Dept Group</label><div id="fDeptGroupLabel" class="multiselect-container" onclick="toggleDropdown('fDeptGroupList')">Select Groups...</div><div id="fDeptGroupList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
         <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
-        <button id="reset-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
+        <button id="reset-btn" class="action-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
     </div>
 
     <div id="cost-analysis" class="tab-content active">
@@ -354,7 +365,7 @@
         <div class="exec-summary-box" style="margin-top: 10px;">
             <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
                 <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button onclick="resetLedgerFilters()" class="ledger-reset-btn">Reset Ledger Filters</button>
+                <button class="action-btn" onclick="resetLedgerFilters()">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
@@ -824,7 +835,7 @@
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
@@ -956,7 +967,7 @@
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
-            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
+            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="action-btn pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
