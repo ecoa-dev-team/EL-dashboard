@@ -171,6 +171,11 @@
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         
+        /* Sort Styles */
+        .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
+        .sortable-header:hover { background: #334155 !important; }
+        .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
+
         .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
         .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
@@ -360,6 +365,7 @@
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
     let tableFilters = {}; 
+    let amountSortOrder = 'desc'; // Current sort state
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
@@ -551,7 +557,7 @@
         updateDashboard();
     }
 
-    function resetLedgerFilters() { tableFilters = {}; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
+    function resetLedgerFilters() { tableFilters = {}; amountSortOrder = 'desc'; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
 
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
@@ -811,7 +817,7 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
 
@@ -867,6 +873,11 @@
         });
     }
 
+    function toggleAmountSort() {
+        amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc';
+        renderApprovalsTable(appData);
+    }
+
     function renderApprovalsTable(sourceData) {
         if (!sourceData || sourceData.length === 0) return;
         const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
@@ -886,13 +897,17 @@
             return true;
         });
 
-        // SORTING LOGIC: Sort by Amount (USD) descending
-        const rawCols = Object.keys(appData[0] || {});
-        const amtKey = rawCols.find(k => k.toLowerCase().includes('amount') && k.toLowerCase().includes('usd'));
-        if (amtKey) {
-            filteredData.sort((a, b) => cleanNum(b[amtKey]) - cleanNum(a[amtKey]));
+        // SORTING LOGIC FOR AMOUNT
+        const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
+        if (amountKey) {
+            filteredData.sort((a, b) => {
+                const valA = cleanNum(a[amountKey]);
+                const valB = cleanNum(b[amountKey]);
+                return amountSortOrder === 'desc' ? valB - valA : valA - valB;
+            });
         }
 
+        const rawCols = Object.keys(appData[0] || {});
         let displayCols = []; 
         rawCols.forEach(c => { 
             const cl = c.toLowerCase().trim(); 
@@ -902,16 +917,31 @@
         });
         displayCols.unshift('Department', 'Cost Center');
         
-        if(head.children.length === 0) {
-            let trH = '<tr>'; displayCols.forEach(c => { const uid = `colDrop_${c.replace(/\W/g, '_')}`; trH += `<th style="position:relative;">${c} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; });
-            trH += '<th>Action</th></tr>'; head.innerHTML = trH;
-            displayCols.forEach(c => {
-                const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-                const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+        // Re-render Header
+        let trH = '<tr>'; displayCols.forEach(c => { 
+            const uid = `colDrop_${c.replace(/\W/g, '_')}`;
+            const isAmount = c.toLowerCase().trim() === 'amount (usd)';
+            const sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
+            const headerClass = isAmount ? 'sortable-header' : '';
+            const headerOnClick = isAmount ? `onclick="toggleAmountSort()"` : '';
+
+            trH += `<th style="position:relative;" class="${headerClass}" ${headerOnClick}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
+        });
+        trH += '<th>Action</th></tr>'; head.innerHTML = trH;
+
+        // Fill dropdowns only once or refresh icons
+        displayCols.forEach(c => {
+            const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
+            const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+            
+            if (list.children.length === 0) {
                 if (c.toLowerCase().includes('date')) { renderDateHierarchy(oKey, uid, list); }
                 else { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
-            });
-        }
+            }
+        });
+
+        syncFilterIcons();
+
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
@@ -942,7 +972,7 @@
 
     function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
     function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
-    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; document.getElementById('icon_' + dropId).classList.add('active'); } else { delete tableFilters[originalKey]; document.getElementById('icon_' + dropId).classList.remove('active'); } renderApprovalsTable(appData); }
+    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) { tableFilters[originalKey] = checked; } else { delete tableFilters[originalKey]; } renderApprovalsTable(appData); }
     
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { 
