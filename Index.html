@@ -966,14 +966,7 @@
         
         ageChart = new Chart(document.getElementById('ageChart'), { 
             type: 'pie', 
-            data: { 
-                labels: ['1-7d', '8-14d', '15d+'], 
-                datasets: [{ 
-                    backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], // Amber, Orange, Crimson Red for risk levels
-                    data: [0,0,0], 
-                    borderWidth: 0 
-                }] 
-            }, 
+            data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, 
             options: { 
                 maintainAspectRatio: false,
                 onClick: (evt, elements) => {
