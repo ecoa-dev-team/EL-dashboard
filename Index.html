@@ -475,13 +475,17 @@
     }
 
     function drillToLedger(costCenter, itemDriver = null) {
-        tableFilters = {};
+        tableFilters = {}; // Start fresh
         const rawCols = Object.keys(appData[0] || {});
+        
+        // Find Ledger Keys
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-        
+        const deptGroupKey = rawCols.find(k => k.toLowerCase().includes('department group') || k.toLowerCase().includes('dept group'));
+
+        // 1. Apply Drill-down filters
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
         
         if(itemDriver && itemKey) {
@@ -493,21 +497,29 @@
             }
         }
         
+        // 2. Respect Document Type (PRF/PR/TRF) for committed cost context
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
         }
-        
+
+        // 3. Inherit Global Dashboard Filters
         syncGlobalSelectionToLedger('fYearList', 'Year');
         syncGlobalSelectionToLedger('fMonthList', 'Month');
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
+        
+        // Apply Dept Group drill-down respect
+        if(deptGroupKey && selectedDeptGroup !== "ALL") {
+            tableFilters[deptGroupKey] = [selectedDeptGroup];
+        }
 
+        // 4. Inherit Date Range
         const dStartVal = document.getElementById('dStart').value;
         const dEndVal = document.getElementById('dEnd').value;
         if (dateKey && (dStartVal || dEndVal)) {
-            const startObj = dStartVal ? new Date(dStartVal) : null; if(startObj) startObj.setHours(0,0,0,0);
-            const endObj = dEndVal ? new Date(dEndVal) : null; if(endObj) endObj.setHours(23,59,59,999);
+            const startObj = dStartVal ? new Date(dStartVal) : null;
+            const endObj = dEndVal ? new Date(dEndVal) : null;
             const matches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
                 if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
@@ -822,7 +834,10 @@
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
-            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
+            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
@@ -966,7 +981,14 @@
         
         ageChart = new Chart(document.getElementById('ageChart'), { 
             type: 'pie', 
-            data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#ff9f43', '#f1c40f', '#475569'], data: [0,0,0], borderWidth: 0 }] }, 
+            data: { 
+                labels: ['1-7d', '8-14d', '15d+'], 
+                datasets: [{ 
+                    backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'],
+                    data: [0,0,0], 
+                    borderWidth: 0 
+                }] 
+            }, 
             options: { 
                 maintainAspectRatio: false,
                 onClick: (evt, elements) => {
