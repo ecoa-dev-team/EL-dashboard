@@ -53,43 +53,17 @@
             background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
             cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
         }
-        .multiselect-container::after {
-            content: "▼";
-            font-size: 8px;
-            color: white;
-            margin-left: 8px;
-        }
+        .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
         .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
 
-        .dropdown-content {
-            display: none; position: absolute; top: 55px; left: 0; background: #1e293b; border: 2px solid var(--primary); 
-            width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-        }
+        .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
         .dropdown-content.show { display: block; }
         .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; font-size: 11px; }
         .dropdown-item:hover { background: #334155; }
         .dropdown-item input { height: 14px; width: 14px; cursor: pointer; }
 
-        input[type="date"] { 
-            background: #0f172a !important; 
-            color: #ffffff !important; 
-            padding: 0 10px; 
-            border: 1px solid var(--primary); 
-            border-radius: 5px; 
-            font-size: 11px; 
-            height: 35px; 
-            outline: none; 
-            font-weight: 800; 
-            cursor: pointer; 
-            width: 100%; 
-            font-family: 'Inter', sans-serif; 
-        }
-
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-            opacity: 0.8;
-        }
+        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
@@ -120,12 +94,7 @@
         h3.chart-title { margin: 0 0 15px 0; font-size: 11px; color: var(--primary); text-transform: uppercase; text-align: center; font-weight: 900; letter-spacing: 1.5px; }
         
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
-        .toggle-btn { 
-            background: transparent; border: none; color: var(--text-light); 
-            padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; 
-            border-radius: 3px; text-transform: uppercase; transition: all 0.2s; 
-            font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px;
-        }
+        .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
         .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
 
@@ -145,12 +114,10 @@
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
         .rank-label-link:hover { color: var(--green); }
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
-        
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
@@ -162,36 +129,27 @@
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
         .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
-        
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .ledger-table { font-size: 12px !important; table-layout: auto; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        
         .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
         .sortable-header:hover { background: #334155 !important; }
         .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
-
         .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
         .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
         .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
-
         .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
-        
         .status-text-green { color: var(--green) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
         .status-text-orange { color: var(--orange) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
-        
         .bg-good-pill { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
         .bg-bad-pill { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
-
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
-        
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
         button#reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
-
         .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
         .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
@@ -475,17 +433,15 @@
     }
 
     function drillToLedger(costCenter, itemDriver = null) {
-        tableFilters = {}; // Start fresh
+        tableFilters = {}; 
         const rawCols = Object.keys(appData[0] || {});
         
-        // Find Ledger Keys
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         const deptGroupKey = rawCols.find(k => k.toLowerCase().includes('department group') || k.toLowerCase().includes('dept group'));
 
-        // 1. Apply Drill-down filters
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
         
         if(itemDriver && itemKey) {
@@ -497,35 +453,37 @@
             }
         }
         
-        // 2. Respect Document Type (PRF/PR/TRF) for committed cost context
         if(typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
         }
 
-        // 3. Inherit Global Dashboard Filters
         syncGlobalSelectionToLedger('fYearList', 'Year');
         syncGlobalSelectionToLedger('fMonthList', 'Month');
         syncGlobalSelectionToLedger('fCompList', 'Burn Company');
         syncGlobalSelectionToLedger('fDeptList', 'Department');
         
-        // Apply Dept Group drill-down respect
         if(deptGroupKey && selectedDeptGroup !== "ALL") {
             tableFilters[deptGroupKey] = [selectedDeptGroup];
         }
 
-        // 4. Inherit Date Range
         const dStartVal = document.getElementById('dStart').value;
         const dEndVal = document.getElementById('dEnd').value;
         if (dateKey && (dStartVal || dEndVal)) {
-            const startObj = dStartVal ? new Date(dStartVal) : null;
-            const endObj = dEndVal ? new Date(dEndVal) : null;
+            const startObj = dStartVal ? new Date(dStartVal + "T00:00:00") : null;
+            const endObj = dEndVal ? new Date(dEndVal + "T00:00:00") : null;
+            
             const matches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
-                if (!d || (startObj && d < startObj) || (endObj && d > endObj)) return null;
+                if (!d) return null;
+                if (startObj && d < startObj) return null;
+                if (endObj && d > endObj) return null;
                 return formatDateStr(d);
-            }))].filter(v => v);
-            tableFilters[dateKey] = matches;
+            }))].filter(v => v !== null);
+            
+            if (matches.length > 0) {
+                tableFilters[dateKey] = matches;
+            }
         }
         
         syncFilterIcons();
@@ -618,7 +576,7 @@
 
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
-        const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
+        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
         const filters = { 
             start: norm(document.getElementById('dStart').value), 
             end: norm(document.getElementById('dEnd').value), 
@@ -820,7 +778,7 @@
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
 
-        const norm = (dStr) => dStr ? new Date(new Date(dStr).setHours(0,0,0,0)) : null;
+        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
         const filters = { start: norm(document.getElementById('dStart').value), end: norm(document.getElementById('dEnd').value), yr: getSelected('fYearList'), mo: getSelected('fMonthList'), comp: getSelected('fCompList'), dept: getSelected('fDeptList'), cc: getSelected('fCCList') };
 
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
@@ -879,8 +837,12 @@
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
                 let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
-                if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { if (rowVal.trim() !== "" && rowVal !== "-") return false; } 
-                else if(!tableFilters[col].includes(rowVal)) return false;
+                if (tableFilters[col].length > 0) {
+                    if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { 
+                        if (rowVal.trim() !== "" && rowVal !== "-") return false; 
+                    } 
+                    else if(!tableFilters[col].includes(rowVal)) return false;
+                }
             }
             return true;
         });
