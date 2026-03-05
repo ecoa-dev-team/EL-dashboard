@@ -114,9 +114,12 @@
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
         .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; }
+        
+        /* Highlighting Logic Style */
+        .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; transition: color 0.2s ease; }
         .rank-label-link:hover { color: var(--green); }
-        .rank-label-link.highlighted { color: var(--orange) !important; font-weight: 900; }
+        .rank-label-link.active-driver { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.4); }
+
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
@@ -757,11 +760,26 @@
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
+        
         sortedCC.forEach(([cc, val]) => {
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
             const escapedCC = cc.replace(/'/g, "\\'");
-            const isHighlighted = selectedCCForDrivers === cc;
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isHighlighted ? 'highlighted' : ''}" onclick="drillToDrivers('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+            const isActive = selectedCCForDrivers === cc ? 'active-driver' : '';
+            
+            dl.insertAdjacentHTML('beforeend', `
+                <div class="rank-item">
+                    <div class="rank-top-row">
+                        <div class="rank-label rank-label-link ${isActive}" onclick="drillToDrivers('${escapedCC}')">${cc}</div>
+                        <div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div>
+                    </div>
+                    <div class="rank-bar-bg">
+                        <div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div>
+                    </div>
+                    <div class="rank-footer">
+                        <div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div>
+                        <div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div>
+                    </div>
+                </div>`);
         });
 
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
@@ -780,13 +798,10 @@
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
         
-        // Refresh the highlighting in the CC list
-        document.querySelectorAll('#driverRankList .rank-label-link').forEach(el => {
-            if (el.innerText.trim() === ccName) {
-                el.classList.add('highlighted');
-            } else {
-                el.classList.remove('highlighted');
-            }
+        // Visual indicator: Toggle CSS class on all driver labels
+        document.querySelectorAll('.rank-label-link').forEach(el => {
+            if (el.innerText.trim() === ccName) el.classList.add('active-driver');
+            else el.classList.remove('active-driver');
         });
 
         const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
@@ -803,7 +818,7 @@
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
-            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             
