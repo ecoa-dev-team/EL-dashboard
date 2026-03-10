@@ -113,19 +113,26 @@
         .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
         .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
         .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
-        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        .rank-label { font-size: 11px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
         
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; transition: color 0.2s; }
         .rank-label-link:hover { color: var(--green); }
-        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
+        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 12px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
 
-        .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .rank-impact-val { font-size: 15px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
-        .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
-        .rank-bar-fill { height: 100%; border-radius: 5px; }
-        .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+        .rank-bar-bg { width: 100%; background: #0f172a; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #475569; position: relative; }
+        .rank-bar-fill { height: 100%; border-radius: 4px; }
+        .rank-footer { display: flex; justify-content: space-between; font-size: 9px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .rank-pct { color: var(--green); }
-        .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
+        .rank-unit-val { color: var(--orange); font-size: 11px; font-weight: 900; }
+
+        .view-all-ctrl { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        .view-all-btn { background: var(--border); color: #fff; border: none; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .view-all-btn.active { background: var(--primary); color: #000; }
+        .pagination-ctrl { display: flex; gap: 5px; align-items: center; font-size: 9px; font-weight: 900; color: var(--primary); }
+        .pag-btn { background: #334155; border: none; color: white; padding: 2px 6px; border-radius: 3px; cursor: pointer; }
+        .pag-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
 
@@ -229,10 +236,14 @@
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 class="chart-title" id="ccDriverTitle">Top 5 CC Committed Drivers</h3>
-                <div class="chart-controls">
-                    <button id="toggle-cc-5" class="toggle-btn active" onclick="toggleDriverView('cc', 5)">Top 5</button>
-                    <button id="toggle-cc-all" class="toggle-btn" onclick="toggleDriverView('cc', 0)">All</button>
+                <h3 class="chart-title">CC Committed Drivers</h3>
+                <div class="view-all-ctrl">
+                    <button id="btnViewAllCC" class="view-all-btn" onclick="toggleViewAll('CC')">View All</button>
+                    <div id="pagCC" class="pagination-ctrl" style="display:none;">
+                        <button class="pag-btn" onclick="changePage('CC', -1)">Prev</button>
+                        <span id="pageTextCC">1 / 1</span>
+                        <button class="pag-btn" onclick="changePage('CC', 1)">Next</button>
+                    </div>
                 </div>
                 <div id="driverRankList" class="health-rank-container"></div>
             </div>
@@ -248,10 +259,14 @@
                 <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 class="chart-title" id="itemDriverTitle">Top 5 Item Drivers (Committed)</h3>
-                <div class="chart-controls">
-                    <button id="toggle-item-5" class="toggle-btn active" onclick="toggleDriverView('item', 5)">Top 5</button>
-                    <button id="toggle-item-all" class="toggle-btn" onclick="toggleDriverView('item', 0)">All</button>
+                <h3 class="chart-title" id="itemDriverTitle">Item Drivers (Committed)</h3>
+                <div class="view-all-ctrl">
+                    <button id="btnViewAllItem" class="view-all-btn" onclick="toggleViewAll('Item')">View All</button>
+                    <div id="pagItem" class="pagination-ctrl" style="display:none;">
+                        <button class="pag-btn" onclick="changePage('Item', -1)">Prev</button>
+                        <span id="pageTextItem">1 / 1</span>
+                        <button class="pag-btn" onclick="changePage('Item', 1)">Next</button>
+                    </div>
                 </div>
                 <div id="costDriverList" class="health-rank-container"></div>
             </div>
@@ -333,9 +348,14 @@
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
-    let ccDriverLimit = 5; 
-    let itemDriverLimit = 5;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    // Pagination/View State
+    let viewAllCC = false, currentPageCC = 1;
+    let viewAllItem = false, currentPageItem = 1;
+    const itemsPerPage = 10;
+    let cachedCCEntries = [], cachedItemEntries = [];
+    let cachedTotalComm = 0, cachedTotalQty = 0;
 
     const ENTITY_TO_SALES_COUNTRY_MAP = { 
         "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
@@ -365,6 +385,33 @@
         updateDashboard();
     }
 
+    function toggleViewAll(type) {
+        if (type === 'CC') {
+            viewAllCC = !viewAllCC;
+            currentPageCC = 1;
+            document.getElementById('btnViewAllCC').classList.toggle('active', viewAllCC);
+            document.getElementById('btnViewAllCC').innerText = viewAllCC ? "Top 5" : "View All";
+            document.getElementById('pagCC').style.display = viewAllCC ? 'flex' : 'none';
+        } else {
+            viewAllItem = !viewAllItem;
+            currentPageItem = 1;
+            document.getElementById('btnViewAllItem').classList.toggle('active', viewAllItem);
+            document.getElementById('btnViewAllItem').innerText = viewAllItem ? "Top 5" : "View All";
+            document.getElementById('pagItem').style.display = viewAllItem ? 'flex' : 'none';
+        }
+        type === 'CC' ? renderCCDrivers() : renderItemDrivers();
+    }
+
+    function changePage(type, delta) {
+        if (type === 'CC') {
+            currentPageCC += delta;
+            renderCCDrivers();
+        } else {
+            currentPageItem += delta;
+            renderItemDrivers();
+        }
+    }
+
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -383,21 +430,6 @@
         currentGranularity = type;
         document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
-        updateDashboard();
-    }
-
-    function toggleDriverView(type, limit) {
-        if (type === 'cc') {
-            ccDriverLimit = limit;
-            document.getElementById('toggle-cc-5').classList.toggle('active', limit === 5);
-            document.getElementById('toggle-cc-all').classList.toggle('active', limit === 0);
-            document.getElementById('ccDriverTitle').innerText = limit === 5 ? "Top 5 CC Committed Drivers" : "All CC Committed Drivers";
-        } else {
-            itemDriverLimit = limit;
-            document.getElementById('toggle-item-5').classList.toggle('active', limit === 5);
-            document.getElementById('toggle-item-all').classList.toggle('active', limit === 0);
-            // Title for item drivers is handled dynamically in drillToDrivers
-        }
         updateDashboard();
     }
 
@@ -710,7 +742,7 @@
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
-        drillToDrivers(selectedCCForDrivers);
+        updateDriversTable(selectedCCForDrivers);
     }
 
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
@@ -726,17 +758,11 @@
         weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => commitTrend[k].val); 
         weeklyPnlChart.update();
         
-        const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
-        let sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]);
-        if (ccDriverLimit > 0) sortedCC = sortedCC.slice(0, ccDriverLimit);
-        
-        const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
-        sortedCC.forEach(([cc, val]) => {
-            const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
-            const escapedCC = cc.replace(/'/g, "\\'");
-            const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToDrivers('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
-        });
+        cachedCCEntries = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]);
+        cachedTotalComm = totalComm;
+        cachedTotalQty = totalQty;
+        renderCCDrivers();
+
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
@@ -747,17 +773,36 @@
         unitCostCompChart.update();
     }
 
-    function drillToDrivers(ccName = null) {
+    function renderCCDrivers() {
+        const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
+        const data = viewAllCC ? cachedCCEntries : cachedCCEntries.slice(0, 5);
+        const maxVal = cachedCCEntries.length > 0 ? cachedCCEntries[0][1] : 1;
+        
+        let displayData = data;
+        if (viewAllCC) {
+            const totalPages = Math.ceil(data.length / itemsPerPage);
+            document.getElementById('pageTextCC').innerText = `${currentPageCC} / ${totalPages}`;
+            document.querySelector('#pagCC button:first-child').disabled = currentPageCC === 1;
+            document.querySelector('#pagCC button:last-child').disabled = currentPageCC === totalPages;
+            displayData = data.slice((currentPageCC - 1) * itemsPerPage, currentPageCC * itemsPerPage);
+        }
+
+        displayData.forEach(([cc, val]) => {
+            const costSharePU = cachedTotalQty > 0 ? (val / cachedTotalQty).toFixed(2) : "0.00";
+            const escapedCC = cc.replace(/'/g, "\\'");
+            const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="updateDriversTable('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${cachedTotalComm > 0 ? ((val/cachedTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+        });
+    }
+
+    function updateDriversTable(ccName = null) {
         selectedCCForDrivers = ccName;
         document.querySelectorAll('.rank-label-link').forEach(el => {
             if (el.innerText === ccName) el.classList.add('active-cc');
             else el.classList.remove('active-cc');
         });
-        
         const titleEl = document.getElementById('itemDriverTitle');
-        const prefix = itemDriverLimit === 5 ? "Top 5" : "All";
-        titleEl.innerHTML = ccName ? `${prefix} Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `${prefix} Item Drivers (Committed)`;
-        
+        titleEl.innerHTML = ccName ? `Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Item Drivers (Committed)`;
         const filters = getGlobalFiltersObj();
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
@@ -787,16 +832,32 @@
             if (filters.comp) { const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!target.includes(sCountry)) isSelectedCountry = false; }
             if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
         });
+
+        cachedItemEntries = Object.entries(driverMap).sort((a,b) => b[1] - a[1]);
+        currentPageItem = 1;
+        renderItemDrivers(totalForScope, totalSalesQty);
+    }
+
+    function renderItemDrivers(totalScopeOverride, totalQtyOverride) {
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
-        let sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]);
-        if (itemDriverLimit > 0) sortedDrivers = sortedDrivers.slice(0, itemDriverLimit);
+        if (cachedItemEntries.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
         
-        if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
-        const maxVal = sortedDrivers[0][1];
-        sortedDrivers.forEach(([driver, val]) => {
-            const unitCost = totalSalesQty > 0 ? (val / totalSalesQty).toFixed(2) : "0.00";
-            const escapedCC = (ccName || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${totalForScope > 0 ? ((val/totalForScope)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+        const data = viewAllItem ? cachedItemEntries : cachedItemEntries.slice(0, 5);
+        const maxVal = cachedItemEntries[0][1];
+        
+        let displayData = data;
+        if (viewAllItem) {
+            const totalPages = Math.ceil(data.length / itemsPerPage);
+            document.getElementById('pageTextItem').innerText = `${currentPageItem} / ${totalPages}`;
+            document.querySelector('#pagItem button:first-child').disabled = currentPageItem === 1;
+            document.querySelector('#pagItem button:last-child').disabled = currentPageItem === totalPages;
+            displayData = data.slice((currentPageItem - 1) * itemsPerPage, currentPageItem * itemsPerPage);
+        }
+
+        displayData.forEach(([driver, val]) => {
+            const unitCost = cachedTotalQty > 0 ? (val / cachedTotalQty).toFixed(2) : "0.00";
+            const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${cachedTotalComm > 0 ? ((val/cachedTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
         });
     }
 
