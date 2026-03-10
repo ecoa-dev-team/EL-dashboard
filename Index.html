@@ -122,7 +122,7 @@
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
         .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
-        .rank-bar-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+        .rank-bar-fill { height: 100%; border-radius: 5px; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .rank-pct { color: var(--green); }
         .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
@@ -316,6 +316,8 @@
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.weight = '700';
     Chart.defaults.color = '#cbd5e1';
+    // Globally disable animations for professional look
+    Chart.defaults.animation = false;
 
     let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
@@ -375,41 +377,26 @@
         updateDashboard();
     }
 
-    /* FIX: Connecting Compliance Dashboard Figures to Ledger */
     function drillToLedgerByStatus(statusTarget) {
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
-        
-        // Respect current global filters (same logic as in updateDashboard for consistency)
         const filters = getGlobalFiltersObj();
-
         const matchingFileNames = recData
             .filter(r => {
-                // Apply Global Filter checks
-                const rowComp = getCol(r, 'Burn Company', 'Company'), 
-                      rowDept = getCol(r, 'Department'), 
-                      rowCC = getCol(r, 'Cost Center', 'Cost Centre'), 
-                      rowMo = getCol(r, 'Month'), 
-                      rowYr = String(getCol(r, 'Year'));
-                
+                const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
                 if (filters.comp && !filters.comp.includes(rowComp)) return false;
                 if (filters.dept && !filters.dept.includes(rowDept)) return false;
                 if (filters.cc && !filters.cc.includes(rowCC)) return false;
                 if (filters.yr && !filters.yr.includes(rowYr)) return false;
                 if (filters.mo && !filters.mo.includes(rowMo)) return false;
-                
                 const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
                 if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
-
-                // Match Status
                 return (getCol(r, 'Status') || "").toLowerCase().includes(statusTarget.toLowerCase());
             })
             .map(r => (getCol(r, 'PRF file') || "").toString().trim())
             .filter(name => name !== "");
-
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         if (fileNameKey) tableFilters[fileNameKey] = matchingFileNames;
-
         syncGlobalSelectionsToLedger(filters);
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
@@ -420,33 +407,23 @@
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const filters = getGlobalFiltersObj();
-
         const filteredFiles = recData.filter(r => {
-            const rowComp = getCol(r, 'Burn Company', 'Company'), 
-                  rowDept = getCol(r, 'Department'), 
-                  rowCC = getCol(r, 'Cost Center', 'Cost Centre'), 
-                  rowMo = getCol(r, 'Month'), 
-                  rowYr = String(getCol(r, 'Year'));
-                
+            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
             if (filters.comp && !filters.comp.includes(rowComp)) return false;
             if (filters.dept && !filters.dept.includes(rowDept)) return false;
             if (filters.cc && !filters.cc.includes(rowCC)) return false;
             if (filters.yr && !filters.yr.includes(rowYr)) return false;
             if (filters.mo && !filters.mo.includes(rowMo)) return false;
-
             const status = (getCol(r, 'Status') || "").toLowerCase();
             const overdue = cleanNum(getCol(r, 'Days Overdue'));
             if (!status.includes('pending') || overdue <= 0) return false;
-            
             if (label === '1-7d') return overdue <= 7;
             if (label === '8-14d') return overdue > 7 && overdue <= 14;
             if (label === '15d+') return overdue > 14;
             return false;
         }).map(r => (getCol(r, 'PRF file') || "").toString().trim());
-
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         if (fileNameKey) tableFilters[fileNameKey] = filteredFiles;
-
         syncGlobalSelectionsToLedger(filters);
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
@@ -475,8 +452,6 @@
         if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
         if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
         if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
-        
-        // Handle Date Range
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
         if (dateKey && (filters.start || filters.end)) {
             const matches = [...new Set(appData.map(r => {
@@ -497,7 +472,6 @@
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
         if(itemDriver && itemKey) {
             if (itemDriver === "Unspecified") {
@@ -509,12 +483,9 @@
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
         }
-
         syncGlobalSelectionsToLedger(filters);
-        // Overwrite Dept Group specifically for Cost Analysis Tab logic
         const deptGroupKey = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group'));
         if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
-
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
@@ -597,15 +568,12 @@
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const filters = getGlobalFiltersObj();
-
         let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
-
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
             else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
-
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
@@ -613,19 +581,15 @@
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
-            
             const amt = cleanNum(getCol(row, 'Amount (USD)')); 
             const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
-            const rComp = getCol(row, 'Burn Company', 'Company');
-            const rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
-
+            const rComp = getCol(row, 'Burn Company', 'Company'), rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
             if (type.includes('PRF')) commPRF += amt; 
             else if (type.includes('PR')) commPR += amt; 
             else if (type.includes('TRF')) commTRF += amt;
             if (type.includes('ECF')) ecf += amt; 
             if (type.includes('TRF')) trf_actual += amt; 
             if (type.includes('INV')) inv += amt;
-
             if (type.includes('PRF') || type.includes('PR') || type.includes('TRF')) {
                 if (d) {
                     let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(d)}` : (currentGranularity === 'monthly' ? monthNames[d.getMonth()].substring(0,3) : getQuarter(d));
@@ -636,7 +600,6 @@
                 companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
-
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -653,11 +616,9 @@
                 }
             }
         });
-
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         const totalComm = commPRF + commPR + commTRF;
-        
         document.getElementById('valPRF').innerText = fmt(totalComm); 
         document.getElementById('subCommPRF').innerText = fmt(commPRF); 
         document.getElementById('subCommPR').innerText = fmt(commPR); 
@@ -669,9 +630,7 @@
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
-
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
-        
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
@@ -681,23 +640,19 @@
             if (filters.cc && !filters.cc.includes(rowCC)) return;
             if (filters.yr && !filters.yr.includes(rowYr)) return;
             if (filters.mo && !filters.mo.includes(rowMo)) return;
-
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-
             const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = rowCC || "Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days')), maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')), pendDays = cleanNum(getCol(r, 'Days Pending'));
             if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } 
             else { penSum += amt; penCount++; if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; } }
             mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
         });
-
         const avgMax = count > 0 ? (mDaysTotal / count) : 0;
         const avgPend = count > 0 ? (pDaysTotal / count) : 0;
         const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
         if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
         else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
-
         const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
         document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
@@ -707,7 +662,6 @@
         document.getElementById('usdPen').innerText = fmt(penSum); 
         document.getElementById('usdRec').innerText = fmt(recSum); 
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
-        
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         updateCostDashboardVisuals(salesTrendAgg, ccCommittedMap, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
@@ -724,7 +678,6 @@
         weeklyPnlChart.data.labels = sortedKeys;
         weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
         weeklyPnlChart.update();
-
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
@@ -734,7 +687,6 @@
             const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
             dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToDrivers('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${totalComm > 0 ? ((val/totalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
         });
-
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
@@ -751,10 +703,8 @@
             if (el.innerText === ccName) el.classList.add('active-cc');
             else el.classList.remove('active-cc');
         });
-
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
-
         const filters = getGlobalFiltersObj();
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
@@ -776,7 +726,6 @@
             driverMap[driver] = (driverMap[driver] || 0) + amt;
             totalForScope += amt;
         });
-
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -785,7 +734,6 @@
             if (filters.comp) { const target = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!target.includes(sCountry)) isSelectedCountry = false; }
             if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
         });
-
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
         const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
         if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
