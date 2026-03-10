@@ -569,6 +569,23 @@
         const filters = getGlobalFiltersObj();
         let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
+        
+        // Helper to generate labels and keys for sorting
+        const getTrendKey = (date) => {
+            if (!date) return null;
+            if (currentGranularity === 'weekly') {
+                const wk = getWeekNumber(date);
+                const monthShort = monthNames[date.getMonth()].substring(0,3);
+                // Return unique sortable string + display label
+                return { sort: `${date.getFullYear()}-${wk.toString().padStart(2, '0')}`, display: `W${wk}.${monthShort}` };
+            } else if (currentGranularity === 'monthly') {
+                return { sort: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`, display: monthNames[date.getMonth()].substring(0,3) };
+            } else {
+                const q = getQuarter(date);
+                return { sort: `${date.getFullYear()}-${q}`, display: q };
+            }
+        };
+
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -590,15 +607,17 @@
             if (type.includes('TRF')) trf_actual += amt; 
             if (type.includes('INV')) inv += amt;
             if (type.includes('PRF') || type.includes('PR') || type.includes('TRF')) {
-                if (d) {
-                    let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(d)}` : (currentGranularity === 'monthly' ? monthNames[d.getMonth()].substring(0,3) : getQuarter(d));
-                    commitTrendAgg[sKey] = (commitTrendAgg[sKey] || 0) + amt;
+                const tObj = getTrendKey(d);
+                if (tObj) {
+                    if (!commitTrendAgg[tObj.sort]) commitTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
+                    commitTrendAgg[tObj.sort].val += amt;
                 }
                 ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
                 const country = ENTITY_TO_SALES_COUNTRY_MAP[rComp] || rComp;
                 companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
+
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -609,12 +628,14 @@
                 const q = cleanNum(getCol(r, 'Sales QTY'));
                 totalSalesQty += q;
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
-                if (sDate) { 
-                    let sKey = currentGranularity === 'weekly' ? `W${getWeekNumber(sDate)}` : (currentGranularity === 'monthly' ? monthNames[sDate.getMonth()].substring(0,3) : getQuarter(sDate));
-                    salesTrendAgg[sKey] = (salesTrendAgg[sKey] || 0) + q; 
+                const tObj = getTrendKey(sDate);
+                if (tObj) { 
+                    if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
+                    salesTrendAgg[tObj.sort].val += q; 
                 }
             }
         });
+
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         const totalComm = commPRF + commPR + commTRF;
@@ -629,6 +650,7 @@
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
+        
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -647,6 +669,7 @@
             mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
         });
+        
         const avgMax = count > 0 ? (mDaysTotal / count) : 0;
         const avgPend = count > 0 ? (pDaysTotal / count) : 0;
         const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
@@ -668,15 +691,19 @@
     }
 
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
-        const sortKeys = (keys, gran) => { return keys.sort((a,b) => { if(gran === 'weekly') return parseInt(a.substring(1)) - parseInt(b.substring(1)); if(gran === 'monthly') return monthNames.findIndex(m => m.startsWith(a)) - monthNames.findIndex(m => m.startsWith(b)); return a.localeCompare(b); }); };
-        const sortedKeys = sortKeys(Object.keys(commitTrend), currentGranularity);
-        trendChart.data.labels = sortedKeys;
-        trendChart.data.datasets[0].data = sortedKeys.map(k => salesTrend[k] || 0);
-        trendChart.data.datasets[1].data = sortedKeys.map(k => (salesTrend[k] && salesTrend[k] > 0) ? ((commitTrend[k] || 0) / salesTrend[k]) : 0);
+        // Sort keys by date/week logic
+        const sortedTrendKeys = Object.keys(commitTrend).sort();
+        const displayLabels = sortedTrendKeys.map(k => commitTrend[k].label);
+        
+        trendChart.data.labels = displayLabels;
+        trendChart.data.datasets[0].data = sortedTrendKeys.map(k => salesTrend[k] ? salesTrend[k].val : 0);
+        trendChart.data.datasets[1].data = sortedTrendKeys.map(k => (salesTrend[k] && salesTrend[k].val > 0) ? (commitTrend[k].val / salesTrend[k].val) : 0);
         trendChart.update();
-        weeklyPnlChart.data.labels = sortedKeys;
-        weeklyPnlChart.data.datasets[1].data = sortedKeys.map(k => commitTrend[k] || 0); 
+        
+        weeklyPnlChart.data.labels = displayLabels;
+        weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => commitTrend[k].val); 
         weeklyPnlChart.update();
+        
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
