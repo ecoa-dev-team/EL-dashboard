@@ -229,7 +229,11 @@
                 <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
             </div>
             <div class="chart-box">
-                <h3 class="chart-title">Top 5 CC Committed Drivers</h3>
+                <h3 class="chart-title" id="ccDriverTitle">Top 5 CC Committed Drivers</h3>
+                <div class="chart-controls">
+                    <button id="toggle-cc-5" class="toggle-btn active" onclick="toggleDriverView('cc', 5)">Top 5</button>
+                    <button id="toggle-cc-all" class="toggle-btn" onclick="toggleDriverView('cc', 0)">All</button>
+                </div>
                 <div id="driverRankList" class="health-rank-container"></div>
             </div>
         </div>
@@ -245,6 +249,10 @@
             </div>
             <div class="chart-box">
                 <h3 class="chart-title" id="itemDriverTitle">Top 5 Item Drivers (Committed)</h3>
+                <div class="chart-controls">
+                    <button id="toggle-item-5" class="toggle-btn active" onclick="toggleDriverView('item', 5)">Top 5</button>
+                    <button id="toggle-item-all" class="toggle-btn" onclick="toggleDriverView('item', 0)">All</button>
+                </div>
                 <div id="costDriverList" class="health-rank-container"></div>
             </div>
         </div>
@@ -325,6 +333,8 @@
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
+    let ccDriverLimit = 5; 
+    let itemDriverLimit = 5;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     const ENTITY_TO_SALES_COUNTRY_MAP = { 
@@ -373,6 +383,21 @@
         currentGranularity = type;
         document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
+        updateDashboard();
+    }
+
+    function toggleDriverView(type, limit) {
+        if (type === 'cc') {
+            ccDriverLimit = limit;
+            document.getElementById('toggle-cc-5').classList.toggle('active', limit === 5);
+            document.getElementById('toggle-cc-all').classList.toggle('active', limit === 0);
+            document.getElementById('ccDriverTitle').innerText = limit === 5 ? "Top 5 CC Committed Drivers" : "All CC Committed Drivers";
+        } else {
+            itemDriverLimit = limit;
+            document.getElementById('toggle-item-5').classList.toggle('active', limit === 5);
+            document.getElementById('toggle-item-all').classList.toggle('active', limit === 0);
+            // Title for item drivers is handled dynamically in drillToDrivers
+        }
         updateDashboard();
     }
 
@@ -570,13 +595,11 @@
         let ecf = 0, trf_actual = 0, inv = 0, commPRF = 0, commPR = 0, commTRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
         
-        // Helper to generate labels and keys for sorting
         const getTrendKey = (date) => {
             if (!date) return null;
             if (currentGranularity === 'weekly') {
                 const wk = getWeekNumber(date);
                 const monthShort = monthNames[date.getMonth()].substring(0,3);
-                // Return unique sortable string + display label
                 return { sort: `${date.getFullYear()}-${wk.toString().padStart(2, '0')}`, display: `W${wk}.${monthShort}` };
             } else if (currentGranularity === 'monthly') {
                 return { sort: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`, display: monthNames[date.getMonth()].substring(0,3) };
@@ -691,7 +714,6 @@
     }
 
     function updateCostDashboardVisuals(salesTrend, ccDriver, totalComm, totalQty, commitTrend, countrySales, countryComm) {
-        // Sort keys by date/week logic
         const sortedTrendKeys = Object.keys(commitTrend).sort();
         const displayLabels = sortedTrendKeys.map(k => commitTrend[k].label);
         
@@ -705,7 +727,9 @@
         weeklyPnlChart.update();
         
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
-        const sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        let sortedCC = Object.entries(ccDriver).sort((a,b) => b[1] - a[1]);
+        if (ccDriverLimit > 0) sortedCC = sortedCC.slice(0, ccDriverLimit);
+        
         const maxVal = sortedCC.length > 0 ? sortedCC[0][1] : 1;
         sortedCC.forEach(([cc, val]) => {
             const costSharePU = totalQty > 0 ? (val / totalQty).toFixed(2) : "0.00";
@@ -729,8 +753,11 @@
             if (el.innerText === ccName) el.classList.add('active-cc');
             else el.classList.remove('active-cc');
         });
+        
         const titleEl = document.getElementById('itemDriverTitle');
-        titleEl.innerHTML = ccName ? `Top 5 Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `Top 5 Item Drivers (Committed)`;
+        const prefix = itemDriverLimit === 5 ? "Top 5" : "All";
+        titleEl.innerHTML = ccName ? `${prefix} Item Drivers: <span style="color: var(--orange)">${ccName}</span>` : `${prefix} Item Drivers (Committed)`;
+        
         const filters = getGlobalFiltersObj();
         let driverMap = {}, totalForScope = 0, totalSalesQty = 0;
         appData.forEach(r => {
@@ -761,7 +788,9 @@
             if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) totalSalesQty += cleanNum(getCol(r, 'Sales QTY')); 
         });
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
-        const sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        let sortedDrivers = Object.entries(driverMap).sort((a,b) => b[1] - a[1]);
+        if (itemDriverLimit > 0) sortedDrivers = sortedDrivers.slice(0, itemDriverLimit);
+        
         if (sortedDrivers.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No committed driver data found</div>'; return; }
         const maxVal = sortedDrivers[0][1];
         sortedDrivers.forEach(([driver, val]) => {
