@@ -490,46 +490,56 @@
         renderApprovalsTable(appData);
     }
 
-    function drillToLedgerByTrend(trendKey) {
+    // NEW FUNCTION: DRILL TO LEDGER BY TREND POINT
+    function drillToLedgerByTrend(label) {
         tableFilters = {};
         const filters = getGlobalFiltersObj();
         const rawCols = Object.keys(appData[0] || {});
         
-        // Setup base filters for PRF/PR/TRF (Committed)
+        // Find keys for Year, Month, Week
+        const yrKey = rawCols.find(c => c.toLowerCase() === 'year');
+        const moKey = rawCols.find(c => c.toLowerCase() === 'month');
+        const dtKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
+        
+        if (currentGranularity === 'monthly') {
+            // Label is "Jan", "Feb" etc
+            const fullMonthName = monthNames.find(m => m.startsWith(label));
+            if (moKey && fullMonthName) tableFilters[moKey] = [fullMonthName];
+        } else if (currentGranularity === 'weekly') {
+            // Label is "W12.Mar" etc. Extract Week number.
+            const weekNumMatch = label.match(/W(\d+)/);
+            if (weekNumMatch && dtKey) {
+                const targetWeek = parseInt(weekNumMatch[1]);
+                const matchingDates = [...new Set(appData.map(r => {
+                    const d = parseExcelDate(r[dtKey]);
+                    if (d && getWeekNumber(d) === targetWeek) return formatDateStr(d);
+                    return null;
+                }))].filter(v => v !== null);
+                if (matchingDates.length > 0) tableFilters[dtKey] = matchingDates;
+            }
+        } else if (currentGranularity === 'quarterly') {
+            // Label is "Q1", "Q2" etc.
+            const targetQ = label;
+            if (dtKey) {
+                const matchingDates = [...new Set(appData.map(r => {
+                    const d = parseExcelDate(r[dtKey]);
+                    if (d && getQuarter(d) === targetQ) return formatDateStr(d);
+                    return null;
+                }))].filter(v => v !== null);
+                if (matchingDates.length > 0) tableFilters[dtKey] = matchingDates;
+            }
+        }
+
+        // Apply shared filters
+        syncGlobalSelectionsToLedger(filters);
+        
+        // Ensure only committed spend docs are shown
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
-        if(typeKey) {
+        if (typeKey) {
             const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
             tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('PR') || v.toUpperCase().includes('TRF'));
         }
 
-        // Setup the specific Date filter based on Trend Key
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-        if (dateKey) {
-            const matches = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d) return null;
-                
-                let rowKey = "";
-                if (currentGranularity === 'weekly') {
-                    const wk = getWeekNumber(d);
-                    rowKey = `${d.getFullYear()}-${wk.toString().padStart(2, '0')}`;
-                } else if (currentGranularity === 'monthly') {
-                    rowKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-                } else {
-                    const q = getQuarter(d);
-                    rowKey = `${d.getFullYear()}-${q}`;
-                }
-
-                return rowKey === trendKey ? formatDateStr(d) : null;
-            }))].filter(v => v !== null);
-            
-            if (matches.length > 0) tableFilters[dateKey] = matches;
-        }
-
-        syncGlobalSelectionsToLedger(filters);
-        const deptGroupKey = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group'));
-        if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
-        
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
@@ -557,10 +567,8 @@
         if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
         if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
         if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
-        
-        // Global Date filters only apply if we haven't already set a trend-specific date filter
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-        if (dateKey && !tableFilters[dateKey] && (filters.start || filters.end)) {
+        if (dateKey && (filters.start || filters.end)) {
             const matches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
                 if (!d) return null;
@@ -674,7 +682,6 @@
 
     let globalTotalComm = 0;
     let globalTotalSalesQty = 0;
-    let trendKeyMapping = []; // To store index to sort-key mapping for clicks
 
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
@@ -730,7 +737,7 @@
 
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
-            if ((filters.start && sDate < sDate) || (filters.end && sDate > sDate)) return; // logic check
+            if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
             let isSelectedCountry = true;
             if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
@@ -811,19 +818,16 @@
     function renderCCDriversList() {
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const dataToRender = viewAllCC ? ccDataFull : ccDataFull.slice(0, 5);
-        
         let pagedData = dataToRender;
         if (viewAllCC) {
             const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
             pagedData = dataToRender.slice(start, start + ITEMS_PER_PAGE);
-            
             const totalPages = Math.ceil(dataToRender.length / ITEMS_PER_PAGE);
             const pagBox = document.getElementById('ccPagination');
             pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
             pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
             pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
         }
-
         const maxVal = ccDataFull.length > 0 ? ccDataFull[0][1] : 1;
         pagedData.forEach(([cc, val]) => {
             const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
@@ -854,42 +858,34 @@
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
             driverMap[driver] = (driverMap[driver] || 0) + amt;
             totalForScope += amt;
         });
-
         itemDataFull = Object.entries(driverMap).sort((a,b) => b[1] - a[1]);
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
-        
-        renderItemDriversList(totalForScope);
+        renderItemDriversList();
     }
 
-    function renderItemDriversList(totalForScopeOverride = null) {
+    function renderItemDriversList() {
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
         const dataToRender = viewAllItem ? itemDataFull : itemDataFull.slice(0, 5);
-        
         let pagedData = dataToRender;
         if (viewAllItem) {
             const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
             pagedData = dataToRender.slice(start, start + ITEMS_PER_PAGE);
-            
             const totalPages = Math.ceil(dataToRender.length / ITEMS_PER_PAGE);
             const pagBox = document.getElementById('itemPagination');
             pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
             pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
             pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
         }
-
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
-
         const maxVal = itemDataFull[0][1];
         const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
-
         pagedData.forEach(([driver, val]) => {
             const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
@@ -899,30 +895,24 @@
 
     function updateCostDashboardVisuals(salesTrend, totalComm, totalQty, commitTrend, countrySales, countryComm) {
         const sortedTrendKeys = Object.keys(commitTrend).sort();
-        trendKeyMapping = sortedTrendKeys; // Store for clickable logic
         const displayLabels = sortedTrendKeys.map(k => commitTrend[k].label);
-        
         trendChart.data.labels = displayLabels;
         trendChart.data.datasets[0].data = sortedTrendKeys.map(k => salesTrend[k] ? salesTrend[k].val : 0);
         trendChart.data.datasets[1].data = sortedTrendKeys.map(k => (salesTrend[k] && salesTrend[k].val > 0) ? (commitTrend[k].val / salesTrend[k].val) : 0);
         trendChart.update();
-        
         weeklyPnlChart.data.labels = displayLabels;
         weeklyPnlChart.data.datasets[1].data = sortedTrendKeys.map(k => commitTrend[k].val); 
         weeklyPnlChart.update();
-        
         const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
         companyDistChart.data.labels = compEntries.map(e => e[0]);
         companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
         companyDistChart.update();
-
         const unitCostEntries = compEntries.map(e => { 
             const country = e[0], comm = e[1]; 
             let sales = countrySales[country] || 0; 
             if (country === 'HQ' && sales === 0) sales = totalQty; 
             return [country, sales > 0 ? (comm / sales) : 0]; 
         }).sort((a,b) => b[1] - a[1]);
-
         unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
         unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
         unitCostCompChart.update();
@@ -1031,36 +1021,38 @@
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
         ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const index = elements[0].index; const label = ageChart.data.labels[index]; drillToLedgerByAgeing(label); } }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
         const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
-        
         trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
         
+        // UPDATED: weeklyPnlChart with Interaction
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { 
             type: 'bar', 
             data: { 
                 labels: [], 
                 datasets: [
                     { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, 
-                    { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }
+                    { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 6, pointHoverRadius: 9, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }
                 ] 
             }, 
             options: { 
                 layout: { padding: { top: 35 } }, 
                 maintainAspectRatio: false, 
-                onHover: (event, chartElement) => {
-                    event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
-                },
                 onClick: (evt, elements) => {
                     if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const trendKey = trendKeyMapping[index];
-                        if (trendKey) drillToLedgerByTrend(trendKey);
+                        const idx = elements[0].index;
+                        const label = weeklyPnlChart.data.labels[idx];
+                        drillToLedgerByTrend(label);
                     }
                 },
-                scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, 
-                plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } 
+                scales: { 
+                    x: commonScaleOptions, 
+                    y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } 
+                }, 
+                plugins: { 
+                    legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } 
+                } 
             } 
         });
-        
+
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
         fetchData(); setInterval(fetchData, 60000);
