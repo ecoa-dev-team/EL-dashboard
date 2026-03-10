@@ -94,9 +94,6 @@
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
         h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; }
         
-        .view-all-toggle { background: transparent; border: 1px solid var(--primary); color: var(--primary); font-size: 9px; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-weight: 900; transition: all 0.2s; }
-        .view-all-toggle.active { background: var(--primary); color: var(--bg); }
-
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
@@ -240,10 +237,9 @@
             <div class="chart-box">
                 <div class="chart-header-row">
                     <h3 class="chart-title">CC Committed Drivers</h3>
-                    <button id="toggleCCViewAll" class="view-all-toggle" onclick="toggleViewAll('cc')">VIEW ALL</button>
                 </div>
                 <div id="driverRankList" class="health-rank-container"></div>
-                <div id="ccPagination" class="pagination-ctrl" style="display:none;">
+                <div id="ccPagination" class="pagination-ctrl">
                     <button class="pag-btn" onclick="changePage('cc', -1)">Prev</button>
                     <span class="pag-info">Page 1/1</span>
                     <button class="pag-btn" onclick="changePage('cc', 1)">Next</button>
@@ -263,10 +259,9 @@
             <div class="chart-box">
                 <div class="chart-header-row">
                     <h3 class="chart-title" id="itemDriverTitle">Item Drivers (Committed)</h3>
-                    <button id="toggleItemViewAll" class="view-all-toggle" onclick="toggleViewAll('item')">VIEW ALL</button>
                 </div>
                 <div id="costDriverList" class="health-rank-container"></div>
-                <div id="itemPagination" class="pagination-ctrl" style="display:none;">
+                <div id="itemPagination" class="pagination-ctrl">
                     <button class="pag-btn" onclick="changePage('item', -1)">Prev</button>
                     <span class="pag-info">Page 1/1</span>
                     <button class="pag-btn" onclick="changePage('item', 1)">Next</button>
@@ -351,12 +346,9 @@
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
     
-    // Pagination & View All State
-    let viewAllCC = false;
+    // Pagination state
     let ccCurrentPage = 1;
     let ccDataFull = [];
-    
-    let viewAllItem = false;
     let itemCurrentPage = 1;
     let itemDataFull = [];
     
@@ -412,21 +404,6 @@
         updateDashboard();
     }
 
-    function toggleViewAll(type) {
-        if (type === 'cc') {
-            viewAllCC = !viewAllCC;
-            ccCurrentPage = 1;
-            document.getElementById('toggleCCViewAll').classList.toggle('active', viewAllCC);
-            document.getElementById('ccPagination').style.display = viewAllCC ? 'flex' : 'none';
-        } else {
-            viewAllItem = !viewAllItem;
-            itemCurrentPage = 1;
-            document.getElementById('toggleItemViewAll').classList.toggle('active', viewAllItem);
-            document.getElementById('itemPagination').style.display = viewAllItem ? 'flex' : 'none';
-        }
-        updateDashboard();
-    }
-
     function changePage(type, direction) {
         if (type === 'cc') {
             ccCurrentPage += direction;
@@ -437,7 +414,6 @@
         }
     }
 
-    // UPDATED DRILL DOWN FOR COMMITTED TREND CHART
     function drillToLedgerByTrendPoint(pointSortKey) {
         tableFilters = {};
         const filters = getGlobalFiltersObj();
@@ -454,7 +430,6 @@
 
         if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
 
-        // Find matches for the specific time period
         if (dateKey) {
             const periodMatches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
@@ -671,7 +646,7 @@
 
     let globalTotalComm = 0;
     let globalTotalSalesQty = 0;
-    let currentSortedTrendKeys = []; // Global tracker for chart interaction
+    let currentSortedTrendKeys = [];
 
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
@@ -799,6 +774,7 @@
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         
         ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => b[1] - a[1]);
+        ccCurrentPage = 1;
         renderCCDriversList();
 
         updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
@@ -807,20 +783,18 @@
 
     function renderCCDriversList() {
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
-        const dataToRender = viewAllCC ? ccDataFull : ccDataFull.slice(0, 5);
+        const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
+        const pagedData = ccDataFull.slice(start, start + ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(ccDataFull.length / ITEMS_PER_PAGE) || 1;
         
-        let pagedData = dataToRender;
-        if (viewAllCC) {
-            const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
-            pagedData = dataToRender.slice(start, start + ITEMS_PER_PAGE);
-            const totalPages = Math.ceil(dataToRender.length / ITEMS_PER_PAGE);
-            const pagBox = document.getElementById('ccPagination');
-            pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
-            pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
-            pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
-        }
+        const pagBox = document.getElementById('ccPagination');
+        pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
+        pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
+        pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
 
-        const maxVal = ccDataFull.length > 0 ? ccDataFull[0][1] : 1;
+        if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
+        
+        const maxVal = ccDataFull[0][1];
         pagedData.forEach(([cc, val]) => {
             const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = cc.replace(/'/g, "\\'");
@@ -859,6 +833,7 @@
         });
 
         itemDataFull = Object.entries(driverMap).sort((a,b) => b[1] - a[1]);
+        itemCurrentPage = 1;
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
         renderItemDriversList();
@@ -866,18 +841,14 @@
 
     function renderItemDriversList() {
         const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
-        const dataToRender = viewAllItem ? itemDataFull : itemDataFull.slice(0, 5);
+        const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
+        const pagedData = itemDataFull.slice(start, start + ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(itemDataFull.length / ITEMS_PER_PAGE) || 1;
         
-        let pagedData = dataToRender;
-        if (viewAllItem) {
-            const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
-            pagedData = dataToRender.slice(start, start + ITEMS_PER_PAGE);
-            const totalPages = Math.ceil(dataToRender.length / ITEMS_PER_PAGE);
-            const pagBox = document.getElementById('itemPagination');
-            pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
-            pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
-            pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
-        }
+        const pagBox = document.getElementById('itemPagination');
+        pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
+        pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
+        pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
 
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
         const maxVal = itemDataFull[0][1];
