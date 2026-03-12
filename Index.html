@@ -414,51 +414,47 @@
         }
     }
 
-    // UPDATED DRILLDOWN FOR COMMITTED SPEND
+    /** * FIXED DRILLDOWN: Ensures Ledger strictly shows Pending PRFs + ECF/TRF/INV
+     * that match the trend point data precisely.
+     */
     function drillToLedgerByTrendPoint(pointSortKey) {
         tableFilters = {};
         const filters = getGlobalFiltersObj();
         const rawCols = Object.keys(appData[0] || {});
         
-        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         
-        // 1. Get filenames of Pending PRFs in this trend window
-        const pendingFiles = recData.filter(r => {
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+        // 1. Identify valid "Pending PRFs" from Recon Report
+        const pendingFilesGlobal = recData
+            .filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending'))
+            .map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        // 2. Identify the filenames in the specific trend window that qualify as "Committed"
+        const validCommittedFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (!d) return false;
             let rowSortKey = "";
             if (currentGranularity === 'weekly') rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
             else if (currentGranularity === 'monthly') rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
             else rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
+            
+            if (rowSortKey !== pointSortKey) return false;
 
-            const status = (getCol(r, 'Status') || "").toLowerCase();
-            return rowSortKey === pointSortKey && status.includes('pending');
-        }).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+            // Date bounds
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
 
-        // 2. Set filters for doc types (ECF, TRF, INV are always included in Committed)
-        if(typeKey) {
-            tableFilters[typeKey] = ["ECF", "TRF", "INV", "PRF", "PR"]; // Included doc types
-        }
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || 
+                   ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
 
-        // 3. Since PRF must be pending, but others are standard, we use file list if possible
-        if(fileNameKey && pendingFiles.length > 0) {
-           // We basically want: (Type IN ECF,TRF,INV) OR (FileName IN pendingFiles)
-           // Simplified for UI: we just pass the pending file names and rely on the type filter
-        }
-
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-        if (dateKey) {
-            const periodMatches = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d) return null;
-                let rowSortKey = "";
-                if (currentGranularity === 'weekly') rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
-                else if (currentGranularity === 'monthly') rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-                else rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
-                return rowSortKey === pointSortKey ? formatDateStr(d) : null;
-            }))].filter(v => v !== null);
-            if (periodMatches.length > 0) tableFilters[dateKey] = periodMatches;
+        if (fileNameKey) {
+            tableFilters[fileNameKey] = validCommittedFiles;
         }
 
         syncGlobalSelectionsToLedger(filters);
@@ -542,45 +538,54 @@
         if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
         if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
         if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
-        const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
-        if (dateKey && (filters.start || filters.end)) {
-            const matches = [...new Set(appData.map(r => {
-                const d = parseExcelDate(r[dateKey]);
-                if (!d) return null;
-                if (filters.start && d < filters.start) return null;
-                if (filters.end && d > filters.end) return null;
-                return formatDateStr(d);
-            }))].filter(v => v !== null);
-            if (matches.length > 0) tableFilters[dateKey] = matches;
-        }
     }
 
-    // UPDATED DRILLDOWN FOR COMMITTED CC / ITEM DRIVERS
+    /**
+     * FIXED DRILLDOWN: Driver Figures now filter ledger to EXACT PRF/ECF/TRF list
+     */
     function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {}; 
         const filters = getGlobalFiltersObj();
         const rawCols = Object.keys(appData[0] || {});
-        const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
-        const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
-        const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         
-        if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
-        if(itemDriver && itemKey) {
-            if (itemDriver === "Unspecified") {
-                const emptyMatches = [...new Set(appData.map(r => (r[itemKey] || "").toString()))].filter(v => v.trim() === "" || v === "-");
-                tableFilters[itemKey] = emptyMatches.length > 0 ? emptyMatches : [""];
-            } else tableFilters[itemKey] = [itemDriver];
-        }
+        // 1. Get Global Pending PRF filenames
+        const pendingFilesGlobal = recData
+            .filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending'))
+            .map(r => (getCol(r, 'PRF file') || "").toString().trim());
 
-        // Apply committed spend logic filter: (Pending PRF) OR (ECF/TRF/INV)
-        if(typeKey) {
-            tableFilters[typeKey] = ["ECF", "TRF", "INV", "PRF", "PR"];
+        // 2. Find exact filenames that make up this specific driver total
+        const validFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            
+            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
+            if (costCenter && rCC !== costCenter) return false;
+
+            if (itemDriver) {
+                const rawDriver = getCol(row, 'Cost Drivers', 'Driver');
+                const driverStr = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+                if (driverStr !== itemDriver) return false;
+            }
+
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || 
+                   ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+
+        if (fileNameKey) {
+            tableFilters[fileNameKey] = validFiles;
         }
 
         syncGlobalSelectionsToLedger(filters);
-        const deptGroupKey = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group'));
-        if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
-        
         syncFilterIcons();
         switchTab('approvals-tab', document.getElementById('btn-approvals'));
         renderApprovalsTable(appData);
@@ -685,20 +690,14 @@
             }
         };
 
-        // NEW: PRE-CALCULATE PENDING PRF AMOUNTS FROM RECON REPORT
-        let pendingPrfMap = {}; // Filename -> Amount
-        let totalPendingPrfAmt = 0;
-
+        let pendingPrfSet = new Set();
         recData.forEach(r => {
-            const status = (getCol(r, 'Status')||"").toLowerCase();
-            if (status.includes('pending')) {
-                const fname = (getCol(r, 'PRF file')||"").toString().trim();
-                const amt = cleanNum(getCol(r, 'PRF Amount (USD)'));
-                pendingPrfMap[fname] = amt;
+            if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
+                pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim());
             }
         });
 
-        // 1. Process Approvals for ECF, TRF, INV and PENDING PRFs
+        let totalPendingPrfAmt = 0;
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -721,7 +720,7 @@
             if (type.includes('ECF')) { ecf += amt; isCommitted = true; } 
             else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; } 
             else if (type.includes('INV')) { inv += amt; isCommitted = true; }
-            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfMap[fname] !== undefined) {
+            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfSet.has(fname)) {
                 totalPendingPrfAmt += amt;
                 isCommitted = true;
             }
@@ -738,7 +737,6 @@
             }
         });
 
-        // 2. Process Sales
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -760,7 +758,6 @@
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         
-        // Final Committed Calculation
         const totalComm = totalPendingPrfAmt + ecf + trf_actual + inv;
         globalTotalComm = totalComm;
         globalTotalSalesQty = totalSalesQty;
@@ -780,7 +777,6 @@
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
         
-        // 3. Process Reconciliation Health (Compliance Tab)
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -863,10 +859,7 @@
     function updateItemDriversData() {
         const filters = getGlobalFiltersObj();
         let driverMap = {}, totalForScope = 0;
-
-        // Get Pending file list again for item driver filtering
-        let pendingFiles = recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending'))
-                                   .map(r => (getCol(r, 'PRF file')||"").toString().trim());
+        let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
 
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -876,10 +869,8 @@
 
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-
             let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || 
-                              ((type.includes('PRF') || type.includes('PR')) && pendingFiles.includes(fname));
-
+                              ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
             if (!isCommitted) return;
 
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
@@ -887,7 +878,6 @@
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
@@ -963,6 +953,7 @@
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         const reconLookup = {};
         recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
+        
         let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -982,17 +973,23 @@
         displayCols.unshift('Department', 'Cost Center');
         const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
         if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
-        let trH = '<tr>'; displayCols.forEach(c => { 
+        
+        let trH = '<tr>'; 
+        displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
             trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
+        
         displayCols.forEach(c => {
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
             const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
             if (list && list.children.length === 0) {
                 if (c.toLowerCase().includes('date')) renderDateHierarchy(oKey, uid, list);
-                else if (c !== "Status" && c !== "Days Pending") { const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); }
+                else if (c !== "Status" && c !== "Days Pending") { 
+                    const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); 
+                    vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); 
+                }
             }
         });
         syncFilterIcons();
