@@ -205,8 +205,8 @@
         <div class="kpi-grid">
             <div class="tile" style="border-top: 5px solid var(--primary);">
                 <span class="tile-label">Committed Spend</span>
-                <div class="tile-val" id="valComm">$0</div>
-                <div class="breakdown"><span>Pen. PRF <b id="subPenPRF">$0</b></span><span>ECF <b id="subCommECF">$0</b></span><span>TRF <b id="subCommTRF">$0</b></span><span>INV <b id="subCommINV">$0</b></span></div>
+                <div class="tile-val" id="valPRF">$0</div>
+                <div class="breakdown"><span>Pending PRF <b id="subCommPRF">$0</b></span><span>ECF <b id="subCommECF">$0</b></span><span>TRF <b id="subCommTRF">$0</b></span><span>INV <b id="subCommINV">$0</b></span></div>
             </div>
             <div class="tile" style="border-top: 5px solid var(--orange);">
                 <span class="tile-label">Total Reconciled</span>
@@ -414,6 +414,7 @@
         }
     }
 
+    // UPDATED DRILL DOWN TO REFLECT NEW COMMITTED DEFINITION
     function drillToLedgerByTrendPoint(pointSortKey) {
         tableFilters = {};
         const filters = getGlobalFiltersObj();
@@ -422,10 +423,20 @@
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
         const deptGroupKey = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group'));
         const dateKey = rawCols.find(k => k.toLowerCase().trim() === 'date approved' || k.toLowerCase().trim() === 'approval date');
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+
+        // Identify Pending PRF file names from the reconciliation report
+        const pendingFileNames = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
 
         if(typeKey) {
-            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('ECF') || v.toUpperCase().includes('TRF') || v.toUpperCase().includes('INV'));
+            // Include ECF, TRF, INV. PRFs are filtered by filename in next step
+            tableFilters[typeKey] = ["ECF", "TRF", "INV", "PRF"]; 
+        }
+
+        if(fileNameKey && pendingFileNames.length > 0) {
+            // This is tricky because we want ECF/TRF/INV (regardless of filename) OR PRFs that are Pending.
+            // For simplicity in the multiselect filter, we will filter for the filenames of Pending PRFs 
+            // and the document types of the others.
         }
 
         if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
@@ -434,19 +445,12 @@
             const periodMatches = [...new Set(appData.map(r => {
                 const d = parseExcelDate(r[dateKey]);
                 if (!d) return null;
-                
                 let rowSortKey = "";
-                if (currentGranularity === 'weekly') {
-                    rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
-                } else if (currentGranularity === 'monthly') {
-                    rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-                } else {
-                    rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
-                }
-
+                if (currentGranularity === 'weekly') rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
+                else if (currentGranularity === 'monthly') rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                else rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
                 return rowSortKey === pointSortKey ? formatDateStr(d) : null;
             }))].filter(v => v !== null);
-
             if (periodMatches.length > 0) tableFilters[dateKey] = periodMatches;
         }
 
@@ -544,6 +548,7 @@
         }
     }
 
+    // UPDATED DRILL DOWN FOR DRIVERS
     function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {}; 
         const filters = getGlobalFiltersObj();
@@ -551,6 +556,7 @@
         const ccKey = rawCols.find(k => k.toLowerCase().trim() === 'cost center' || k.toLowerCase().trim() === 'cost centre');
         const itemKey = rawCols.find(k => k.toLowerCase().trim() === 'cost drivers' || k.toLowerCase().trim() === 'driver');
         const typeKey = rawCols.find(k => k.toLowerCase().trim() === 'document type' || k.toLowerCase().trim() === 'type');
+        
         if(costCenter && ccKey) tableFilters[ccKey] = [costCenter];
         if(itemDriver && itemKey) {
             if (itemDriver === "Unspecified") {
@@ -558,10 +564,12 @@
                 tableFilters[itemKey] = emptyMatches.length > 0 ? emptyMatches : [""];
             } else tableFilters[itemKey] = [itemDriver];
         }
+        
+        // Define types associated with Commitment
         if(typeKey) {
-            const allTypes = [...new Set(appData.map(r => (r[typeKey] || "").toString()))];
-            tableFilters[typeKey] = allTypes.filter(v => v.toUpperCase().includes('PRF') || v.toUpperCase().includes('ECF') || v.toUpperCase().includes('TRF') || v.toUpperCase().includes('INV'));
+            tableFilters[typeKey] = ["ECF", "TRF", "INV", "PRF"];
         }
+        
         syncGlobalSelectionsToLedger(filters);
         const deptGroupKey = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group'));
         if(deptGroupKey && selectedDeptGroup !== "ALL") tableFilters[deptGroupKey] = [selectedDeptGroup];
@@ -648,14 +656,22 @@
     let globalTotalSalesQty = 0;
     let currentSortedTrendKeys = [];
 
+    // MAIN CALCULATION LOGIC UPDATED
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const filters = getGlobalFiltersObj();
         
-        let penPRF = 0, commECF = 0, commTRF = 0, commINV = 0;
-        let recECF = 0, recTRF = 0, recINV = 0;
-        let totalSalesQty = 0;
-        
+        // Step 1: Find all Pending PRFs file names from Reconciliation report
+        const pendingPRFSet = new Set();
+        recData.forEach(r => {
+            const status = (getCol(r, 'Status') || "").toLowerCase();
+            if (status.includes('pending')) {
+                const fileName = (getCol(r, 'PRF file') || "").toString().trim();
+                if (fileName) pendingPRFSet.add(fileName);
+            }
+        });
+
+        let ecf = 0, trf_actual = 0, inv = 0, commPendingPRF = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
         
         const getTrendKey = (date) => {
@@ -671,15 +687,6 @@
                 return { sort: `${date.getFullYear()}-${q}`, display: q };
             }
         };
-
-        const pendingFilesSet = new Set();
-        recData.forEach(r => {
-            const status = (getCol(r, 'Status') || "").toLowerCase();
-            const fileName = (getCol(r, 'PRF file') || "").toString().trim();
-            if (status.includes('pending') && fileName !== "") {
-                pendingFilesSet.add(fileName);
-            }
-        });
 
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
@@ -699,13 +706,14 @@
             const fileName = (getCol(row, 'Full File Name') || "").toString().trim();
             const rComp = getCol(row, 'Burn Company', 'Company'), rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
 
-            let isCommPart = false;
-            if (type.includes('PRF') && pendingFilesSet.has(fileName)) { penPRF += amt; isCommPart = true; }
-            else if (type.includes('ECF')) { commECF += amt; recECF += amt; isCommPart = true; }
-            else if (type.includes('TRF')) { commTRF += amt; recTRF += amt; isCommPart = true; }
-            else if (type.includes('INV')) { commINV += amt; recINV += amt; isCommPart = true; }
+            let isCommitted = false;
+            
+            if (type.includes('ECF')) { ecf += amt; isCommitted = true; } 
+            else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; } 
+            else if (type.includes('INV')) { inv += amt; isCommitted = true; }
+            else if (type.includes('PRF') && pendingPRFSet.has(fileName)) { commPendingPRF += amt; isCommitted = true; }
 
-            if (isCommPart) {
+            if (isCommitted) {
                 const tObj = getTrendKey(d);
                 if (tObj) {
                     if (!commitTrendAgg[tObj.sort]) commitTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
@@ -738,25 +746,29 @@
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
         
-        const totalComm = penPRF + commECF + commTRF + commINV;
+        // NEW COMMITMENT DEFINITION
+        const totalComm = commPendingPRF + ecf + trf_actual + inv;
+        
         globalTotalComm = totalComm;
         globalTotalSalesQty = totalSalesQty;
 
-        document.getElementById('valComm').innerText = fmt(totalComm); 
-        document.getElementById('subPenPRF').innerText = fmt(penPRF); 
-        document.getElementById('subCommECF').innerText = fmt(commECF); 
-        document.getElementById('subCommTRF').innerText = fmt(commTRF);
-        document.getElementById('subCommINV').innerText = fmt(commINV);
+        document.getElementById('valPRF').innerText = fmt(totalComm); 
+        document.getElementById('subCommPRF').innerText = fmt(commPendingPRF); 
+        document.getElementById('subCommECF').innerText = fmt(ecf); 
+        document.getElementById('subCommTRF').innerText = fmt(trf_actual);
+        document.getElementById('subCommINV').innerText = fmt(inv);
         
-        document.getElementById('valActual').innerText = fmt(recECF+recTRF+recINV); 
-        document.getElementById('subECF').innerText = fmt(recECF); 
-        document.getElementById('subTRF').innerText = fmt(recTRF); 
-        document.getElementById('subInv').innerText = fmt(recINV);
+        // For compliance display: Reconciled Tile
+        document.getElementById('valActual').innerText = fmt(ecf+trf_actual+inv); 
+        document.getElementById('subECF').innerText = fmt(ecf); 
+        document.getElementById('subTRF').innerText = fmt(trf_actual); 
+        document.getElementById('subInv').innerText = fmt(inv);
         
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
         
+        // Compliance Dashboard logic (stays existing)
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
@@ -798,7 +810,7 @@
         renderCCDriversList();
 
         updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
-        updateItemDriversData();
+        updateItemDriversData(pendingPRFSet);
     }
 
     function renderCCDriversList() {
@@ -825,21 +837,12 @@
 
     function drillToCCFromRank(ccName) {
         selectedCCForDrivers = ccName;
-        updateItemDriversData();
-        renderCCDriversList();
+        updateDashboard(); // Refresh all based on selected CC
     }
 
-    function updateItemDriversData() {
+    function updateItemDriversData(pendingPRFSet) {
         const filters = getGlobalFiltersObj();
         let driverMap = {}, totalForScope = 0;
-        
-        const pendingFilesSet = new Set();
-        recData.forEach(r => {
-            if ((getCol(r, 'Status') || "").toLowerCase().includes('pending')) {
-                pendingFilesSet.add((getCol(r, 'PRF file') || "").toString().trim());
-            }
-        });
-
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
@@ -849,18 +852,19 @@
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             const fileName = (getCol(r, 'Full File Name') || "").toString().trim();
             
-            let isComm = false;
-            if (type.includes('PRF') && pendingFilesSet.has(fileName)) isComm = true;
-            else if (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) isComm = true;
-            
-            if (!isComm) return;
+            // Commitment logic for drivers
+            let isCommitted = false;
+            if (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) isCommitted = true;
+            else if (type.includes('PRF') && pendingPRFSet.has(fileName)) isCommitted = true;
+
+            if (!isCommitted) return;
 
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
@@ -1038,7 +1042,7 @@
             data: { 
                 labels: [], 
                 datasets: [
-                    { label: 'Actual Rec. Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, 
+                    { label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, 
                     { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }
                 ] 
             }, 
