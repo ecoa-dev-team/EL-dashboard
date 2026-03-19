@@ -96,9 +96,9 @@
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
         h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
         
-        .tiny-sort-btn { background: #0f172a; border: 1px solid var(--primary); color: var(--primary); font-size: 10px; padding: 1px 4px; border-radius: 3px; cursor: pointer; transition: all 0.2s; font-weight: 900; line-height: 1; height: 18px; display: flex; align-items: center; }
-        .tiny-sort-btn:hover { background: var(--primary); color: #000; }
-        .tiny-sort-btn.active { background: var(--primary); color: #000; }
+        /* New Sleek Sort Toggle Styles */
+        .sort-toggle-btn { background: #0f172a; border: 1px solid var(--primary); color: var(--primary); font-size: 9px; cursor: pointer; border-radius: 3px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; transition: 0.2s; line-height: 1; }
+        .sort-toggle-btn:hover { background: var(--primary); color: #000; }
 
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
@@ -252,8 +252,8 @@
             <div class="chart-box">
                 <div class="chart-header-row">
                     <h3 class="chart-title">
-                        CC Committed Drivers 
-                        <button id="ccSortBtn" class="tiny-sort-btn" onclick="toggleDriverSort('cc')">▾</button>
+                        CC Committed Drivers
+                        <button class="sort-toggle-btn" id="sort-cc-btn" onclick="toggleSort('cc')" title="Toggle Sort (High-Low/Low-High)">▼</button>
                     </h3>
                 </div>
                 <div id="driverRankList" class="health-rank-container"></div>
@@ -278,7 +278,7 @@
                 <div class="chart-header-row">
                     <h3 class="chart-title">
                         <span id="itemDriverTitle">Item Drivers (Committed)</span>
-                        <button id="itemSortBtn" class="tiny-sort-btn" onclick="toggleDriverSort('item')">▾</button>
+                        <button class="sort-toggle-btn" id="sort-item-btn" onclick="toggleSort('item')" title="Toggle Sort (High-Low/Low-High)">▼</button>
                     </h3>
                 </div>
                 <div id="costDriverList" class="health-rank-container"></div>
@@ -367,9 +367,9 @@
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
     
-    // Sort logic
-    let ccSortOrder = 'desc'; 
-    let itemSortOrder = 'desc';
+    // Sort logic state
+    let ccSortDirection = 'desc'; // 'desc' = Highest to Lowest, 'asc' = Lowest to Highest
+    let itemSortDirection = 'desc';
 
     // Pagination state
     let ccCurrentPage = 1;
@@ -408,22 +408,6 @@
         updateDashboard();
     }
 
-    function toggleDriverSort(type) {
-        if (type === 'cc') {
-            ccSortOrder = ccSortOrder === 'desc' ? 'asc' : 'desc';
-            document.getElementById('ccSortBtn').innerText = ccSortOrder === 'desc' ? '▾' : '▴';
-            ccDataFull.sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-            ccCurrentPage = 1;
-            renderCCDriversList();
-        } else {
-            itemSortOrder = itemSortOrder === 'desc' ? 'asc' : 'desc';
-            document.getElementById('itemSortBtn').innerText = itemSortOrder === 'desc' ? '▾' : '▴';
-            itemDataFull.sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-            itemCurrentPage = 1;
-            renderItemDriversList();
-        }
-    }
-
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -451,6 +435,25 @@
             renderCCDriversList();
         } else {
             itemCurrentPage += direction;
+            renderItemDriversList();
+        }
+    }
+
+    /* Logic for Sleek Sort Buttons */
+    function toggleSort(type) {
+        if (type === 'cc') {
+            ccSortDirection = ccSortDirection === 'desc' ? 'asc' : 'desc';
+            const btn = document.getElementById('sort-cc-btn');
+            btn.innerText = ccSortDirection === 'desc' ? '▼' : '▲';
+            ccDataFull.sort((a,b) => ccSortDirection === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            ccCurrentPage = 1;
+            renderCCDriversList();
+        } else {
+            itemSortDirection = itemSortDirection === 'desc' ? 'asc' : 'desc';
+            const btn = document.getElementById('sort-item-btn');
+            btn.innerText = itemSortDirection === 'desc' ? '▼' : '▲';
+            itemDataFull.sort((a,b) => itemSortDirection === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            itemCurrentPage = 1;
             renderItemDriversList();
         }
     }
@@ -491,7 +494,6 @@
         const rawCols = Object.keys(appData[0] || {});
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
-
         const validFiles = appData.filter(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
@@ -502,26 +504,23 @@
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
             if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return false;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
-
             const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(row, 'Full File Name') || "").toString().trim();
             const isReconciled = type.includes('ECF') || type.includes('TRF') || type.includes('INV');
             const isPendingPRF = (type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname);
-
             switch(mode) {
                 case 'COMM_TOTAL': return isReconciled || isPendingPRF;
-                case 'COMM_PRF':   return isPendingPRF;
-                case 'COMM_ECF':   return type.includes('ECF');
-                case 'COMM_TRF':   return type.includes('TRF');
-                case 'COMM_INV':   return type.includes('INV');
-                case 'REC_TOTAL':  return isReconciled;
-                case 'REC_ECF':    return type.includes('ECF');
-                case 'REC_TRF':    return type.includes('TRF');
-                case 'REC_INV':    return type.includes('INV');
+                case 'COMM_PRF': return isPendingPRF;
+                case 'COMM_ECF': return type.includes('ECF');
+                case 'COMM_TRF': return type.includes('TRF');
+                case 'COMM_INV': return type.includes('INV');
+                case 'REC_TOTAL': return isReconciled;
+                case 'REC_ECF': return type.includes('ECF');
+                case 'REC_TRF': return type.includes('TRF');
+                case 'REC_INV': return type.includes('INV');
                 default: return false;
             }
         }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
-
         if (fileNameKey) tableFilters[fileNameKey] = validFiles;
         syncGlobalSelectionsToLedger(filters);
         syncFilterIcons();
@@ -533,8 +532,7 @@
         tableFilters = {};
         const rawCols = Object.keys(appData[0] || {});
         const filters = getGlobalFiltersObj();
-        const matchingFileNames = recData
-            .filter(r => {
+        const matchingFileNames = recData.filter(r => {
                 const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
                 if (filters.comp && !filters.comp.includes(rowComp)) return false;
                 if (filters.dept && !filters.dept.includes(rowDept)) return false;
@@ -544,9 +542,7 @@
                 const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
                 if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
                 return (getCol(r, 'Status') || "").toLowerCase().includes(statusTarget.toLowerCase());
-            })
-            .map(r => (getCol(r, 'PRF file') || "").toString().trim())
-            .filter(name => name !== "");
+            }).map(r => (getCol(r, 'PRF file') || "").toString().trim()).filter(name => name !== "");
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         if (fileNameKey) tableFilters[fileNameKey] = matchingFileNames;
         syncGlobalSelectionsToLedger(filters);
@@ -721,10 +717,8 @@
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const filters = getGlobalFiltersObj();
-        
         let ecf = 0, trf_actual = 0, inv = 0, totalSalesQty = 0;
         let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
-
         const getTrendKey = (date) => {
             if (!date) return null;
             if (currentGranularity === 'weekly') {
@@ -738,20 +732,13 @@
                 return { sort: `${date.getFullYear()}-${q}`, display: q };
             }
         };
-
         let pendingPrfSet = new Set();
-        recData.forEach(r => {
-            if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
-                pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim());
-            }
-        });
-
+        recData.forEach(r => { if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) { pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim()); } });
         let totalPendingPrfAmt = 0;
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
             else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
-            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
@@ -759,21 +746,15 @@
             if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
             if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
-
             const amt = cleanNum(getCol(row, 'Amount (USD)')); 
             const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(row, 'Full File Name') || "").toString().trim();
             const rComp = getCol(row, 'Burn Company', 'Company'), rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
-
             let isCommitted = false;
             if (type.includes('ECF')) { ecf += amt; isCommitted = true; } 
             else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; } 
             else if (type.includes('INV')) { inv += amt; isCommitted = true; }
-            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfSet.has(fname)) {
-                totalPendingPrfAmt += amt;
-                isCommitted = true;
-            }
-
+            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfSet.has(fname)) { totalPendingPrfAmt += amt; isCommitted = true; }
             if (isCommitted) {
                 const tObj = getTrendKey(d);
                 if (tObj) {
@@ -785,7 +766,6 @@
                 companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
-
         salesData.forEach(r => {
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
@@ -794,8 +774,7 @@
             if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
             if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) {
                 const q = cleanNum(getCol(r, 'Sales QTY'));
-                totalSalesQty += q;
-                countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
+                totalSalesQty += q; countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
                 const tObj = getTrendKey(sDate);
                 if (tObj) { 
                     if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
@@ -806,22 +785,17 @@
 
         const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
         const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
-        
         const totalComm = totalPendingPrfAmt + ecf + trf_actual + inv;
-        globalTotalComm = totalComm;
-        globalTotalSalesQty = totalSalesQty;
-
+        globalTotalComm = totalComm; globalTotalSalesQty = totalSalesQty;
         document.getElementById('valPRF').innerText = fmt(totalComm); 
         document.getElementById('subCommPRF').innerText = fmt(totalPendingPrfAmt); 
         document.getElementById('subCommECF').innerText = fmt(ecf); 
         document.getElementById('subCommTRF').innerText = fmt(trf_actual);
         document.getElementById('subCommInv').innerText = fmt(inv);
-
         document.getElementById('valActual').innerText = fmt(ecf+trf_actual+inv); 
         document.getElementById('subECF').innerText = fmt(ecf); 
         document.getElementById('subTRF').innerText = fmt(trf_actual); 
         document.getElementById('subInv').innerText = fmt(inv);
-
         document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
         document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
         document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
@@ -830,34 +804,25 @@
         recData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
-            
             if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
             if (filters.comp && !filters.comp.includes(rowComp)) return;
             if (filters.dept && !filters.dept.includes(rowDept)) return;
             if (filters.cc && !filters.cc.includes(rowCC)) return;
             if (filters.yr && !filters.yr.includes(rowYr)) return;
             if (filters.mo && !filters.mo.includes(rowMo)) return;
-
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-
             const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = rowCC || "Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days')), maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')), pendDays = cleanNum(getCol(r, 'Days Pending'));
-            
             if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } 
             else { penSum += amt; penCount++; if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; } }
-            
             mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
         });
-        
-        const avgMax = count > 0 ? (mDaysTotal / count) : 0;
-        const avgPend = count > 0 ? (pDaysTotal / count) : 0;
+        const avgMax = count > 0 ? (mDaysTotal / count) : 0; const avgPend = count > 0 ? (pDaysTotal / count) : 0;
         const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
         if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
         else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
-        
-        const globalCompPct = (recCount + penCount) > 0 ? (recCount / (recCount + penCount)) * 100 : 0;
-        document.getElementById('vEff').innerText = globalCompPct.toFixed(0) + "%"; 
+        document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
         document.getElementById('countPen').innerText = penCount + " PRFs"; 
@@ -865,11 +830,11 @@
         document.getElementById('usdPen').innerText = fmt(penSum); 
         document.getElementById('usdRec').innerText = fmt(recSum); 
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
-        
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         
-        ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        // Update CC Drivers Data with respect to sort toggle
+        ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortDirection === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         ccCurrentPage = 1;
         renderCCDriversList();
 
@@ -887,14 +852,13 @@
         pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
         pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
-        
-        const highestVal = ccDataFull.reduce((max, cur) => Math.max(max, cur[1]), 0);
-        
+        // Base max on the absolute highest in data to keep bars relative regardless of sort
+        const absMax = Math.max(...ccDataFull.map(e => e[1]));
         pagedData.forEach(([cc, val]) => {
             const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = cc.replace(/'/g, "\\'");
             const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/highestVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
         });
     }
 
@@ -906,9 +870,8 @@
 
     function updateItemDriversData() {
         const filters = getGlobalFiltersObj();
-        let driverMap = {}, totalForScope = 0;
+        let driverMap = {};
         let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
-
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
@@ -916,21 +879,17 @@
             if (selectedCCForDrivers && rowCC !== selectedCCForDrivers) return;
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
-            if (!isCommitted) return;
+            if (!((type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname)))) return;
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
             driverMap[driver] = (driverMap[driver] || 0) + amt;
-            totalForScope += amt;
         });
-        
-        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortDirection === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         itemCurrentPage = 1;
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
@@ -947,14 +906,12 @@
         pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
         pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
-        
-        const highestVal = itemDataFull.reduce((max, cur) => Math.max(max, cur[1]), 0);
+        const absMax = Math.max(...itemDataFull.map(e => e[1]));
         const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
-        
         pagedData.forEach(([driver, val]) => {
             const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/highestVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
         });
     }
 
@@ -991,7 +948,6 @@
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         const reconLookup = {};
         recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
-        
         let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -1011,14 +967,12 @@
         displayCols.unshift('Department', 'Cost Center');
         const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
         if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
-        
         let trH = '<tr>'; 
         displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
             trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
-        
         displayCols.forEach(c => {
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
             const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
@@ -1030,8 +984,7 @@
                 }
             }
         });
-        syncFilterIcons();
-        body.innerHTML = ''; let ledgerTotal = 0;
+        syncFilterIcons(); body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
@@ -1042,13 +995,10 @@
                 else if (c === 'Status') {
                     const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
                     if (statusText) {
-                        let colorClass = "";
-                        if (statusText.toLowerCase().includes("reconciled")) colorClass = "status-text-green";
-                        else if (statusText.toLowerCase().includes("pending")) colorClass = "status-text-orange";
+                        let colorClass = statusText.toLowerCase().includes("reconciled") ? "status-text-green" : (statusText.toLowerCase().includes("pending") ? "status-text-orange" : "");
                         formattedValue = `<span class="${colorClass}">${statusText}</span>`;
                     } else formattedValue = "";
-                }
-                else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
+                } else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
                 else {
                     let cellValue = row[c]; formattedValue = cellValue;
                     if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
