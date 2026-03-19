@@ -94,16 +94,16 @@
         
         .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 350px; overflow: hidden; }
         .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
-        h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; }
+        h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
         
+        .tiny-sort-btn { background: #0f172a; border: 1px solid var(--primary); color: var(--primary); font-size: 10px; padding: 1px 4px; border-radius: 3px; cursor: pointer; transition: all 0.2s; font-weight: 900; line-height: 1; height: 18px; display: flex; align-items: center; }
+        .tiny-sort-btn:hover { background: var(--primary); color: #000; }
+        .tiny-sort-btn.active { background: var(--primary); color: #000; }
+
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
         .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
-
-        .tiny-sort-btn { background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 10px; padding: 0 4px; display: inline-flex; align-items: center; vertical-align: middle; transition: color 0.2s; }
-        .tiny-sort-btn:hover { color: var(--primary); }
-        .tiny-sort-btn.active { color: var(--green); }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -251,9 +251,9 @@
             </div>
             <div class="chart-box">
                 <div class="chart-header-row">
-                    <h3 class="chart-title">CC Committed Drivers
-                        <button id="sortCC_Desc" class="tiny-sort-btn active" onclick="toggleListSort('cc', 'desc')">▼</button>
-                        <button id="sortCC_Asc" class="tiny-sort-btn" onclick="toggleListSort('cc', 'asc')">▲</button>
+                    <h3 class="chart-title">
+                        CC Committed Drivers 
+                        <button id="ccSortBtn" class="tiny-sort-btn" onclick="toggleDriverSort('cc')">▾</button>
                     </h3>
                 </div>
                 <div id="driverRankList" class="health-rank-container"></div>
@@ -276,11 +276,10 @@
             </div>
             <div class="chart-box">
                 <div class="chart-header-row">
-                    <h3 class="chart-title" id="itemDriverTitle">Item Drivers (Committed)</h3>
-                    <div style="display:flex; gap: 2px;">
-                        <button id="sortItem_Desc" class="tiny-sort-btn active" onclick="toggleListSort('item', 'desc')">▼</button>
-                        <button id="sortItem_Asc" class="tiny-sort-btn" onclick="toggleListSort('item', 'asc')">▲</button>
-                    </div>
+                    <h3 class="chart-title">
+                        <span id="itemDriverTitle">Item Drivers (Committed)</span>
+                        <button id="itemSortBtn" class="tiny-sort-btn" onclick="toggleDriverSort('item')">▾</button>
+                    </h3>
                 </div>
                 <div id="costDriverList" class="health-rank-container"></div>
                 <div id="itemPagination" class="pagination-ctrl">
@@ -368,14 +367,15 @@
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
     
-    // List state and sorting
+    // Sort logic
+    let ccSortOrder = 'desc'; 
+    let itemSortOrder = 'desc';
+
+    // Pagination state
     let ccCurrentPage = 1;
     let ccDataFull = [];
-    let ccSortDir = 'desc';
-
     let itemCurrentPage = 1;
     let itemDataFull = [];
-    let itemSortDir = 'desc';
     
     const ITEMS_PER_PAGE = 5;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -408,6 +408,22 @@
         updateDashboard();
     }
 
+    function toggleDriverSort(type) {
+        if (type === 'cc') {
+            ccSortOrder = ccSortOrder === 'desc' ? 'asc' : 'desc';
+            document.getElementById('ccSortBtn').innerText = ccSortOrder === 'desc' ? '▾' : '▴';
+            ccDataFull.sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            ccCurrentPage = 1;
+            renderCCDriversList();
+        } else {
+            itemSortOrder = itemSortOrder === 'desc' ? 'asc' : 'desc';
+            document.getElementById('itemSortBtn').innerText = itemSortOrder === 'desc' ? '▾' : '▴';
+            itemDataFull.sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            itemCurrentPage = 1;
+            renderItemDriversList();
+        }
+    }
+
     function switchTab(id, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -435,25 +451,6 @@
             renderCCDriversList();
         } else {
             itemCurrentPage += direction;
-            renderItemDriversList();
-        }
-    }
-
-    // Sort function for the lists
-    function toggleListSort(type, dir) {
-        if (type === 'cc') {
-            ccSortDir = dir;
-            document.getElementById('sortCC_Desc').classList.toggle('active', dir === 'desc');
-            document.getElementById('sortCC_Asc').classList.toggle('active', dir === 'asc');
-            ccDataFull.sort((a,b) => dir === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-            ccCurrentPage = 1;
-            renderCCDriversList();
-        } else {
-            itemSortDir = dir;
-            document.getElementById('sortItem_Desc').classList.toggle('active', dir === 'desc');
-            document.getElementById('sortItem_Asc').classList.toggle('active', dir === 'asc');
-            itemDataFull.sort((a,b) => dir === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-            itemCurrentPage = 1;
             renderItemDriversList();
         }
     }
@@ -493,15 +490,11 @@
         const filters = getGlobalFiltersObj();
         const rawCols = Object.keys(appData[0] || {});
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
-        
-        const pendingFilesGlobal = recData
-            .filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending'))
-            .map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
 
         const validFiles = appData.filter(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
-            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
@@ -876,7 +869,7 @@
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         
-        ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortDir === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         ccCurrentPage = 1;
         renderCCDriversList();
 
@@ -895,12 +888,13 @@
         pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
         
-        const absoluteMax = ccDataFull.reduce((a, b) => Math.max(a, b[1]), 0);
+        const highestVal = ccDataFull.reduce((max, cur) => Math.max(max, cur[1]), 0);
+        
         pagedData.forEach(([cc, val]) => {
             const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = cc.replace(/'/g, "\\'");
             const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absoluteMax*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/highestVal*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
         });
     }
 
@@ -935,7 +929,8 @@
             driverMap[driver] = (driverMap[driver] || 0) + amt;
             totalForScope += amt;
         });
-        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortDir === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        
+        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         itemCurrentPage = 1;
         const titleEl = document.getElementById('itemDriverTitle');
         titleEl.innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
@@ -953,12 +948,13 @@
         pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
         if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
         
-        const absoluteMax = itemDataFull.reduce((a, b) => Math.max(a, b[1]), 0);
+        const highestVal = itemDataFull.reduce((max, cur) => Math.max(max, cur[1]), 0);
         const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
+        
         pagedData.forEach(([driver, val]) => {
             const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
             const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absoluteMax*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/highestVal*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
         });
     }
 
