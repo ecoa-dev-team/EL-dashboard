@@ -374,11 +374,9 @@
     let selectedDeptGroup = "Selling & Distribution"; 
     let selectedCCForDrivers = null; 
     
-    // Sort logic for Driver Lists
     let ccSortOrder = 'desc';
     let itemSortOrder = 'desc';
 
-    // Pagination state
     let ccCurrentPage = 1;
     let ccDataFull = [];
     let itemCurrentPage = 1;
@@ -446,7 +444,6 @@
         }
     }
 
-    // Toggle Sort for Drivers
     function setDriverSort(listType, order) {
         if (listType === 'cc') {
             ccSortOrder = order;
@@ -901,27 +898,36 @@
 
     function updateItemDriversData() {
         const filters = getGlobalFiltersObj();
-        let driverMap = {}, totalForScope = 0;
+        let driverMap = {};
         let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
 
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-            const rowCC = getCol(r, 'Cost Center', 'Cost Centre');
-            if (selectedCCForDrivers && rowCC !== selectedCCForDrivers) return;
-            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
-            if (!isCommitted) return;
+            
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            if (selectedCCForDrivers && rCC !== selectedCCForDrivers) return;
+
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
-            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return; // Note: small fix here based on local var context
+            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(rCC)) return;
+
+            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
+            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
+            
+            if (!isCommitted) return;
+
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
             driverMap[driver] = (driverMap[driver] || 0) + amt;
         });
+
         itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         itemCurrentPage = 1;
         document.getElementById('itemDriverTitle').innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
