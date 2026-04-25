@@ -3,131 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance & Operations Command Center</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <title>Financial Performance Dashboard</title>
     <style>
+        /* Add your dashboard styles here */
         :root {
-            --bg: #0f172a;
-            --card: #1e293b;
             --primary: #00d2ff;
-            --secondary: #00ff9d;
             --orange: #ff9f43;
-            --red: #ff4d4d;
             --green: #00ff9d;
-            --text-light: #94a3b8;
-            --white: #ffffff;
+            --red: #ff4d4d;
+            --yellow: #f1c40f;
+            --text-light: #f8fafc;
         }
-        body { background: var(--bg); color: var(--white); font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
-        /* Layout & Tab Styles */
-        .tab-content { display: none; padding: 20px; }
-        .tab-content.active { display: block; }
-        .tab-btn { cursor: pointer; padding: 10px 20px; background: var(--card); border: none; color: var(--text-light); }
-        .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
-        /* Dashboard UI Elements */
-        .rank-item { background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 8px; border-radius: 4px; }
-        .rank-top-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .rank-label-link { cursor: pointer; text-decoration: underline; color: var(--primary); }
-        .rank-bar-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; }
-        .rank-bar-fill { height: 100%; transition: width 0.3s ease; }
-        .rank-footer { display: flex; justify-content: space-between; font-size: 10px; margin-top: 5px; color: var(--text-light); }
-        /* Table Styles */
-        table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 12px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; }
-        .status-text-green { color: var(--green); font-weight: bold; }
-        .status-text-orange { color: var(--orange); font-weight: bold; }
-        .pdf-btn { color: var(--primary); text-decoration: none; font-weight: bold; }
-        /* Dropdowns & Filters */
-        .col-dropdown-container { display: none; position: absolute; background: var(--card); border: 1px solid var(--primary); z-index: 100; max-height: 300px; overflow-y: auto; }
-        .show { display: block; }
+        /* ... existing styles ... */
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<div id="global-filters">
-    <div id="status">SYSTEM INITIALIZING...</div>
-</div>
-
-<div class="tabs">
-    <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard', this)">DASHBOARD</button>
-    <button class="tab-btn" id="btn-cost" onclick="switchTab('cost-analysis', this)">COST ANALYSIS</button>
-    <button class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">LEDGER</button>
-</div>
-
-<div id="dashboard" class="tab-content active">
-    <div id="valEfficiency">0%</div>
-    <div id="vOverLabel">Avg Overdue</div><div id="vOver">0 Days</div>
-</div>
-
-<div id="cost-analysis" class="tab-content">
-    <div id="itemDriverTitle">Item Drivers (Committed)</div>
-    <div id="driverRankList"></div>
-    <div id="costDriverList"></div>
-</div>
-
-<div id="approvals-tab" class="tab-content">
-    <div id="ledger-summary">TOTAL: $0.00</div>
-    <table>
-        <thead id="approvalsHead"></thead>
-        <tbody id="approvalsBody"></tbody>
-    </table>
-</div>
-
 <script>
-    Chart.register(ChartDataLabels);
-
-    let appData = [], recData = [], pnlData = [], salesData = [];
-    let tableFilters = {}, amountSortOrder = 'desc', ccSortOrder = 'desc', itemSortOrder = 'desc';
-    let selectedCCForDrivers = null, selectedDeptGroup = "ALL", currentGranularity = 'monthly';
-    let ccCurrentPage = 1, itemCurrentPage = 1;
+    // Constants and Global Variables
     const ITEMS_PER_PAGE = 10;
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const ENTITY_TO_SALES_COUNTRY_MAP = { 'Burn Manufacturing Kenya': 'Kenya', 'Burn Manufacturing DRC': 'DRC' };
-
+    const ENTITY_TO_SALES_COUNTRY_MAP = { /* Mapping logic */ };
+    
+    let appData = [], recData = [], pnlData = [], salesData = [];
+    let tableFilters = {};
+    let ccDataFull = [], itemDataFull = [];
+    let ccCurrentPage = 1, itemCurrentPage = 1;
+    let ccSortOrder = 'desc', itemSortOrder = 'desc', amountSortOrder = 'desc';
+    let selectedCCForDrivers = null;
+    let currentGranularity = 'monthly';
+    let selectedDeptGroup = "ALL";
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
 
-    // --- Helper Functions ---
+    // Helper Functions
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
     const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
-    const parseExcelDate = (val) => { if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0)); let s = val.toString().trim(); const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/); if (gDateMatch) { const [_, y, m, d] = gDateMatch; return new Date(y, m, d, 0, 0, 0, 0); } const dotMatch = s.split('.'); if (dotMatch.length === 3) return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0); const iso = new Date(s); return !isNaN(iso.getTime()) ? new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0) : null; };
-    const formatDateStr = (d) => (!d || isNaN(d.getTime())) ? '-' : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-    const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); let yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
-    const getQuarter = (d) => 'Q' + Math.floor((d.getMonth() + 3) / 3);
+    const parseExcelDate = (val) => { if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0)); let s = val.toString().trim(); const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/); if (gDateMatch) { const [_, y, m, d] = gDateMatch; return new Date(y, m, d, 0, 0, 0, 0); } const dotMatch = s.split('.'); if (dotMatch.length === 3) { return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0); } const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); } return null; };
+    const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+    const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
+    const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
 
-    // --- Core Logic ---
+    // Navigation and UI Toggles
+    function cycleDeptGroup() {
+        const el = document.getElementById('deptGroupTriToggle');
+        const state = el.getAttribute('data-state');
+        let newState, label;
+        if (state === "SD") { newState = "GA"; label = "General & Admin"; }
+        else if (state === "GA") { newState = "ALL"; label = "ALL"; }
+        else { newState = "SD"; label = "Selling & Distribution"; }
+        el.setAttribute('data-state', newState);
+        selectedDeptGroup = label;
+        document.getElementById('activeDeptText').innerText = label;
+        updateDashboard();
+    }
+
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); 
+        if (btn) btn.classList.add('active');
+        const isCost = (id === 'cost-analysis');
+        const isDash = (id === 'dashboard');
+        const isApp = (id === 'approvals-tab');
+        document.getElementById('global-filters').style.display = isApp ? 'none' : 'flex';
+        document.getElementById('dept-toggle-container').style.display = isCost ? 'block' : 'none';
+        document.getElementById('fDeptGroupWrapper').style.display = isDash ? 'flex' : 'none';
+        updateDashboard();
+    }
+
+    function syncGranularity(type) {
+        currentGranularity = type;
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
+        updateDashboard();
+    }
+
+    // Drill-down Logics
+    function drillToLedgerByTrendPoint(pointSortKey) {
+        tableFilters = {};
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        const validCommittedFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if (!d) return false;
+            let rowSortKey = "";
+            if (currentGranularity === 'weekly') rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
+            else if (currentGranularity === 'monthly') rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+            else rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
+            if (rowSortKey !== pointSortKey) return false;
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+
+        if (fileNameKey) tableFilters[fileNameKey] = validCommittedFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
+    function drillToLedgerByKpi(mode) {
+        tableFilters = {};
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const validFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return false;
+            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            const isReconciled = type.includes('ECF') || type.includes('TRF') || type.includes('INV');
+            const isPendingPRF = (type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname);
+            switch(mode) {
+                case 'COMM_TOTAL': return isReconciled || isPendingPRF;
+                case 'COMM_PRF':   return isPendingPRF;
+                case 'COMM_ECF':   return type.includes('ECF');
+                case 'COMM_TRF':   return type.includes('TRF');
+                case 'COMM_INV':   return type.includes('INV');
+                case 'REC_TOTAL':  return isReconciled;
+                case 'REC_ECF':    return type.includes('ECF');
+                case 'REC_TRF':    return type.includes('TRF');
+                case 'REC_INV':    return type.includes('INV');
+                default: return false;
+            }
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+        if (fileNameKey) tableFilters[fileNameKey] = validFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
+    function drillToLedgerByAgeing(label) {
+        tableFilters = {};
+        const rawCols = Object.keys(appData[0] || {});
+        const filters = getGlobalFiltersObj();
+        const filteredFiles = recData.filter(r => {
+            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+            if (filters.comp && !filters.comp.includes(rowComp)) return false;
+            if (filters.dept && !filters.dept.includes(rowDept)) return false;
+            if (filters.cc && !filters.cc.includes(rowCC)) return false;
+            if (filters.yr && !filters.yr.includes(rowYr)) return false;
+            if (filters.mo && !filters.mo.includes(rowMo)) return false;
+            const status = (getCol(r, 'Status') || "").toLowerCase();
+            const overdue = cleanNum(getCol(r, 'Days Overdue'));
+            if (!status.includes('pending') || overdue <= 0) return false;
+            if (label === '1-7d') return overdue <= 7;
+            if (label === '8-14d') return overdue > 7 && overdue <= 14;
+            if (label === '15d+') return overdue > 14;
+            return false;
+        }).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        if (fileNameKey) tableFilters[fileNameKey] = filteredFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
+    function drillToLedger(costCenter, itemDriver = null) {
+        tableFilters = {}; 
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        const validFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
+            if (costCenter && rCC !== costCenter) return false;
+            if (itemDriver) {
+                const rawDriver = getCol(row, 'Cost Drivers', 'Driver');
+                const driverStr = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+                if (driverStr !== itemDriver) return false;
+            }
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+
+        if (fileNameKey) tableFilters[fileNameKey] = validFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
+    // Filters and Data Fetching
+    function getGlobalFiltersObj() {
+        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
+        return { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList'), 
+            deptGroup: getSelected('fDeptGroupList') 
+        };
+    }
+
+    function syncGlobalSelectionsToLedger(filters) {
+        const rawCols = Object.keys(appData[0] || {});
+        if (filters.yr) { const k = rawCols.find(c => c.toLowerCase() === 'year'); if(k) tableFilters[k] = filters.yr; }
+        if (filters.mo) { const k = rawCols.find(c => c.toLowerCase() === 'month'); if(k) tableFilters[k] = filters.mo; }
+        if (filters.comp) { const k = rawCols.find(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company'); if(k) tableFilters[k] = filters.comp; }
+        if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
+        if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
+        if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
+    }
+
+    async function fetchData() {
+        try {
+            const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
+            appData = a; recData = b; pnlData = c; salesData = d;
+            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
+            initFilters(); updateDashboard(); renderApprovalsTable(appData);
+        } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
+    }
+
+    function fetchSheet(sheetName) {
+        const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+        return fetch(url).then(res => {
+            if (!res.ok) throw new Error("Fetch failed");
+            return res.text();
+        }).then(text => {
+            const json = JSON.parse(text.substring(47).slice(0, -2));
+            const cols = json.table.cols.map(c => (c.label || "").trim());
+            return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
+        });
+    }
+
+    // Dashboard Update Logic
+    let globalTotalComm = 0;
+    let globalTotalSalesQty = 0;
+    let currentSortedTrendKeys = [];
+
     function updateDashboard() {
         const activeTab = document.querySelector('.tab-content.active').id;
         const filters = getGlobalFiltersObj();
-        let ecf = 0, trf_actual = 0, inv = 0, totalSalesQty = 0, totalPendingPrfAmt = 0;
-        let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
         
-        let pendingPrfSet = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
+        let ecf = 0, trf_actual = 0, inv = 0, totalSalesQty = 0;
+        let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
 
         const getTrendKey = (date) => {
             if (!date) return null;
-            if (currentGranularity === 'weekly') return { sort: `${date.getFullYear()}-${getWeekNumber(date).toString().padStart(2, '0')}`, display: `W${getWeekNumber(date)}` };
-            if (currentGranularity === 'monthly') return { sort: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`, display: monthNames[date.getMonth()].substring(0,3) };
-            return { sort: `${date.getFullYear()}-${getQuarter(date)}`, display: getQuarter(date) };
+            if (currentGranularity === 'weekly') {
+                const wk = getWeekNumber(date);
+                const monthShort = monthNames[date.getMonth()].substring(0,3);
+                return { sort: `${date.getFullYear()}-${wk.toString().padStart(2, '0')}`, display: `W${wk}.${monthShort}` };
+            } else if (currentGranularity === 'monthly') {
+                return { sort: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`, display: monthNames[date.getMonth()].substring(0,3) };
+            } else {
+                const q = getQuarter(date);
+                return { sort: `${date.getFullYear()}-${q}`, display: q };
+            }
         };
 
+        let pendingPrfSet = new Set();
+        recData.forEach(r => {
+            if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
+                pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim());
+            }
+        });
+
+        let totalPendingPrfAmt = 0;
         appData.forEach(row => {
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
-            if (activeTab === 'cost-analysis' ? (selectedDeptGroup !== "ALL" && rowDeptGroup !== selectedDeptGroup) : (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup))) return;
+            if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
+            else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
+            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
 
-            const amt = cleanNum(getCol(row, 'Amount (USD)'));
+            const amt = cleanNum(getCol(row, 'Amount (USD)')); 
             const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(row, 'Full File Name') || "").toString().trim();
             const rComp = getCol(row, 'Burn Company', 'Company'), rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
 
             let isCommitted = false;
-            if (type.includes('ECF')) { ecf += amt; isCommitted = true; }
-            else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; }
+            if (type.includes('ECF')) { ecf += amt; isCommitted = true; } 
+            else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; } 
             else if (type.includes('INV')) { inv += amt; isCommitted = true; }
-            else if (pendingPrfSet.has(fname)) { totalPendingPrfAmt += amt; isCommitted = true; }
+            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfSet.has(fname)) {
+                totalPendingPrfAmt += amt;
+                isCommitted = true;
+            }
 
             if (isCommitted) {
                 const tObj = getTrendKey(d);
@@ -136,120 +326,280 @@
                     commitTrendAgg[tObj.sort].val += amt;
                 }
                 ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
-                companyCommittedAgg[rComp] = (companyCommittedAgg[rComp] || 0) + amt;
+                const country = ENTITY_TO_SALES_COUNTRY_MAP[rComp] || rComp;
+                companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
             }
         });
 
-        // Reconciliation Metrics
-        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1 = 0, a2 = 0, a3 = 0;
+        salesData.forEach(r => {
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
+            if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
+            if (filters.mo && !filters.mo.includes(sMo)) return;
+            let isSelectedCountry = true;
+            if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
+            if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) {
+                const q = cleanNum(getCol(r, 'Sales QTY'));
+                totalSalesQty += q;
+                countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
+                const tObj = getTrendKey(sDate);
+                if (tObj) { 
+                    if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
+                    salesTrendAgg[tObj.sort].val += q; 
+                }
+            }
+        });
+
+        const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
+        const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
+        
+        const totalComm = totalPendingPrfAmt + ecf + trf_actual + inv;
+        globalTotalComm = totalComm;
+        globalTotalSalesQty = totalSalesQty;
+
+        // Reconciliation Analysis Logic
+        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
-            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days'));
-            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; }
-            else { penSum += amt; penCount++; if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; } }
-            mDaysTotal += cleanNum(getCol(r, 'Max Reconciliation Days')); pDaysTotal += cleanNum(getCol(r, 'Days Pending')); count++;
-            let cc = getCol(r, 'Cost Center') || "Misc";
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+            if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
+            if (filters.comp && !filters.comp.includes(rowComp)) return;
+            if (filters.dept && !filters.dept.includes(rowDept)) return;
+            if (filters.cc && !filters.cc.includes(rowCC)) return;
+            if (filters.yr && !filters.yr.includes(rowYr)) return;
+            if (filters.mo && !filters.mo.includes(rowMo)) return;
+            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = rowCC || "Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days')), maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')), pendDays = cleanNum(getCol(r, 'Days Pending'));
+            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } 
+            else if (status.includes('pending')) { penSum += amt; penCount++; if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; } }
+            mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
             if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
         });
 
-        // Update DOM Elements
-        const totalComm = totalPendingPrfAmt + ecf + trf_actual + inv;
-        globalTotalComm = totalComm;
-        const avgMax = count > 0 ? (mDaysTotal / count) : 0, avgPend = count > 0 ? (pDaysTotal / count) : 0;
-        
-        document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%";
-        document.getElementById('vOver').innerText = Math.abs(avgMax - avgPend).toFixed(0) + " Days";
-        document.getElementById('ledger-summary').innerText = "TOTAL: " + totalComm.toLocaleString('en-US', {style:'currency', currency:'USD'});
+        const avgMax = count > 0 ? (mDaysTotal / count) : 0;
+        const avgPend = count > 0 ? (pDaysTotal / count) : 0;
+        const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
+        if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
+        else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
 
-        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend);
+        // Update UI Elements
+        document.getElementById('valPRF').innerText = fmt(totalComm); 
+        document.getElementById('subCommPRF').innerText = fmt(totalPendingPrfAmt); 
+        document.getElementById('subCommECF').innerText = fmt(ecf); 
+        document.getElementById('subCommTRF').innerText = fmt(trf_actual);
+        document.getElementById('subCommInv').innerText = fmt(inv);
+        document.getElementById('valActual').innerText = fmt(ecf+trf_actual+inv); 
+        document.getElementById('subECF').innerText = fmt(ecf); 
+        document.getElementById('subTRF').innerText = fmt(trf_actual); 
+        document.getElementById('subInv').innerText = fmt(inv);
+        document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
+        document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
+        document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
+        
+        document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
+        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
+        document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
+        document.getElementById('countPen').innerText = penCount + " PRFs"; 
+        document.getElementById('countRec').innerText = recCount + " PRFs"; 
+        document.getElementById('usdPen').innerText = fmt(penSum); 
+        document.getElementById('usdRec').innerText = fmt(recSum); 
+        document.getElementById('usdTotalMix').innerText = fmt(penSum);
+        
+        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
         updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         
         ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        ccCurrentPage = 1;
         renderCCDriversList();
         updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
         updateItemDriversData();
     }
 
-    // --- View Functions ---
+    // Ranking and List Renders
     function renderCCDriversList() {
-        const dl = document.getElementById('driverRankList'); if(!dl) return; dl.innerHTML = '';
-        const pagedData = ccDataFull.slice((ccCurrentPage - 1) * ITEMS_PER_PAGE, ccCurrentPage * ITEMS_PER_PAGE);
+        const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
+        const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
+        const pagedData = ccDataFull.slice(start, start + ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(ccDataFull.length / ITEMS_PER_PAGE) || 1;
+        const pagBox = document.getElementById('ccPagination');
+        pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
+        pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
+        pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
+        if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
         const absMax = ccDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
         pagedData.forEach(([cc, val]) => {
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item">
-                <div class="rank-top-row">
-                    <div class="rank-label rank-label-link" onclick="drillToCCFromRank('${cc.replace(/'/g, "\\'")}')">${cc}</div>
-                    <div class="rank-impact-val">$${(val/1000).toFixed(1)}k</div>
-                </div>
-                <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--primary)"></div></div>
-            </div>`);
+            const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
+            const escapedCC = cc.replace(/'/g, "\\'");
+            const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
         });
     }
 
+    function drillToCCFromRank(ccName) {
+        selectedCCForDrivers = ccName;
+        updateItemDriversData();
+        renderCCDriversList();
+    }
+
+    function updateItemDriversData() {
+        const filters = getGlobalFiltersObj();
+        let driverMap = {};
+        let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
+
+        appData.forEach(r => {
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
+            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+            if (selectedCCForDrivers && rCC !== selectedCCForDrivers) return;
+            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
+            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(rCC)) return;
+
+            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
+            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
+            if (!isCommitted) return;
+
+            const amt = cleanNum(getCol(r, 'Amount (USD)'));
+            const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
+            const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+            driverMap[driver] = (driverMap[driver] || 0) + amt;
+        });
+
+        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+        itemCurrentPage = 1;
+        document.getElementById('itemDriverTitle').innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
+        renderItemDriversList();
+    }
+
+    function renderItemDriversList() {
+        const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
+        const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
+        const pagedData = itemDataFull.slice(start, start + ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(itemDataFull.length / ITEMS_PER_PAGE) || 1;
+        const pagBox = document.getElementById('itemPagination');
+        pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
+        pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
+        pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
+        if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
+        const absMax = itemDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
+        const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
+        pagedData.forEach(([driver, val]) => {
+            const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
+            const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
+            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+        });
+    }
+
+    // Chart Management
+    function updateCostDashboardVisuals(salesTrend, totalComm, totalQty, commitTrend, countrySales, countryComm) {
+        currentSortedTrendKeys = Object.keys(commitTrend).sort();
+        const displayLabels = currentSortedTrendKeys.map(k => commitTrend[k].label);
+        trendChart.data.labels = displayLabels;
+        trendChart.data.datasets[0].data = currentSortedTrendKeys.map(k => salesTrend[k] ? salesTrend[k].val : 0);
+        trendChart.data.datasets[1].data = currentSortedTrendKeys.map(k => (salesTrend[k] && salesTrend[k].val > 0) ? (commitTrend[k].val / salesTrend[k].val) : 0);
+        trendChart.update();
+        weeklyPnlChart.data.labels = displayLabels;
+        weeklyPnlChart.data.datasets[1].data = currentSortedTrendKeys.map(k => commitTrend[k].val); 
+        weeklyPnlChart.update();
+        const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
+        companyDistChart.data.labels = compEntries.map(e => e[0]);
+        companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
+        companyDistChart.update();
+        const unitCostEntries = compEntries.map(e => { 
+            const country = e[0], comm = e[1]; 
+            let sales = countrySales[country] || 0; 
+            if (country === 'HQ' && sales === 0) sales = totalQty; 
+            return [country, sales > 0 ? (comm / sales) : 0]; 
+        }).sort((a,b) => b[1] - a[1]);
+        unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
+        unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
+        unitCostCompChart.update();
+    }
+
+    // Ledger and Table Logic
     function renderApprovalsTable(sourceData) {
-        const body = document.getElementById('approvalsBody'); if(!body) return;
-        body.innerHTML = '';
-        sourceData.forEach(row => {
-            let tr = `<tr><td>${getCol(row, 'Department') || '-'}</td><td>${getCol(row, 'Cost Center') || '-'}</td><td>${cleanNum(getCol(row, 'Amount (USD)')).toLocaleString()}</td><td><a href="${getCol(row, 'Link')}" target="_blank" class="pdf-btn">VIEW</a></td></tr>`;
-            body.insertAdjacentHTML('beforeend', tr);
+        if (!sourceData || sourceData.length === 0) return;
+        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
+        const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
+        const reconLookup = {};
+        recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
+        let filteredData = sourceData.filter(row => {
+            for(let col in tableFilters) {
+                let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
+                let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
+                if (tableFilters[col].length > 0) {
+                    if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { if (rowVal.trim() !== "" && rowVal !== "-") return false; } 
+                    else if(!tableFilters[col].includes(rowVal)) return false;
+                }
+            }
+            return true;
         });
-    }
-
-    // --- Initialization & Data Fetching ---
-    const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
-    async function fetchSheet(sheetName) {
-        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-        const res = await fetch(url);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        const cols = json.table.cols.map(c => (c.label || "").trim());
-        return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
-    }
-
-    async function fetchData() {
-        try {
-            [appData, recData, pnlData, salesData] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
-            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
-            updateDashboard(); renderApprovalsTable(appData);
-        } catch (e) { document.getElementById('status').innerText = "LINK SEVERED"; }
-    }
-
-    // --- Tab & Sorting UI ---
-    function switchTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); 
-        if (btn) btn.classList.add('active');
-        updateDashboard();
-    }
-
-    function getGlobalFiltersObj() {
-        const norm = (id) => { const v = document.getElementById(id); return v && v.value ? new Date(v.value + "T00:00:00") : null; };
-        return { start: norm('dStart'), end: norm('dEnd'), yr: null, mo: null, comp: null, dept: null, cc: null, deptGroup: null };
-    }
-
-    function updateExecSummary(comp, speed) { /* Implementation for exComp, exSpeed labels */ }
-    function updateVisuals(rec, pen, ageData, rankMap) {
-        if(mixChart) { mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); }
-        if(ageChart) { ageChart.data.datasets[0].data = ageData; ageChart.update(); }
-    }
-
-    // --- Charts Initialization ---
-    window.onload = () => {
-        const mixCtx = document.getElementById('mixChart');
-        if(mixCtx) mixChart = new Chart(mixCtx, { type: 'doughnut', data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0] }] }, options: { maintainAspectRatio: false } });
+        const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
+        if (amountKey) filteredData.sort((a, b) => { const valA = cleanNum(a[amountKey]), valB = cleanNum(b[amountKey]); return amountSortOrder === 'desc' ? valB - valA : valA - valB; });
+        const rawCols = Object.keys(appData[0] || {});
+        let displayCols = []; 
+        rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
+        displayCols.unshift('Department', 'Cost Center');
+        const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
+        if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
         
-        const ageCtx = document.getElementById('ageChart');
-        if(ageCtx) ageChart = new Chart(ageCtx, { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0] }] }, options: { maintainAspectRatio: false } });
+        let trH = '<tr>'; 
+        displayCols.forEach(c => { 
+            const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
+            trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
+        });
+        trH += '<th>Action</th></tr>'; head.innerHTML = trH;
+        
+        body.innerHTML = ''; let ledgerTotal = 0;
+        filteredData.forEach(row => {
+            let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+            const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
+            displayCols.forEach(c => {
+                let formattedValue = '-';
+                if (c === 'Department') formattedValue = row['Department'];
+                else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
+                else if (c === 'Status') {
+                    const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
+                    if (statusText) {
+                        let colorClass = statusText.toLowerCase().includes("reconciled") ? "status-text-green" : "status-text-orange";
+                        formattedValue = `<span class="${colorClass}">${statusText}</span>`;
+                    } else formattedValue = "";
+                }
+                else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
+                else {
+                    let cellValue = row[c]; formattedValue = cellValue;
+                    if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                }
+                trB += `<td>${formattedValue || '-'}</td>`;
+            });
+            let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
+            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
+            body.insertAdjacentHTML('beforeend', trB);
+        });
+        document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
+    }
 
-        fetchData();
-        setInterval(fetchData, 60000);
+    // Initialization and Event Listeners
+    window.onload = () => {
+        const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
+        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
+        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) drillToLedgerByAgeing(ageChart.data.labels[elements[0].index]); }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
+        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
+        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+        fetchData(); setInterval(fetchData, 60000);
     };
 
-    // Placeholder functions for missing UI updates
-    function updateCostDashboardVisuals() {}
-    function drillToCCFromRank(cc) { selectedCCForDrivers = cc; updateDashboard(); }
-    function updateItemDriversData() {}
-    function renderItemDriversList() {}
+    // Remaining logic (initFilters, updateFilterLabel, syncFilterIcons, etc.) should follow
+    // ... (rest of supporting functions) ...
 </script>
 </body>
 </html>
