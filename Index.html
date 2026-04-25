@@ -1,398 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>ELECTRIC MGMT Command Center</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
-    <style>
-        :root { 
-            --primary: #00d2ff; 
-            --accent: #1e293b;
-            --green: #00ff9d; 
-            --red: #ff4d4d; 
-            --orange: #ff9f43; 
-            --bg: #0f172a; 
-            --card: #1e293b; 
-            --dark-blue: #0f172a; 
-            --text-main: #ffffff;
-            --text-light: #cbd5e1;
-            --border: #475569;
-        }
-        
-        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 13px; line-height: 1.4; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
-        .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
-        
-        .tab-container { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-end; }
-        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; font-family: 'Inter', sans-serif; }
-        .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 10px; width: fit-content; }
-        .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #0f172a; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
-        .tri-slider { position: absolute; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); transition: 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
-        .tri-state-toggle[data-state="SD"] .tri-slider { left: 3px; background: var(--primary); }
-        .tri-state-toggle[data-state="GA"] .tri-slider { left: 18px; background: var(--orange); }
-        .tri-state-toggle[data-state="ALL"] .tri-slider { left: 33px; background: var(--green); }
-        
-        .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 130px; }
-
-        .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
-        .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
-        .f-group label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
-        
-        .multiselect-container { 
-            background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
-            cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
-        }
-        .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
-        .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
-
-        .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
-        .dropdown-content.show { display: block; }
-        .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; font-size: 11px; }
-        .dropdown-item:hover { background: #334155; }
-        .dropdown-item input { height: 14px; width: 14px; cursor: pointer; }
-
-        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
-
-        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
-        .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-        .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; cursor: pointer; transition: color 0.2s; }
-        .tile-val:hover { color: var(--primary); text-decoration: underline; }
-        .breakdown { display: flex; justify-content: space-around; font-size: 10px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 5px; }
-        .breakdown b { color: var(--primary); font-weight: 900; font-size: 11px; cursor: pointer; }
-        .breakdown b:hover { color: var(--green); text-decoration: underline; }
-
-        .pnl-card-container { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
-        .pnl-col-main { flex: 1.2; text-align: center; border-right: 1px solid var(--border); }
-        .pnl-col-stats { flex: 0.8; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding-left: 15px; text-align: left; }
-        .pnl-main-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; line-height: 1.1; }
-        .pnl-stat-item { display: flex; flex-direction: column; }
-        .pnl-stat-label { font-size: 10px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
-        .pnl-stat-val { font-size: 1.2rem; font-weight: 900; color: var(--green); line-height: 1; }
-
-        .recon-health { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
-        .mini-tile { background: var(--card); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-        .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
-        .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
-
-        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; margin-bottom: 15px; }
-        .cost-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; height: 350px; }
-        
-        .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
-        
-        .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 350px; overflow: hidden; }
-        .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
-        h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
-        
-        .sort-btn-wrap { display: flex; gap: 2px; }
-        .sort-arrow-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); font-size: 8px; padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: 0.2s; }
-        .sort-arrow-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .sort-arrow-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
-
-        .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
-        .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
-        .toggle-btn:hover { background: rgba(255,255,255,0.1); }
-        .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
-
-        .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
-        .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
-        .status-row { display: flex; justify-content: space-around; margin-bottom: 8px; text-align: center; }
-        .status-col { display: flex; flex-direction: column; align-items: center; }
-        .status-count { font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
-        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-        .status-label { font-size: 10px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
-        .status-usd { font-size: 11px; color: var(--primary); font-weight: 800; margin-top: 2px; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
-        .status-usd:hover { color: var(--green); }
-        .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 11px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; text-transform: uppercase; }
-        #usdTotalMix { font-size: 1.8rem; display: block; margin-top: 4px; color: var(--red); font-weight: 900; }
-
-        .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
-        .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
-        .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
-        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-        
-        .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; transition: color 0.2s; }
-        .rank-label-link:hover { color: var(--green); }
-        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
-
-        .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
-        .rank-impact-val:hover { color: var(--green); }
-        .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
-        .rank-bar-fill { height: 100%; border-radius: 5px; }
-        .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
-        .rank-pct { color: var(--green); }
-        .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
-
-        .pagination-ctrl { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 10px 0; border-top: 1px solid var(--border); margin-top: auto; }
-        .pag-btn { background: #334155; border: 1px solid var(--border); color: white; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
-        .pag-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .pag-info { font-size: 10px; font-weight: 900; color: var(--primary); }
-
-        .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
-
-        .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
-        .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
-        .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
-        .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .ledger-table { font-size: 12px !important; table-layout: auto; }
-        .ledger-table th { padding: 12px 10px !important; }
-        .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
-        .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
-        .sortable-header:hover { background: #334155 !important; }
-        .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
-        .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
-        .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
-        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
-        .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
-        .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
-        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
-        .status-text-green { color: var(--green) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
-        .status-text-orange { color: var(--orange) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
-        .bg-good-pill { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
-        .bg-bad-pill { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
-        .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
-        #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
-        button#reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
-        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
-        .col-dropdown-container.show { display: block; }
-        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
-        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
-        #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <h3>ELECTRIC MGMT COMMAND CENTER • ANALYTICS</h3>
-        <div id="status">ESTABLISHING LINK...</div>
-    </div>
-
-    <div class="tab-container">
-        <div class="tab-btn active" id="btn-cost" onclick="switchTab('cost-analysis', this)">Cost Analysis Dashboard</div>
-        <div class="tab-btn" id="btn-dashboard" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
-        <div class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
-    </div>
-
-    <div id="dept-toggle-container" style="display: block; margin-bottom: 10px;">
-        <div class="dept-toggle-wrap">
-            <span class="dept-toggle-label">DEPT GROUP:</span>
-            <div id="deptGroupTriToggle" class="tri-state-toggle" data-state="SD" onclick="cycleDeptGroup()">
-                <div class="tri-slider"></div>
-            </div>
-            <span id="activeDeptText" class="active-dept-text">Selling & Distribution</span>
-        </div>
-    </div>
-
-    <div id="global-filters" class="filter-section">
-        <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
-        <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
-        <div class="f-group"><label>Fiscal Year</label><div id="fYearLabel" class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
-        <div class="f-group"><label>Period</label><div id="fMonthLabel" class="multiselect-container" onclick="toggleDropdown('fMonthList')">Select Months...</div><div id="fMonthList" class="dropdown-content"></div></div>
-        <div class="f-group"><label>Entity</label><div id="fCompLabel" class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
-        <div class="f-group" id="fDeptGroupWrapper" style="display:none;"><label>Dept Group</label><div id="fDeptGroupLabel" class="multiselect-container" onclick="toggleDropdown('fDeptGroupList')">Select Groups...</div><div id="fDeptGroupList" class="dropdown-content"></div></div>
-        <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
-        <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
-        <button id="reset-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
-    </div>
-
-    <div id="cost-analysis" class="tab-content active">
-        <div class="kpi-grid">
-            <div class="tile" style="border-top: 5px solid var(--primary);">
-                <span class="tile-label">Committed Spend</span>
-                <div class="tile-val" id="valPRF" onclick="drillToLedgerByKpi('COMM_TOTAL')">$0</div>
-                <div class="breakdown">
-                    <span>Pending PRFs <b id="subCommPRF" onclick="drillToLedgerByKpi('COMM_PRF')">$0</b></span>
-                    <span>ECFs <b id="subCommECF" onclick="drillToLedgerByKpi('COMM_ECF')">$0</b></span>
-                    <span>TRFs <b id="subCommTRF" onclick="drillToLedgerByKpi('COMM_TRF')">$0</b></span>
-                    <span>Invoices <b id="subCommInv" onclick="drillToLedgerByKpi('COMM_INV')">$0</b></span>
-                </div>
-            </div>
-            <div class="tile" style="border-top: 5px solid var(--orange);">
-                <span class="tile-label">Total Reconciled</span>
-                <div class="tile-val" id="valActual" onclick="drillToLedgerByKpi('REC_TOTAL')">$0</div>
-                <div class="breakdown">
-                    <span>ECF <b id="subECF" onclick="drillToLedgerByKpi('REC_ECF')">$0</b></span>
-                    <span>TRF <b id="subTRF" onclick="drillToLedgerByKpi('REC_TRF')">$0</b></span>
-                    <span>INV <b id="subInv" onclick="drillToLedgerByKpi('REC_INV')">$0</b></span>
-                </div>
-            </div>
-            <div class="tile" style="border-top: 5px solid var(--green);">
-                <span class="tile-label">Comm. Cost / Unit Sold</span>
-                <div class="pnl-card-container">
-                    <div class="pnl-col-main"><div class="pnl-main-val" id="valPNL">$0</div></div>
-                    <div class="pnl-col-stats">
-                        <div class="pnl-stat-item"><span class="pnl-stat-label">Comm. Total</span><span class="pnl-stat-val" id="valUnitPNLTotal" style="color:var(--primary); font-size: 14px;">$0</span></div>
-                        <div class="pnl-stat-item"><span class="pnl-stat-label">Sales Qty</span><span class="pnl-stat-val" id="subSalesQty" style="color:var(--green)">0</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="cost-viz-grid">
-            <div class="chart-box">
-                <h3 class="chart-title">Trends: Sales Vol vs Committed Cost / Unit</h3>
-                <div class="chart-controls">
-                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
-                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
-                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Qt</button>
-                </div>
-                <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
-            </div>
-            <div class="chart-box">
-                <div class="chart-header-row">
-                    <h3 class="chart-title">
-                        CC Committed Drivers
-                        <div class="sort-btn-wrap">
-                            <button class="sort-arrow-btn active" id="ccSortDesc" onclick="setDriverSort('cc', 'desc')">▼</button>
-                            <button class="sort-arrow-btn" id="ccSortAsc" onclick="setDriverSort('cc', 'asc')">▲</button>
-                        </div>
-                    </h3>
-                </div>
-                <div id="driverRankList" class="health-rank-container"></div>
-                <div id="ccPagination" class="pagination-ctrl">
-                    <button class="pag-btn" onclick="changePage('cc', -1)">Prev</button>
-                    <span class="pag-info">Page 1/1</span>
-                    <button class="pag-btn" onclick="changePage('cc', 1)">Next</button>
-                </div>
-            </div>
-        </div>
-        <div class="cost-viz-grid">
-            <div class="chart-box">
-                <h3 class="chart-title">Committed Trend</h3>
-                <div class="chart-controls">
-                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
-                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
-                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Qt</button>
-                </div>
-                <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
-            </div>
-            <div class="chart-box">
-                <div class="chart-header-row">
-                    <h3 class="chart-title">
-                        <span id="itemDriverTitle">Item Drivers (Committed)</span>
-                        <div class="sort-btn-wrap">
-                            <button class="sort-arrow-btn active" id="itemSortDesc" onclick="setDriverSort('item', 'desc')">▼</button>
-                            <button class="sort-arrow-btn" id="itemSortAsc" onclick="setDriverSort('item', 'asc')">▲</button>
-                        </div>
-                    </h3>
-                </div>
-                <div id="costDriverList" class="health-rank-container"></div>
-                <div id="itemPagination" class="pagination-ctrl">
-                    <button class="pag-btn" onclick="changePage('item', -1)">Prev</button>
-                    <span class="pag-info">Page 1/1</span>
-                    <button class="pag-btn" onclick="changePage('item', 1)">Next</button>
-                </div>
-            </div>
-        </div>
-        <div class="cost-lower-grid">
-            <div class="chart-box">
-                <h3 class="chart-title">Committed Impact by Company</h3>
-                <div style="flex:1; position:relative;"><canvas id="companyDistChart"></canvas></div>
-            </div>
-            <div class="chart-box">
-                <h3 class="chart-title">Comm. Unit Cost per Country</h3>
-                <div style="flex:1; position:relative;"><canvas id="unitCostCompChart"></canvas></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="dashboard" class="tab-content">
-        <div class="recon-health">
-            <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
-            <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
-            <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
-            <div class="mini-tile"><span id="vOverLabel">Avg Days to Deadline</span><div id="vOver" style="color:var(--green)">0 Days</div></div>
-        </div>
-        <div class="viz-grid">
-            <div class="chart-box">
-                <h3 class="chart-title">Global Compliance</h3>
-                <div class="gauge-container"><canvas id="mixChart"></canvas></div>
-                <div class="status-mix-footer">
-                    <div class="status-row">
-                        <div class="status-col"><div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div><div class="status-label" id="labelPen">Pending</div><div class="status-usd" id="usdPen" onclick="drillToLedgerByStatus('Pending')">$0</div></div>
-                        <div class="status-col"><div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div><div class="status-label" id="labelRec">Reconciled</div><div class="status-usd" id="usdRec" onclick="drillToLedgerByStatus('Reconciled')">$0</div></div>
-                    </div>
-                    <div class="status-total">Current Exposure: <span id="usdTotalMix">$0</span></div>
-                </div>
-            </div>
-            <div class="chart-box">
-                <h3 style="text-align: left; border-left: 5px solid var(--orange); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing (Pending)</h3>
-                <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
-            </div>
-            <div class="chart-box">
-                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking (CC)</h3>
-                <div id="healthRankList" class="health-rank-container"></div>
-            </div>
-        </div>
-        <div class="exec-summary-box">
-            <div class="exec-header">Strategic KPI Matrix</div>
-            <table class="exec-table">
-                <thead><tr><th>Category</th><th>Target Benchmark</th><th style="text-align: center;">Current Value</th><th style="text-align: center;">Status</th></tr></thead>
-                <tbody>
-                    <tr><td>Compliance</td><td>100% PRFs Reconciled within 30 days</td><td id="exCompVal" style="font-weight:900; text-align:center;">0%</td><td id="exCompTrend" style="text-align: center;">-</td></tr>
-                    <tr><td>Process Speed</td><td>Reconciliation Lead Time < 30 days</td><td id="exSpeedVal" style="font-weight:900; text-align:center;">0 Days</td><td id="exSpeedTrend" style="text-align: center;">-</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="approvals-tab" class="tab-content">
-        <div class="exec-summary-box" style="margin-top: 10px;">
-            <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
-                <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
-            </div>
-            <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
-        </div>
-    </div>
-
 <script>
-    Chart.register(ChartDataLabels);
-    Chart.defaults.devicePixelRatio = 2; 
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.weight = '700';
-    Chart.defaults.color = '#cbd5e1';
-    Chart.defaults.animation = false;
-
+    // Global Data & State
     let appData = [], recData = [], pnlData = [], salesData = [];
-    let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
-    let tableFilters = {}; 
-    let amountSortOrder = 'desc'; 
-    let currentGranularity = 'weekly'; 
-    let selectedDeptGroup = "Selling & Distribution"; 
-    let selectedCCForDrivers = null; 
-    
-    let ccSortOrder = 'desc';
-    let itemSortOrder = 'desc';
-
-    let ccCurrentPage = 1;
-    let ccDataFull = [];
-    let itemCurrentPage = 1;
-    let itemDataFull = [];
-    
+    let tableFilters = {};
+    let ccDataFull = [], itemDataFull = [];
+    let ccSortOrder = 'desc', itemSortOrder = 'desc', amountSortOrder = 'desc';
+    let ccCurrentPage = 1, itemCurrentPage = 1;
     const ITEMS_PER_PAGE = 5;
+    let selectedCCForDrivers = null;
+    let selectedDeptGroup = "ALL";
+    let currentGranularity = 'monthly';
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const ENTITY_TO_SALES_COUNTRY_MAP = { 'Burn Manufacturing Kenya': 'Kenya', 'Burn Manufacturing DRC': 'DRC', 'Burn Manufacturing Tanzania': 'Tanzania', 'Burn Manufacturing Somalia': 'Somalia' };
 
-    const ENTITY_TO_SALES_COUNTRY_MAP = { 
-        "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
-        "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
-        "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana",
-        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria",
-        "HQ": "HQ"
-    };
+    let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
 
+    // --- Utility Functions ---
     const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
     const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
     const parseExcelDate = (val) => { if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0)); let s = val.toString().trim(); const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/); if (gDateMatch) { const [_, y, m, d] = gDateMatch; return new Date(y, m, d, 0, 0, 0, 0); } const dotMatch = s.split('.'); if (dotMatch.length === 3) { return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0); } const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); } return null; };
@@ -400,6 +22,7 @@
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
     const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
 
+    // --- UI Controllers ---
     function cycleDeptGroup() {
         const el = document.getElementById('deptGroupTriToggle');
         const state = el.getAttribute('data-state');
@@ -435,13 +58,8 @@
     }
 
     function changePage(type, direction) {
-        if (type === 'cc') {
-            ccCurrentPage += direction;
-            renderCCDriversList();
-        } else {
-            itemCurrentPage += direction;
-            renderItemDriversList();
-        }
+        if (type === 'cc') { ccCurrentPage += direction; renderCCDriversList(); } 
+        else { itemCurrentPage += direction; renderItemDriversList(); }
     }
 
     function setDriverSort(listType, order) {
@@ -462,6 +80,7 @@
         }
     }
 
+    // --- Drill-Down Logic ---
     function drillToLedgerByTrendPoint(pointSortKey) {
         tableFilters = {};
         const filters = getGlobalFiltersObj();
@@ -585,30 +204,6 @@
         renderApprovalsTable(appData);
     }
 
-    function getGlobalFiltersObj() {
-        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
-        return { 
-            start: norm(document.getElementById('dStart').value), 
-            end: norm(document.getElementById('dEnd').value), 
-            yr: getSelected('fYearList'), 
-            mo: getSelected('fMonthList'), 
-            comp: getSelected('fCompList'), 
-            dept: getSelected('fDeptList'), 
-            cc: getSelected('fCCList'), 
-            deptGroup: getSelected('fDeptGroupList') 
-        };
-    }
-
-    function syncGlobalSelectionsToLedger(filters) {
-        const rawCols = Object.keys(appData[0] || {});
-        if (filters.yr) { const k = rawCols.find(c => c.toLowerCase() === 'year'); if(k) tableFilters[k] = filters.yr; }
-        if (filters.mo) { const k = rawCols.find(c => c.toLowerCase() === 'month'); if(k) tableFilters[k] = filters.mo; }
-        if (filters.comp) { const k = rawCols.find(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company'); if(k) tableFilters[k] = filters.comp; }
-        if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
-        if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
-        if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
-    }
-
     function drillToLedger(costCenter, itemDriver = null) {
         tableFilters = {}; 
         const filters = getGlobalFiltersObj();
@@ -643,28 +238,11 @@
         renderApprovalsTable(appData);
     }
 
-    function syncFilterIcons() {
-        document.querySelectorAll('.header-filter-icon').forEach(icon => {
-            const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
-            icon.classList.remove('active');
-            for (let filterKey in tableFilters) {
-                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) || (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) || (colName === 'Month' && filterKey.toLowerCase() === 'month') || (colName === 'Year' && filterKey.toLowerCase() === 'year')) {
-                    icon.classList.add('active');
-                }
-            }
-        });
-    }
-
-    function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
-    window.onclick = function(event) { if (!event.target.matches('.multiselect-container') && !event.target.closest('.dropdown-content') && !event.target.closest('.col-dropdown-container') && !event.target.matches('.header-filter-icon')) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show')); } }
-
+    // --- Data Fetching & Sync ---
     const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
     function fetchSheet(sheetName) {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-        return fetch(url).then(res => {
-            if (!res.ok) throw new Error("Fetch failed");
-            return res.text();
-        }).then(text => {
+        return fetch(url).then(res => { if (!res.ok) throw new Error("Fetch failed"); return res.text(); }).then(text => {
             const json = JSON.parse(text.substring(47).slice(0, -2));
             const cols = json.table.cols.map(c => (c.label || "").trim());
             return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
@@ -680,6 +258,7 @@
         } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
     }
 
+    // --- Filter Handlers ---
     function initFilters() {
         const fill = (id, labelId, data, keys, placeholder) => {
             const el = document.getElementById(id); if (!el || el.children.length > 0) return;
@@ -697,26 +276,45 @@
         fill('fDeptGroupList', 'fDeptGroupLabel', appData, ['Department Group', 'Dept Group'], 'Dept Groups');
     }
 
-    function updateFilterLabel(containerId, labelId, placeholder) {
-        const checked = getSelected(containerId); const labelEl = document.getElementById(labelId);
-        if (checked) { labelEl.classList.add('active-filter'); labelEl.innerText = checked.length === 1 ? checked[0] : `${checked.length} ${placeholder} Selected`; }
-        else { labelEl.innerText = `Select ${placeholder}...`; labelEl.classList.remove('active-filter'); }
-        updateDashboard();
+    function getGlobalFiltersObj() {
+        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
+        return { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList'), 
+            deptGroup: getSelected('fDeptGroupList') 
+        };
     }
 
-    function toggleAllFilters(containerId, labelId, placeholder, checked) { document.querySelectorAll(`#${containerId} input`).forEach(i => i.checked = checked); updateFilterLabel(containerId, labelId, placeholder); }
     function getSelected(id) { const checked = Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value).filter(v => v); return checked.length > 0 ? checked : null; }
-    
-    function resetGlobalFilters() {
-        document.getElementById('dStart').value = ''; document.getElementById('dEnd').value = '';
-        document.querySelectorAll('#global-filters .dropdown-content input').forEach(i => i.checked = false);
-        [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers'],['fDeptGroupList', 'fDeptGroupLabel', 'Dept Groups']].forEach(c => { const labelEl = document.getElementById(c[1]); if(labelEl) { labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); }});
-        selectedCCForDrivers = null;
-        updateDashboard();
+
+    function syncGlobalSelectionsToLedger(filters) {
+        const rawCols = Object.keys(appData[0] || {});
+        if (filters.yr) { const k = rawCols.find(c => c.toLowerCase() === 'year'); if(k) tableFilters[k] = filters.yr; }
+        if (filters.mo) { const k = rawCols.find(c => c.toLowerCase() === 'month'); if(k) tableFilters[k] = filters.mo; }
+        if (filters.comp) { const k = rawCols.find(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company'); if(k) tableFilters[k] = filters.comp; }
+        if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
+        if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
+        if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
     }
 
-    function resetLedgerFilters() { tableFilters = {}; amountSortOrder = 'desc'; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
+    function syncFilterIcons() {
+        document.querySelectorAll('.header-filter-icon').forEach(icon => {
+            const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
+            icon.classList.remove('active');
+            for (let filterKey in tableFilters) {
+                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) || (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) || (colName === 'Month' && filterKey.toLowerCase() === 'month') || (colName === 'Year' && filterKey.toLowerCase() === 'year')) {
+                    icon.classList.add('active');
+                }
+            }
+        });
+    }
 
+    // --- Dashboard Aggregation & Updates ---
     let globalTotalComm = 0;
     let globalTotalSalesQty = 0;
     let currentSortedTrendKeys = [];
@@ -743,11 +341,7 @@
         };
 
         let pendingPrfSet = new Set();
-        recData.forEach(r => {
-            if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
-                pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim());
-            }
-        });
+        recData.forEach(r => { if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) { pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim()); } });
 
         let totalPendingPrfAmt = 0;
         appData.forEach(row => {
@@ -800,10 +394,7 @@
                 totalSalesQty += q;
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
                 const tObj = getTrendKey(sDate);
-                if (tObj) { 
-                    if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
-                    salesTrendAgg[tObj.sort].val += q; 
-                }
+                if (tObj) { if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display }; salesTrendAgg[tObj.sort].val += q; }
             }
         });
 
@@ -851,7 +442,7 @@
         const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
         if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
         else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
-        
+
         document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
@@ -871,6 +462,7 @@
         updateItemDriversData();
     }
 
+    // --- List Rendering ---
     function renderCCDriversList() {
         const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
         const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
@@ -904,24 +496,17 @@
         appData.forEach(r => {
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-            
             const rCC = getCol(r, 'Cost Center', 'Cost Centre');
             if (selectedCCForDrivers && rCC !== selectedCCForDrivers) return;
-
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
             if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
             if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
             if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
-            if (filters.cc && !filters.cc.includes(rCC)) return;
-
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
-            
-            if (!isCommitted) return;
-
+            if (!((type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname)))) return;
             const amt = cleanNum(getCol(r, 'Amount (USD)'));
             const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
             const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
@@ -953,6 +538,7 @@
         });
     }
 
+    // --- Visual Updates & Charts ---
     function updateCostDashboardVisuals(salesTrend, totalComm, totalQty, commitTrend, countrySales, countryComm) {
         currentSortedTrendKeys = Object.keys(commitTrend).sort();
         const displayLabels = currentSortedTrendKeys.map(k => commitTrend[k].label);
@@ -1028,29 +614,57 @@
             let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
             const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
             displayCols.forEach(c => {
-                let formattedValue = '-';
-                if (c === 'Department') formattedValue = row['Department'];
-                else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
+                let fv = '-';
+                if (c === 'Department') fv = row['Department'];
+                else if (c === 'Cost Center') fv = getCol(row, 'Cost Center', 'Cost Centre');
                 else if (c === 'Status') {
                     const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
-                    if (statusText) {
-                        let colorClass = statusText.toLowerCase().includes("reconciled") ? "status-text-green" : "status-text-orange";
-                        formattedValue = `<span class="${colorClass}">${statusText}</span>`;
-                    } else formattedValue = "";
+                    if (statusText) fv = `<span class="${statusText.toLowerCase().includes("reconciled") ? "status-text-green" : "status-text-orange"}">${statusText}</span>`;
+                    else fv = "";
                 }
-                else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
+                else if (c === 'Days Pending') fv = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
                 else {
-                    let cellValue = row[c]; formattedValue = cellValue;
-                    if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                    let cellValue = row[c]; fv = cellValue;
+                    if (c.toLowerCase().includes('amount')) fv = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    else if (c.toLowerCase().includes('date')) fv = formatDateStr(parseExcelDate(cellValue));
                 }
-                trB += `<td>${formattedValue || '-'}</td>`;
+                trB += `<td>${fv || '-'}</td>`;
             });
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
         });
         document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
+    }
+
+    // --- Misc UI Helpers ---
+    function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
+    window.onclick = function(event) { if (!event.target.matches('.multiselect-container') && !event.target.closest('.dropdown-content') && !event.target.closest('.col-dropdown-container') && !event.target.matches('.header-filter-icon')) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show')); } }
+    function updateFilterLabel(containerId, labelId, placeholder) { const checked = getSelected(containerId); const labelEl = document.getElementById(labelId); if (checked) { labelEl.classList.add('active-filter'); labelEl.innerText = checked.length === 1 ? checked[0] : `${checked.length} ${placeholder} Selected`; } else { labelEl.innerText = `Select ${placeholder}...`; labelEl.classList.remove('active-filter'); } updateDashboard(); }
+    function toggleAllFilters(containerId, labelId, placeholder, checked) { document.querySelectorAll(`#${containerId} input`).forEach(i => i.checked = checked); updateFilterLabel(containerId, labelId, placeholder); }
+    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) tableFilters[originalKey] = checked; else delete tableFilters[originalKey]; renderApprovalsTable(appData); }
+    function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
+    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
+    
+    function resetGlobalFilters() {
+        document.getElementById('dStart').value = ''; document.getElementById('dEnd').value = '';
+        document.querySelectorAll('#global-filters .dropdown-content input').forEach(i => i.checked = false);
+        [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers'],['fDeptGroupList', 'fDeptGroupLabel', 'Dept Groups']].forEach(c => { const labelEl = document.getElementById(c[1]); if(labelEl) { labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); }});
+        selectedCCForDrivers = null;
+        updateDashboard();
+    }
+    
+    function resetLedgerFilters() { tableFilters = {}; amountSortOrder = 'desc'; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
+    
+    function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
+    function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.style.color = isGood ? 'var(--green)' : 'var(--red)'; tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good-pill' : 'bg-bad-pill'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
+    function updateVisuals(rec, pen, ageData, rankMap) {
+        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
+        const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
+        Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
+            const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
+            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
+        });
     }
 
     function renderDateHierarchy(originalKey, dropId, listElement) {
@@ -1064,20 +678,7 @@
         });
     }
 
-    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
-    function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
-    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) tableFilters[originalKey] = checked; else delete tableFilters[originalKey]; renderApprovalsTable(appData); }
-    function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
-    function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.style.color = isGood ? 'var(--green)' : 'var(--red)'; tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good-pill' : 'bg-bad-pill'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
-    function updateVisuals(rec, pen, ageData, rankMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
-        const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
-        Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
-            const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
-            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
-        });
-    }
-
+    // --- Chart Initializations ---
     window.onload = () => {
         const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
         mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
@@ -1090,5 +691,3 @@
         fetchData(); setInterval(fetchData, 60000);
     };
 </script>
-</body>
-</html>
