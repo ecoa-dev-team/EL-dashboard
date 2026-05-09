@@ -54,7 +54,7 @@
             cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
         }
         .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
-        .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
+        .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.1); color: var(--green); }
 
         .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
         .dropdown-content.show { display: block; }
@@ -104,7 +104,7 @@
         .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
-        .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
+        .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 3px rgba(0, 210, 255, 0.3); }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -125,7 +125,7 @@
         
         .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; transition: color 0.2s; }
         .rank-label-link:hover { color: var(--green); }
-        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
+        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 2px rgba(255, 159, 67, 0.2); }
 
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
