@@ -1,3 +1,5 @@
+--- START OF FILE Index.html ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,16 +36,24 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 10px; width: fit-content; }
+        .controls-row { display: flex; gap: 15px; align-items: center; margin-bottom: 10px; }
+        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); width: fit-content; }
         .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
         
         .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #0f172a; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
         .tri-slider { position: absolute; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); transition: 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        
+        /* BU Toggle States */
+        .tri-state-toggle[data-state="ALL"] .tri-slider { left: 3px; background: var(--green); }
+        .tri-state-toggle[data-state="Electric"] .tri-slider { left: 18px; background: var(--primary); }
+        .tri-state-toggle[data-state="Biomass"] .tri-slider { left: 33px; background: var(--orange); }
+        
+        /* Dept Toggle States */
         .tri-state-toggle[data-state="SD"] .tri-slider { left: 3px; background: var(--primary); }
         .tri-state-toggle[data-state="GA"] .tri-slider { left: 18px; background: var(--orange); }
-        .tri-state-toggle[data-state="ALL"] .tri-slider { left: 33px; background: var(--green); }
+        .tri-state-toggle[data-state="DEPT_ALL"] .tri-slider { left: 33px; background: var(--green); }
         
-        .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 130px; }
+        .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 110px; }
 
         .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
@@ -186,13 +196,25 @@
         <div class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
     </div>
 
-    <div id="dept-toggle-container" style="display: block; margin-bottom: 10px;">
-        <div class="dept-toggle-wrap">
-            <span class="dept-toggle-label">DEPT GROUP:</span>
-            <div id="deptGroupTriToggle" class="tri-state-toggle" data-state="SD" onclick="cycleDeptGroup()">
-                <div class="tri-slider"></div>
+    <div id="toggles-container" style="display: block; margin-bottom: 10px;">
+        <div class="controls-row">
+            <!-- Business Unit Toggle -->
+            <div class="dept-toggle-wrap">
+                <span class="dept-toggle-label">BUSINESS UNIT:</span>
+                <div id="buTriToggle" class="tri-state-toggle" data-state="ALL" onclick="cycleBusinessUnit()">
+                    <div class="tri-slider"></div>
+                </div>
+                <span id="activeBUText" class="active-dept-text">ALL</span>
             </div>
-            <span id="activeDeptText" class="active-dept-text">Selling & Distribution</span>
+
+            <!-- Dept Group Toggle (Visible on Cost Analysis Only) -->
+            <div id="dept-toggle-container" class="dept-toggle-wrap">
+                <span class="dept-toggle-label">DEPT GROUP:</span>
+                <div id="deptGroupTriToggle" class="tri-state-toggle" data-state="SD" onclick="cycleDeptGroup()">
+                    <div class="tri-slider"></div>
+                </div>
+                <span id="activeDeptText" class="active-dept-text">Selling & Distribution</span>
+            </div>
         </div>
     </div>
 
@@ -372,6 +394,7 @@
     let amountSortOrder = 'desc'; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
+    let selectedBU = "ALL"; // Default Business Unit Filter
     let selectedCCForDrivers = null; 
     
     let ccSortOrder = 'desc';
@@ -400,12 +423,26 @@
     const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
     const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
 
+    function cycleBusinessUnit() {
+        const el = document.getElementById('buTriToggle');
+        const state = el.getAttribute('data-state');
+        let newState;
+        if (state === "ALL") newState = "Electric";
+        else if (state === "Electric") newState = "Biomass";
+        else newState = "ALL";
+        
+        el.setAttribute('data-state', newState);
+        selectedBU = newState;
+        document.getElementById('activeBUText').innerText = newState;
+        updateDashboard();
+    }
+
     function cycleDeptGroup() {
         const el = document.getElementById('deptGroupTriToggle');
         const state = el.getAttribute('data-state');
         let newState, label;
         if (state === "SD") { newState = "GA"; label = "General & Admin"; }
-        else if (state === "GA") { newState = "ALL"; label = "ALL"; }
+        else if (state === "GA") { newState = "DEPT_ALL"; label = "ALL"; }
         else { newState = "SD"; label = "Selling & Distribution"; }
         el.setAttribute('data-state', newState);
         selectedDeptGroup = label;
@@ -422,7 +459,7 @@
         const isDash = (id === 'dashboard');
         const isApp = (id === 'approvals-tab');
         document.getElementById('global-filters').style.display = isApp ? 'none' : 'flex';
-        document.getElementById('dept-toggle-container').style.display = isCost ? 'block' : 'none';
+        document.getElementById('dept-toggle-container').style.display = isCost ? 'flex' : 'none';
         document.getElementById('fDeptGroupWrapper').style.display = isDash ? 'flex' : 'none';
         updateDashboard();
     }
@@ -470,8 +507,12 @@
         const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
 
         const validCommittedFiles = appData.filter(row => {
+            const rowBU = getCol(row, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return false;
+            
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if (!d) return false;
             let rowSortKey = "";
@@ -499,8 +540,12 @@
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
         const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
         const validFiles = appData.filter(row => {
+            const rowBU = getCol(row, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return false;
+
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            
             const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
@@ -538,6 +583,9 @@
         const filters = getGlobalFiltersObj();
         const matchingFileNames = recData
             .filter(r => {
+                const rowBU = getCol(r, 'Business Unit');
+                if (selectedBU !== "ALL" && rowBU !== selectedBU) return false;
+
                 const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
                 if (filters.comp && !filters.comp.includes(rowComp)) return false;
                 if (filters.dept && !filters.dept.includes(rowDept)) return false;
@@ -563,6 +611,9 @@
         const rawCols = Object.keys(appData[0] || {});
         const filters = getGlobalFiltersObj();
         const filteredFiles = recData.filter(r => {
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return false;
+
             const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
             if (filters.comp && !filters.comp.includes(rowComp)) return false;
             if (filters.dept && !filters.dept.includes(rowDept)) return false;
@@ -614,9 +665,12 @@
         const filters = getGlobalFiltersObj();
         const rawCols = Object.keys(appData[0] || {});
         const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
-        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim());
 
         const validFiles = appData.filter(row => {
+            const rowBU = getCol(row, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return false;
+
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
             const rCC = getCol(row, 'Cost Center', 'Cost Centre');
@@ -751,6 +805,9 @@
 
         let totalPendingPrfAmt = 0;
         appData.forEach(row => {
+            const rowBU = getCol(row, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
+
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
             else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
@@ -790,6 +847,9 @@
         });
 
         salesData.forEach(r => {
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
+
             const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
@@ -829,6 +889,9 @@
         
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
+
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
             if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
@@ -902,6 +965,9 @@
         let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
 
         appData.forEach(r => {
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
+
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
             
@@ -986,6 +1052,7 @@
         const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
         const reconLookup = {};
         recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
+        
         let filteredData = sourceData.filter(row => {
             for(let col in tableFilters) {
                 let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
@@ -997,23 +1064,42 @@
             }
             return true;
         });
+
         const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
         if (amountKey) filteredData.sort((a, b) => { const valA = cleanNum(a[amountKey]), valB = cleanNum(b[amountKey]); return amountSortOrder === 'desc' ? valB - valA : valA - valB; });
+        
         const rawCols = Object.keys(appData[0] || {});
         let displayCols = []; 
-        rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
+        rawCols.forEach(c => { 
+            const cl = c.toLowerCase().trim(); 
+            if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && cl !== 'business unit' && !excludedCols.includes(cl)) displayCols.push(c); 
+        });
+
+        // Order: Department, Cost Center, ... Burn Company, Business Unit ...
         displayCols.unshift('Department', 'Cost Center');
+        const compIdx = displayCols.findIndex(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company');
+        if (compIdx !== -1) displayCols.splice(compIdx + 1, 0, "Business Unit");
+        else displayCols.push("Business Unit");
+
         const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
         if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
+        
         let trH = '<tr>'; 
         displayCols.forEach(c => { 
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
             trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
         });
         trH += '<th>Action</th></tr>'; head.innerHTML = trH;
+
         displayCols.forEach(c => {
             const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-            const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+            const oKey = rawCols.find(rk => { 
+                const rkc = rk.toLowerCase().trim(); 
+                if (c === 'Department') return rkc === 'department';
+                if (c === 'Cost Center') return (rkc === 'cost center' || rkc === 'cost centre');
+                if (c === 'Business Unit') return rkc === 'business unit';
+                return rk === c; 
+            });
             if (list && list.children.length === 0) {
                 if (c.toLowerCase().includes('date')) renderDateHierarchy(oKey, uid, list);
                 else if (c !== "Status" && c !== "Days Pending") { 
@@ -1022,6 +1108,7 @@
                 }
             }
         });
+
         syncFilterIcons();
         body.innerHTML = ''; let ledgerTotal = 0;
         filteredData.forEach(row => {
@@ -1031,6 +1118,7 @@
                 let formattedValue = '-';
                 if (c === 'Department') formattedValue = row['Department'];
                 else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
+                else if (c === 'Business Unit') formattedValue = getCol(row, 'Business Unit');
                 else if (c === 'Status') {
                     const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
                     if (statusText) {
@@ -1046,6 +1134,7 @@
                 }
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
+            // Pick from Column S (via header map)
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
