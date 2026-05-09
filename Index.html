@@ -2,495 +2,856 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PRF RECONCILIATION & COST DRIVERS DASHBOARD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <title>ELECTRIC MGMT Command Center</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-dark: #0f172a; --card-bg: #1e293b; --primary: #00d2ff; --secondary: #00ff9d;
-            --orange: #ff9f43; --red: #ff4d4d; --green: #00ff9d; --text-light: #f1f5f9;
+        :root { 
+            --primary: #00d2ff; 
+            --accent: #1e293b;
+            --green: #00ff9d; 
+            --red: #ff4d4d; 
+            --orange: #ff9f43; 
+            --bg: #0f172a; 
+            --card: #1e293b; 
+            --dark-blue: #0f172a; 
+            --text-main: #ffffff;
+            --text-light: #cbd5e1;
+            --border: #475569;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-light); padding: 20px; font-size: 14px; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 15px 25px; background: var(--card-bg); border-radius: 12px; border-left: 5px solid var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .header h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
-        .last-sync { font-size: 11px; opacity: 0.6; color: var(--secondary); font-weight: bold; }
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-main); font-size: 13px; line-height: 1.4; }
         
-        .filter-bar { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 12px; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; }
-        select { background: #334155; color: white; border: 1px solid #475569; padding: 8px 12px; border-radius: 6px; font-weight: 600; outline: none; min-width: 140px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
+        .header h3 { font-weight: 800; letter-spacing: 1.5px; color: var(--primary); text-transform: uppercase; margin: 0; font-size: 18px; }
         
-        .main-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative; }
-        .card-title { font-size: 12px; font-weight: 800; opacity: 0.7; margin-bottom: 15px; text-transform: uppercase; color: var(--primary); }
+        .tab-container { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-end; }
+        .tab-btn { background: var(--card); border: 1px solid var(--border); color: var(--text-light); padding: 10px 20px; cursor: pointer; font-weight: 800; text-transform: uppercase; border-radius: 6px 6px 0 0; font-size: 11px; font-family: 'Inter', sans-serif; }
+        .tab-btn.active { background: var(--primary); color: var(--bg); border-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(30, 41, 59, 0.5); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 10px; width: fit-content; }
+        .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .kpi-row { display: flex; align-items: baseline; gap: 10px; }
-        .kpi-val { font-size: 32px; font-weight: 900; }
-        .kpi-unit { font-size: 14px; opacity: 0.6; }
+        .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #0f172a; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
+        .tri-slider { position: absolute; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); transition: 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        .tri-state-toggle[data-state="SD"] .tri-slider { left: 3px; background: var(--primary); }
+        .tri-state-toggle[data-state="GA"] .tri-slider { left: 18px; background: var(--orange); }
+        .tri-state-toggle[data-state="ALL"] .tri-slider { left: 33px; background: var(--green); }
         
-        .chart-container { height: 200px; width: 100%; position: relative; }
-        .wide-card { grid-column: span 2; }
-        .tall-card { grid-row: span 2; }
+        .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 130px; }
+
+        .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
+        .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
+        .f-group label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
         
-        .rank-list { margin-top: 10px; }
-        .rank-item { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .rank-top-row { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
-        .rank-label { font-weight: 700; font-size: 12px; color: var(--text-light); }
-        .rank-label-link { cursor: pointer; color: var(--primary); text-decoration: underline; }
-        .rank-label-link:hover { color: var(--secondary); }
-        .rank-label-link.active-cc { color: var(--orange); font-weight: 900; text-decoration: none; }
-        .rank-impact-val { font-weight: 900; color: var(--secondary); cursor: pointer; }
-        .rank-bar-bg { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin: 4px 0; }
-        .rank-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
-        .rank-footer { display: flex; justify-content: space-between; font-size: 9px; opacity: 0.7; font-weight: 700; }
-        .rank-pct { color: var(--orange); }
-        .rank-unit-val { color: var(--secondary); }
-        
-        .pagination-box { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 10px; }
-        .pag-btn { background: #334155; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: 900; }
-        .pag-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        
-        .ledger-section { background: var(--card-bg); padding: 25px; border-radius: 12px; margin-top: 25px; overflow: hidden; }
-        .ledger-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        #ledger-summary { font-weight: 900; color: var(--secondary); background: rgba(0,255,157,0.1); padding: 8px 15px; border-radius: 6px; }
-        .table-wrap { overflow-x: auto; max-height: 600px; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        th { background: #0f172a; position: sticky; top: 0; z-index: 10; text-align: left; padding: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; border-bottom: 2px solid var(--primary); white-space: nowrap; }
-        td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
-        tr:hover { background: rgba(255,255,255,0.03); }
-        
-        .pdf-btn { background: var(--primary); color: #0f172a; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: 900; font-size: 9px; }
-        .status-text-green { color: var(--green); font-weight: 900; }
-        .status-text-orange { color: var(--orange); font-weight: 900; }
-        
-        .header-filter-icon { margin-left: 5px; cursor: pointer; color: #475569; font-size: 10px; transition: 0.2s; }
-        .header-filter-icon:hover { color: var(--primary); }
-        .filter-active { color: var(--orange) !important; }
-        .col-dropdown-container { display: none; position: absolute; background: #1e293b; border: 1px solid #475569; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); z-index: 100; min-width: 200px; max-height: 300px; border-radius: 8px; margin-top: 5px; left: 0; }
-        .col-filter-header { padding: 10px; border-bottom: 1px solid #334155; position: sticky; top: 0; background: #1e293b; }
-        .col-filter-search { width: 100%; background: #0f172a; border: 1px solid #475569; color: white; padding: 5px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; }
-        .col-options-list { max-height: 200px; overflow-y: auto; padding: 5px; }
-        .dropdown-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 11px; cursor: pointer; color: #cbd5e1; }
+        .multiselect-container { 
+            background: #0f172a; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
+            cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
+        }
+        .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
+        .multiselect-container.active-filter { border-color: var(--green); background: rgba(0, 255, 157, 0.15); color: var(--green); }
+
+        .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+        .dropdown-content.show { display: block; }
+        .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; font-size: 11px; }
         .dropdown-item:hover { background: #334155; }
-        .dropdown-item input { accent-color: var(--primary); cursor: pointer; }
+        .dropdown-item input { height: 14px; width: 14px; cursor: pointer; }
+
+        input[type="date"] { background: #0f172a !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
+        .tile { background: var(--card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .tile-label { font-size: 11px; color: var(--text-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .tile-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; margin: 4px 0; cursor: pointer; transition: color 0.2s; }
+        .tile-val:hover { color: var(--primary); text-decoration: underline; }
+        .breakdown { display: flex; justify-content: space-around; font-size: 10px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; color: var(--text-main); font-weight: 600; flex-wrap: wrap; gap: 5px; }
+        .breakdown b { color: var(--primary); font-weight: 900; font-size: 11px; cursor: pointer; }
+        .breakdown b:hover { color: var(--green); text-decoration: underline; }
+
+        .pnl-card-container { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+        .pnl-col-main { flex: 1.2; text-align: center; border-right: 1px solid var(--border); }
+        .pnl-col-stats { flex: 0.8; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding-left: 15px; text-align: left; }
+        .pnl-main-val { font-size: 1.8rem; font-weight: 900; color: #ffffff; line-height: 1.1; }
+        .pnl-stat-item { display: flex; flex-direction: column; }
+        .pnl-stat-label { font-size: 10px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
+        .pnl-stat-val { font-size: 1.2rem; font-weight: 900; color: var(--green); line-height: 1; }
+
+        .recon-health { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px; }
+        .mini-tile { background: var(--card); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+        .mini-tile span { font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+        .mini-tile div { font-size: 1.4rem; font-weight: 900; color: #fff; margin-top: 5px; }
+
+        .cost-viz-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .cost-lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; height: 350px; }
         
-        .trend-pill { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; }
-        .bg-good-pill { background: rgba(0,255,157,0.15); color: var(--green); }
-        .bg-bad-pill { background: rgba(255,77,77,0.15); color: var(--red); }
-        .sortable-header { cursor: pointer; }
-        .sortable-header:hover { color: var(--secondary); }
-        .sort-indicator { margin-left: 4px; font-size: 10px; opacity: 0.5; }
-        .empty-placeholder { text-align: center; padding: 40px; opacity: 0.4; font-weight: 800; font-style: italic; }
+        .viz-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 15px; height: 380px; margin-bottom: 15px; }
+        
+        .chart-box { background: var(--card); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid var(--border); position: relative; min-height: 350px; overflow: hidden; }
+        .chart-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
+        h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
+        
+        .sort-btn-wrap { display: flex; gap: 2px; }
+        .sort-arrow-btn { background: #0f172a; border: 1px solid var(--border); color: var(--text-light); font-size: 8px; padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: 0.2s; }
+        .sort-arrow-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .sort-arrow-btn.active { background: var(--primary); color: #000; border-color: var(--primary); }
+
+        .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(15, 23, 42, 0.8); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
+        .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
+        .toggle-btn:hover { background: rgba(255,255,255,0.1); }
+        .toggle-btn.active { background: var(--primary); color: #000; box-shadow: 0 0 5px rgba(0, 210, 255, 0.5); }
+
+        .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
+        .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
+        .status-row { display: flex; justify-content: space-around; margin-bottom: 8px; text-align: center; }
+        .status-col { display: flex; flex-direction: column; align-items: center; }
+        .status-count { font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .status-label { font-size: 10px; color: var(--text-light); font-weight: 800; text-transform: uppercase; }
+        .status-usd { font-size: 11px; color: var(--primary); font-weight: 800; margin-top: 2px; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .status-usd:hover { color: var(--green); }
+        .status-total { text-align: center; font-weight: 800; color: var(--text-light); font-size: 11px; margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 8px; text-transform: uppercase; }
+        #usdTotalMix { font-size: 1.8rem; display: block; margin-top: 4px; color: var(--red); font-weight: 900; }
+
+        .health-rank-container { display: flex; flex-direction: column; gap: 12px; margin-top: 5px; overflow-y: auto; padding-right: 10px; flex: 1; }
+        .rank-item { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+        .rank-top-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .rank-label { font-size: 12px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+        
+        .rank-label-link { color: var(--primary); text-decoration: underline; cursor: pointer; transition: color 0.2s; }
+        .rank-label-link:hover { color: var(--green); }
+        .rank-label-link.active-cc { color: var(--orange) !important; font-size: 13px; text-shadow: 0 0 5px rgba(255, 159, 67, 0.3); }
+
+        .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
+        .rank-impact-val:hover { color: var(--green); }
+        .rank-bar-bg { width: 100%; background: #0f172a; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #475569; position: relative; }
+        .rank-bar-fill { height: 100%; border-radius: 5px; }
+        .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
+        .rank-pct { color: var(--green); }
+        .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
+
+        .pagination-ctrl { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 10px 0; border-top: 1px solid var(--border); margin-top: auto; }
+        .pag-btn { background: #334155; border: 1px solid var(--border); color: white; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .pag-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .pag-info { font-size: 10px; font-weight: 900; color: var(--primary); }
+
+        .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
+
+        .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
+        .exec-header { background: #334155; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
+        .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #1e293b !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .ledger-table { font-size: 12px !important; table-layout: auto; }
+        .ledger-table th { padding: 12px 10px !important; }
+        .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
+        .sortable-header:hover { background: #334155 !important; }
+        .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
+        .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
+        .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
+        .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
+        .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(71, 85, 105, 0.5); }
+        .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
+        .pdf-btn { background: var(--primary); color: #000; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
+        .status-text-green { color: var(--green) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-text-orange { color: var(--orange) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+        .bg-good-pill { background: rgba(0, 255, 157, 0.2); color: var(--green) !important; border: 1px solid var(--green); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
+        .bg-bad-pill { background: rgba(255, 77, 77, 0.2); color: var(--red) !important; border: 1px solid var(--red); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
+        .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
+        #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
+        button#reset-btn { background: var(--primary); color: #0f172a; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
+        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #1e293b; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
+        .col-dropdown-container.show { display: block; }
+        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; position: sticky; top: 0; z-index: 10; }
+        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #1e293b; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
+        #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div>
-        <h1>PRF RECONCILIATION & COST DRIVERS</h1>
-        <div id="syncTime" class="last-sync">Initializing...</div>
+    <div class="header">
+        <h3>ELECTRIC MGMT COMMAND CENTER • ANALYTICS</h3>
+        <div id="status">ESTABLISHING LINK...</div>
     </div>
-    <div style="text-align: right">
-        <div style="font-weight: 900; font-size: 12px; color: var(--primary);">EXECUTIVE SUMMARY</div>
-        <div style="display: flex; gap: 20px; margin-top: 5px;">
-            <div id="exComp">Compliance: <span id="exCompVal" style="font-weight: 900;">0%</span> <span id="exCompTrend"></span></div>
-            <div id="exSpeed">Speed: <span id="exSpeedVal" style="font-weight: 900;">0 Days</span> <span id="exSpeedTrend"></span></div>
-        </div>
-    </div>
-</div>
 
-<div class="filter-bar">
-    <div class="filter-group">
-        <label>Dept. Group</label>
-        <select id="fDeptGroup" onchange="applyGlobalFilters()">
-            <option value="ALL">ALL GROUPS</option>
-            <option value="OPERATIONS">OPERATIONS</option>
-            <option value="SUPPORT">SUPPORT</option>
-            <option value="COMMERCIAL">COMMERCIAL</option>
-        </select>
+    <div class="tab-container">
+        <div class="tab-btn active" id="btn-cost" onclick="switchTab('cost-analysis', this)">Cost Analysis Dashboard</div>
+        <div class="tab-btn" id="btn-dashboard" onclick="switchTab('dashboard', this)">Compliance Dashboard</div>
+        <div class="tab-btn" id="btn-approvals" onclick="switchTab('approvals-tab', this)">RAW DATA-APPROVALS LEDGER</div>
     </div>
-    <div class="filter-group">
-        <label>Primary Company</label>
-        <select id="fCompany" onchange="applyGlobalFilters()">
-            <option value="ALL">ALL COMPANIES</option>
-        </select>
-    </div>
-    <div class="filter-group">
-        <label>Time Scope</label>
-        <select id="fTime" onchange="applyGlobalFilters()">
-            <option value="ALL">ALL TIME</option>
-            <option value="LAST90">LAST 90 DAYS</option>
-            <option value="YTD">YTD</option>
-        </select>
-    </div>
-    <div style="margin-left: auto; align-self: flex-end;">
-        <button onclick="resetAllDashboardFilters()" style="background: var(--red); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 900; cursor: pointer;">RESET FILTERS</button>
-    </div>
-</div>
 
-<div class="main-grid">
-    <div class="card tall-card">
-        <div class="card-title">Reconciliation Health (Mix)</div>
-        <div class="chart-container" style="height: 140px;">
-            <canvas id="mixChart"></canvas>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-            <div style="background: rgba(0,255,157,0.1); padding: 10px; border-radius: 8px;">
-                <div style="font-size: 9px; font-weight: 800; opacity: 0.6;">RECONCILED</div>
-                <div id="countRec" style="font-size: 16px; font-weight: 900; color: var(--green);">0 PRFs</div>
-                <div id="usdRec" style="font-size: 11px; font-weight: 700; opacity: 0.8;">$0.00</div>
+    <div id="dept-toggle-container" style="display: block; margin-bottom: 10px;">
+        <div class="dept-toggle-wrap">
+            <span class="dept-toggle-label">DEPT GROUP:</span>
+            <div id="deptGroupTriToggle" class="tri-state-toggle" data-state="SD" onclick="cycleDeptGroup()">
+                <div class="tri-slider"></div>
             </div>
-            <div style="background: rgba(255,77,77,0.1); padding: 10px; border-radius: 8px;">
-                <div style="font-size: 9px; font-weight: 800; opacity: 0.6;">PENDING</div>
-                <div id="countPen" style="font-size: 16px; font-weight: 900; color: var(--red);">0 PRFs</div>
-                <div id="usdPen" style="font-size: 11px; font-weight: 700; opacity: 0.8;">$0.00</div>
-            </div>
-        </div>
-        <div style="margin-top: 20px;">
-            <div class="card-title" style="margin-bottom: 8px; font-size: 10px;">Top Compliance Drivers (CC)</div>
-            <div id="healthRankList" class="rank-list"></div>
+            <span id="activeDeptText" class="active-dept-text">Selling & Distribution</span>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-title">Pending Impact</div>
-        <div class="kpi-row">
-            <span id="usdTotalMix" class="kpi-val">$0.0</span>
-            <span class="kpi-unit">Total Pipeline</span>
-        </div>
-        <div style="margin-top: 15px; font-size: 11px; font-weight: 600;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span>Efficiency Rate:</span> <span id="vEff" style="color: var(--secondary)">0%</span>
+    <div id="global-filters" class="filter-section">
+        <div class="f-group"><label>Date From</label><input type="date" id="dStart" onchange="updateDashboard()"></div>
+        <div class="f-group"><label>Date To</label><input type="date" id="dEnd" onchange="updateDashboard()"></div>
+        <div class="f-group"><label>Fiscal Year</label><div id="fYearLabel" class="multiselect-container" onclick="toggleDropdown('fYearList')">Select Years...</div><div id="fYearList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Period</label><div id="fMonthLabel" class="multiselect-container" onclick="toggleDropdown('fMonthList')">Select Months...</div><div id="fMonthList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Entity</label><div id="fCompLabel" class="multiselect-container" onclick="toggleDropdown('fCompList')">Select Entities...</div><div id="fCompList" class="dropdown-content"></div></div>
+        <div class="f-group" id="fDeptGroupWrapper" style="display:none;"><label>Dept Group</label><div id="fDeptGroupLabel" class="multiselect-container" onclick="toggleDropdown('fDeptGroupList')">Select Groups...</div><div id="fDeptGroupList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Department</label><div id="fDeptLabel" class="multiselect-container" onclick="toggleDropdown('fDeptList')">Select Departments...</div><div id="fDeptList" class="dropdown-content"></div></div>
+        <div class="f-group"><label>Cost Center</label><div id="fCCLabel" class="multiselect-container" onclick="toggleDropdown('fCCList')">Select Cost Centers...</div><div id="fCCList" class="dropdown-content"></div></div>
+        <button id="reset-btn" onclick="resetGlobalFilters()">RESET DASH FILTERS</button>
+    </div>
+
+    <div id="cost-analysis" class="tab-content active">
+        <div class="kpi-grid">
+            <div class="tile" style="border-top: 5px solid var(--primary);">
+                <span class="tile-label">Committed Spend</span>
+                <div class="tile-val" id="valPRF" onclick="drillToLedgerByKpi('COMM_TOTAL')">$0</div>
+                <div class="breakdown">
+                    <span>Pending PRFs <b id="subCommPRF" onclick="drillToLedgerByKpi('COMM_PRF')">$0</b></span>
+                    <span>ECFs <b id="subCommECF" onclick="drillToLedgerByKpi('COMM_ECF')">$0</b></span>
+                    <span>TRFs <b id="subCommTRF" onclick="drillToLedgerByKpi('COMM_TRF')">$0</b></span>
+                    <span>Invoices <b id="subCommInv" onclick="drillToLedgerByKpi('COMM_INV')">$0</b></span>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span>Avg. Cycle Time:</span> <span id="vMax" style="color: var(--primary)">0 Days</span>
+            <div class="tile" style="border-top: 5px solid var(--orange);">
+                <span class="tile-label">Total Reconciled</span>
+                <div class="tile-val" id="valActual" onclick="drillToLedgerByKpi('REC_TOTAL')">$0</div>
+                <div class="breakdown">
+                    <span>ECF <b id="subECF" onclick="drillToLedgerByKpi('REC_ECF')">$0</b></span>
+                    <span>TRF <b id="subTRF" onclick="drillToLedgerByKpi('REC_TRF')">$0</b></span>
+                    <span>INV <b id="subInv" onclick="drillToLedgerByKpi('REC_INV')">$0</b></span>
+                </div>
+            </div>
+            <div class="tile" style="border-top: 5px solid var(--green);">
+                <span class="tile-label">Comm. Cost / Unit Sold</span>
+                <div class="pnl-card-container">
+                    <div class="pnl-col-main"><div class="pnl-main-val" id="valPNL">$0</div></div>
+                    <div class="pnl-col-stats">
+                        <div class="pnl-stat-item"><span class="pnl-stat-label">Comm. Total</span><span class="pnl-stat-val" id="valUnitPNLTotal" style="color:var(--primary); font-size: 14px;">$0</span></div>
+                        <div class="pnl-stat-item"><span class="pnl-stat-label">Sales Qty</span><span class="pnl-stat-val" id="subSalesQty" style="color:var(--green)">0</span></div>
+                    </div>
+                </div>
             </div>
         </div>
+        <div class="cost-viz-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Trends: Sales Vol vs Committed Cost / Unit</h3>
+                <div class="chart-controls">
+                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
+                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
+                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Qt</button>
+                </div>
+                <div style="flex:1; position:relative;"><canvas id="trendChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header-row">
+                    <h3 class="chart-title">
+                        CC Committed Drivers
+                        <div class="sort-btn-wrap">
+                            <button class="sort-arrow-btn active" id="ccSortDesc" onclick="setDriverSort('cc', 'desc')">▼</button>
+                            <button class="sort-arrow-btn" id="ccSortAsc" onclick="setDriverSort('cc', 'asc')">▲</button>
+                        </div>
+                    </h3>
+                </div>
+                <div id="driverRankList" class="health-rank-container"></div>
+                <div id="ccPagination" class="pagination-ctrl">
+                    <button class="pag-btn" onclick="changePage('cc', -1)">Prev</button>
+                    <span class="pag-info">Page 1/1</span>
+                    <button class="pag-btn" onclick="changePage('cc', 1)">Next</button>
+                </div>
+            </div>
+        </div>
+        <div class="cost-viz-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Committed Trend</h3>
+                <div class="chart-controls">
+                    <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
+                    <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
+                    <button class="toggle-btn btn-quarterly" onclick="syncGranularity('quarterly')">Qt</button>
+                </div>
+                <div style="flex:1; position:relative;"><canvas id="weeklyPnlChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header-row">
+                    <h3 class="chart-title">
+                        <span id="itemDriverTitle">Item Drivers (Committed)</span>
+                        <div class="sort-btn-wrap">
+                            <button class="sort-arrow-btn active" id="itemSortDesc" onclick="setDriverSort('item', 'desc')">▼</button>
+                            <button class="sort-arrow-btn" id="itemSortAsc" onclick="setDriverSort('item', 'asc')">▲</button>
+                        </div>
+                    </h3>
+                </div>
+                <div id="costDriverList" class="health-rank-container"></div>
+                <div id="itemPagination" class="pagination-ctrl">
+                    <button class="pag-btn" onclick="changePage('item', -1)">Prev</button>
+                    <span class="pag-info">Page 1/1</span>
+                    <button class="pag-btn" onclick="changePage('item', 1)">Next</button>
+                </div>
+            </div>
+        </div>
+        <div class="cost-lower-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Committed Impact by Company</h3>
+                <div style="flex:1; position:relative;"><canvas id="companyDistChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="chart-title">Comm. Unit Cost per Country</h3>
+                <div style="flex:1; position:relative;"><canvas id="unitCostCompChart"></canvas></div>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <div class="card-title">Pending Ageing</div>
-        <div class="chart-container" style="height: 120px;">
-            <canvas id="ageChart"></canvas>
+    <div id="dashboard" class="tab-content">
+        <div class="recon-health">
+            <div class="mini-tile"><span>Recon Health</span><div id="vEff" style="color:var(--green)">0%</div></div>
+            <div class="mini-tile"><span>Max Cycle</span><div id="vMax">0 Days</div></div>
+            <div class="mini-tile"><span>Avg Pending</span><div id="vPend">0 Days</div></div>
+            <div class="mini-tile"><span id="vOverLabel">Avg Days to Deadline</span><div id="vOver" style="color:var(--green)">0 Days</div></div>
         </div>
-        <div style="text-align: center; margin-top: 10px; font-size: 11px; font-weight: 800;">
-            AVG PENDING: <span id="vPend" style="color: var(--orange)">0 Days</span>
+        <div class="viz-grid">
+            <div class="chart-box">
+                <h3 class="chart-title">Global Compliance</h3>
+                <div class="gauge-container"><canvas id="mixChart"></canvas></div>
+                <div class="status-mix-footer">
+                    <div class="status-row">
+                        <div class="status-col"><div class="status-count"><span class="status-dot" style="background: var(--red);"></span> <span id="countPen">0</span></div><div class="status-label" id="labelPen">Pending</div><div class="status-usd" id="usdPen" onclick="drillToLedgerByStatus('Pending')">$0</div></div>
+                        <div class="status-col"><div class="status-count"><span class="status-dot" style="background: var(--green);"></span> <span id="countRec">0</span></div><div class="status-label" id="labelRec">Reconciled</div><div class="status-usd" id="usdRec" onclick="drillToLedgerByStatus('Reconciled')">$0</div></div>
+                    </div>
+                    <div class="status-total">Current Exposure: <span id="usdTotalMix">$0</span></div>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3 style="text-align: left; border-left: 5px solid var(--orange); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--orange)">Overdue Ageing (Pending)</h3>
+                <div style="flex:1; position:relative; margin-top: 10px;"><canvas id="ageChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <h3 style="text-align: left; border-left: 5px solid var(--primary); padding-left: 10px; font-size: 11px; text-transform: uppercase; font-weight: 900; color:var(--primary)">Efficiency Ranking (CC)</h3>
+                <div id="healthRankList" class="health-rank-container"></div>
+            </div>
         </div>
-    </div>
-
-    <div class="card tall-card">
-        <div class="card-title" id="driverRankTitle" style="display: flex; justify-content: space-between; align-items: center;">
-            CC Drivers (Committed)
-            <span onclick="toggleCCSort()" style="cursor: pointer; color: var(--secondary); font-size: 10px;">SORT ▼</span>
-        </div>
-        <div id="driverRankList" class="rank-list"></div>
-        <div class="pagination-box" id="ccPagination">
-            <button class="pag-btn" onclick="changeCCPage(-1)">PREV</button>
-            <span class="pag-info">Page 1/1</span>
-            <button class="pag-btn" onclick="changeCCPage(1)">NEXT</button>
-        </div>
-    </div>
-
-    <div class="card tall-card">
-        <div class="card-title" id="itemDriverTitle" style="display: flex; justify-content: space-between; align-items: center;">
-            Item Drivers (Committed)
-            <span onclick="toggleItemSort()" style="cursor: pointer; color: var(--secondary); font-size: 10px;">SORT ▼</span>
-        </div>
-        <div id="costDriverList" class="rank-list"></div>
-        <div class="pagination-box" id="itemPagination">
-            <button class="pag-btn" onclick="changeItemPage(-1)">PREV</button>
-            <span class="pag-info">Page 1/1</span>
-            <button class="pag-btn" onclick="changeItemPage(1)">NEXT</button>
-        </div>
-    </div>
-
-    <div class="card wide-card">
-        <div class="card-title">Sales Volume vs. Committed Cost Per Unit</div>
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
+        <div class="exec-summary-box">
+            <div class="exec-header">Strategic KPI Matrix</div>
+            <table class="exec-table">
+                <thead><tr><th>Category</th><th>Target Benchmark</th><th style="text-align: center;">Current Value</th><th style="text-align: center;">Status</th></tr></thead>
+                <tbody>
+                    <tr><td>Compliance</td><td>100% PRFs Reconciled within 30 days</td><td id="exCompVal" style="font-weight:900; text-align:center;">0%</td><td id="exCompTrend" style="text-align: center;">-</td></tr>
+                    <tr><td>Process Speed</td><td>Reconciliation Lead Time < 30 days</td><td id="exSpeedVal" style="font-weight:900; text-align:center;">0 Days</td><td id="exSpeedTrend" style="text-align: center;">-</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="card wide-card">
-        <div class="card-title">Actual P&L Spend vs. Committed Spend Trend</div>
-        <div class="chart-container">
-            <canvas id="weeklyPnlChart"></canvas>
+    <div id="approvals-tab" class="tab-content">
+        <div class="exec-summary-box" style="margin-top: 10px;">
+            <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
+                <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
+                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #000; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
+            </div>
+            <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
     </div>
-
-    <div class="card">
-        <div class="card-title">Committed Spend by Company</div>
-        <div class="chart-container">
-            <canvas id="companyDistChart"></canvas>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">Unit Cost Benchmarking (By Country)</div>
-        <div class="chart-container">
-            <canvas id="unitCostCompChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<div class="ledger-section" id="ledger-anchor">
-    <div class="ledger-header">
-        <div class="card-title" style="margin: 0; font-size: 16px;">Detailed Ledger <span id="drilldown-note" style="color: var(--orange); text-transform: none; font-size: 12px; margin-left: 15px;"></span></div>
-        <div id="ledger-summary">TOTAL: $0.00</div>
-    </div>
-    <div class="table-wrap">
-        <table id="approvalsTable">
-            <thead id="approvalsHead"></thead>
-            <tbody id="approvalsBody"></tbody>
-        </table>
-    </div>
-</div>
 
 <script>
-    const SHEET_ID = '1234567890abcdefghijklmnopqrstuvwxyz'; // REPLACE WITH YOUR ID
-    const TAB_APPROVALS = 'APPROVALS';
-    const TAB_RECON = 'RECON';
-    const TAB_SALES = 'SALES_DATA';
+    Chart.register(ChartDataLabels);
+    Chart.defaults.devicePixelRatio = 2; 
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.weight = '700';
+    Chart.defaults.color = '#cbd5e1';
+    Chart.defaults.animation = false;
 
-    let appData = [], recData = [], salesData = [];
+    let appData = [], recData = [], pnlData = [], salesData = [];
     let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
-    let selectedDeptGroup = "ALL", selectedCCForDrivers = null;
-    let ccDataFull = [], itemDataFull = [], ccCurrentPage = 1, itemCurrentPage = 1, ITEMS_PER_PAGE = 5;
-    let ccSortOrder = 'desc', itemSortOrder = 'desc', amountSortOrder = 'desc';
-    let globalTotalSalesQty = 0, globalTotalComm = 0;
-    let tableFilters = {};
-    let currentSortedTrendKeys = [];
+    let tableFilters = {}; 
+    let amountSortOrder = 'desc'; 
+    let currentGranularity = 'weekly'; 
+    let selectedDeptGroup = "Selling & Distribution"; 
+    let selectedCCForDrivers = null; 
+    
+    let ccSortOrder = 'desc';
+    let itemSortOrder = 'desc';
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    let ccCurrentPage = 1;
+    let ccDataFull = [];
+    let itemCurrentPage = 1;
+    let itemDataFull = [];
+    
+    const ITEMS_PER_PAGE = 5;
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-    function getCol(row, ...names) {
-        for (let n of names) { if (row[n] !== undefined) return row[n]; }
-        return "";
+    const ENTITY_TO_SALES_COUNTRY_MAP = { 
+        "Kenya Ltd": "Kenya", "KENYA LTD": "Kenya", 
+        "Uganda Ltd": "Uganda", "UGANDA LTD": "Uganda",
+        "Ghana Ltd": "Ghana", "GHANA LTD": "Ghana",
+        "Nigeria Ltd": "Nigeria", "NIGERIA LTD": "Nigeria",
+        "HQ": "HQ"
+    };
+
+    const cleanNum = (v) => { if (v === null || v === undefined || v === "") return 0; if (typeof v === 'number') return v; return parseFloat(v.toString().replace(/[^\d.-]/g, '')) || 0; };
+    const getCol = (row, ...keys) => { const found = Object.keys(row).find(k => keys.some(s => k.toLowerCase().trim() === s.toLowerCase().trim())); return found ? row[found] : null; };
+    const parseExcelDate = (val) => { if (!val) return null; if (val instanceof Date) return new Date(val.setHours(0,0,0,0)); let s = val.toString().trim(); const gDateMatch = s.match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/); if (gDateMatch) { const [_, y, m, d] = gDateMatch; return new Date(y, m, d, 0, 0, 0, 0); } const dotMatch = s.split('.'); if (dotMatch.length === 3) { return new Date(dotMatch[2], dotMatch[1] - 1, dotMatch[0], 0, 0, 0, 0); } const iso = new Date(s); if(!isNaN(iso.getTime())) { return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate(), 0, 0, 0, 0); } return null; };
+    const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+    const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7); };
+    const getQuarter = (d) => { return 'Q' + Math.floor((d.getMonth() + 3) / 3); };
+
+    function cycleDeptGroup() {
+        const el = document.getElementById('deptGroupTriToggle');
+        const state = el.getAttribute('data-state');
+        let newState, label;
+        if (state === "SD") { newState = "GA"; label = "General & Admin"; }
+        else if (state === "GA") { newState = "ALL"; label = "ALL"; }
+        else { newState = "SD"; label = "Selling & Distribution"; }
+        el.setAttribute('data-state', newState);
+        selectedDeptGroup = label;
+        document.getElementById('activeDeptText').innerText = label;
+        updateDashboard();
     }
 
-    function cleanNum(v) { 
-        if (!v) return 0;
-        if (typeof v === 'number') return v;
-        return parseFloat(v.toString().replace(/[^0-9.-]+/g, "")) || 0; 
+    function switchTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); 
+        if (btn) btn.classList.add('active');
+        const isCost = (id === 'cost-analysis');
+        const isDash = (id === 'dashboard');
+        const isApp = (id === 'approvals-tab');
+        document.getElementById('global-filters').style.display = isApp ? 'none' : 'flex';
+        document.getElementById('dept-toggle-container').style.display = isCost ? 'block' : 'none';
+        document.getElementById('fDeptGroupWrapper').style.display = isDash ? 'flex' : 'none';
+        updateDashboard();
     }
 
-    function parseExcelDate(val) {
-        if (!val) return null;
-        if (val instanceof Date) return val;
-        if (!isNaN(val) && val > 30000) return new Date((val - 25569) * 86400 * 1000);
-        let d = new Date(val);
-        return isNaN(d.getTime()) ? null : d;
+    function syncGranularity(type) {
+        currentGranularity = type;
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.btn-' + type).forEach(b => b.classList.add('active'));
+        updateDashboard();
     }
 
-    function formatDateStr(d) {
-        if (!d) return "-";
-        return d.toLocaleDateString('en-GB');
-    }
-
-    function fmt(v) { return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); }
-
-    function getGlobalFiltersObj() {
-        const t = document.getElementById('fTime').value;
-        const comp = document.getElementById('fCompany').value;
-        let start = null, end = new Date();
-        if (t === 'LAST90') { start = new Date(); start.setDate(end.getDate() - 90); }
-        if (t === 'YTD') { start = new Date(end.getFullYear(), 0, 1); }
-        return { start, end, comp: comp === 'ALL' ? null : [comp] };
-    }
-
-    async function fetchData() {
-        document.getElementById('syncTime').innerText = "Updating...";
-        try {
-            const [rApp, rRec, rSal] = await Promise.all([
-                fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_APPROVALS}`).then(r => r.text()),
-                fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_RECON}`).then(r => r.text()),
-                fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_SALES}`).then(r => r.text())
-            ]);
-            appData = parseGviz(rApp);
-            recData = parseGviz(rRec);
-            salesData = parseGviz(rSal);
-            
-            const companies = [...new Set(appData.map(r => getCol(r, 'Burn Company', 'Company')))].filter(Boolean).sort();
-            const fComp = document.getElementById('fCompany');
-            const curVal = fComp.value;
-            fComp.innerHTML = '<option value="ALL">ALL COMPANIES</option>';
-            companies.forEach(c => fComp.insertAdjacentHTML('beforeend', `<option value="${c}">${c}</option>`));
-            fComp.value = companies.includes(curVal) ? curVal : "ALL";
-
-            updateDashboard();
-            document.getElementById('syncTime').innerText = "LIVE SYNC: " + new Date().toLocaleTimeString();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('syncTime').innerText = "SYNC OFFLINE - CHECK SHEET ID";
+    function changePage(type, direction) {
+        if (type === 'cc') {
+            ccCurrentPage += direction;
+            renderCCDriversList();
+        } else {
+            itemCurrentPage += direction;
+            renderItemDriversList();
         }
     }
 
-    function parseGviz(jsonStr) {
-        const raw = JSON.parse(jsonStr.substring(47, jsonStr.length - 2));
-        const cols = raw.table.cols.map(c => c.label || "");
-        return raw.table.rows.map(r => {
-            let obj = {};
-            r.c.forEach((cell, i) => { if (cols[i]) obj[cols[i]] = cell ? cell.v : null; });
-            return obj;
-        });
+    function setDriverSort(listType, order) {
+        if (listType === 'cc') {
+            ccSortOrder = order;
+            document.getElementById('ccSortDesc').classList.toggle('active', order === 'desc');
+            document.getElementById('ccSortAsc').classList.toggle('active', order === 'asc');
+            ccDataFull.sort((a,b) => order === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            ccCurrentPage = 1;
+            renderCCDriversList();
+        } else {
+            itemSortOrder = order;
+            document.getElementById('itemSortDesc').classList.toggle('active', order === 'desc');
+            document.getElementById('itemSortAsc').classList.toggle('active', order === 'asc');
+            itemDataFull.sort((a,b) => order === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            itemCurrentPage = 1;
+            renderItemDriversList();
+        }
     }
 
-    function applyGlobalFilters() {
-        selectedDeptGroup = document.getElementById('fDeptGroup').value;
-        selectedCCForDrivers = null;
+    function drillToLedgerByTrendPoint(pointSortKey) {
         tableFilters = {};
-        updateDashboard();
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        const validCommittedFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if (!d) return false;
+            let rowSortKey = "";
+            if (currentGranularity === 'weekly') rowSortKey = `${d.getFullYear()}-${getWeekNumber(d).toString().padStart(2, '0')}`;
+            else if (currentGranularity === 'monthly') rowSortKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+            else rowSortKey = `${d.getFullYear()}-${getQuarter(d)}`;
+            if (rowSortKey !== pointSortKey) return false;
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+
+        if (fileNameKey) tableFilters[fileNameKey] = validCommittedFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
     }
 
-    function resetAllDashboardFilters() {
-        document.getElementById('fDeptGroup').value = "ALL";
-        document.getElementById('fCompany').value = "ALL";
-        document.getElementById('fTime').value = "ALL";
-        selectedDeptGroup = "ALL";
-        selectedCCForDrivers = null;
+    function drillToLedgerByKpi(mode) {
         tableFilters = {};
-        updateDashboard();
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const validFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return false;
+            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            const isReconciled = type.includes('ECF') || type.includes('TRF') || type.includes('INV');
+            const isPendingPRF = (type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname);
+            switch(mode) {
+                case 'COMM_TOTAL': return isReconciled || isPendingPRF;
+                case 'COMM_PRF':   return isPendingPRF;
+                case 'COMM_ECF':   return type.includes('ECF');
+                case 'COMM_TRF':   return type.includes('TRF');
+                case 'COMM_INV':   return type.includes('INV');
+                case 'REC_TOTAL':  return isReconciled;
+                case 'REC_ECF':    return type.includes('ECF');
+                case 'REC_TRF':    return type.includes('TRF');
+                case 'REC_INV':    return type.includes('INV');
+                default: return false;
+            }
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+        if (fileNameKey) tableFilters[fileNameKey] = validFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
     }
 
-    function toggleCCSort() { ccSortOrder = ccSortOrder === 'desc' ? 'asc' : 'desc'; renderCCDriversList(); }
-    function toggleItemSort() { itemSortOrder = itemSortOrder === 'desc' ? 'asc' : 'desc'; renderItemDriversList(); }
-    function changeCCPage(dir) { ccCurrentPage += dir; renderCCDriversList(); }
-    function changeItemPage(dir) { itemCurrentPage += dir; renderItemDriversList(); }
+    function drillToLedgerByStatus(statusTarget) {
+        tableFilters = {};
+        const rawCols = Object.keys(appData[0] || {});
+        const filters = getGlobalFiltersObj();
+        const matchingFileNames = recData
+            .filter(r => {
+                const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+                if (filters.comp && !filters.comp.includes(rowComp)) return false;
+                if (filters.dept && !filters.dept.includes(rowDept)) return false;
+                if (filters.cc && !filters.cc.includes(rowCC)) return false;
+                if (filters.yr && !filters.yr.includes(rowYr)) return false;
+                if (filters.mo && !filters.mo.includes(rowMo)) return false;
+                const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+                if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+                return (getCol(r, 'Status') || "").toLowerCase().includes(statusTarget.toLowerCase());
+            })
+            .map(r => (getCol(r, 'PRF file') || "").toString().trim())
+            .filter(name => name !== "");
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        if (fileNameKey) tableFilters[fileNameKey] = matchingFileNames;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
 
-    function toggleDropdown(id) {
-        document.querySelectorAll('.col-dropdown-container').forEach(d => { if (d.id !== id) d.style.display = 'none'; });
-        const el = document.getElementById(id);
-        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    function drillToLedgerByAgeing(label) {
+        tableFilters = {};
+        const rawCols = Object.keys(appData[0] || {});
+        const filters = getGlobalFiltersObj();
+        const filteredFiles = recData.filter(r => {
+            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+            if (filters.comp && !filters.comp.includes(rowComp)) return false;
+            if (filters.dept && !filters.dept.includes(rowDept)) return false;
+            if (filters.cc && !filters.cc.includes(rowCC)) return false;
+            if (filters.yr && !filters.yr.includes(rowYr)) return false;
+            if (filters.mo && !filters.mo.includes(rowMo)) return false;
+            const status = (getCol(r, 'Status') || "").toLowerCase();
+            const overdue = cleanNum(getCol(r, 'Days Overdue'));
+            if (!status.includes('pending') || overdue <= 0) return false;
+            if (label === '1-7d') return overdue <= 7;
+            if (label === '8-14d') return overdue > 7 && overdue <= 14;
+            if (label === '15d+') return overdue > 14;
+            return false;
+        }).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        if (fileNameKey) tableFilters[fileNameKey] = filteredFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
+    }
+
+    function getGlobalFiltersObj() {
+        const norm = (dStr) => dStr ? new Date(dStr + "T00:00:00") : null;
+        return { 
+            start: norm(document.getElementById('dStart').value), 
+            end: norm(document.getElementById('dEnd').value), 
+            yr: getSelected('fYearList'), 
+            mo: getSelected('fMonthList'), 
+            comp: getSelected('fCompList'), 
+            dept: getSelected('fDeptList'), 
+            cc: getSelected('fCCList'), 
+            deptGroup: getSelected('fDeptGroupList') 
+        };
+    }
+
+    function syncGlobalSelectionsToLedger(filters) {
+        const rawCols = Object.keys(appData[0] || {});
+        if (filters.yr) { const k = rawCols.find(c => c.toLowerCase() === 'year'); if(k) tableFilters[k] = filters.yr; }
+        if (filters.mo) { const k = rawCols.find(c => c.toLowerCase() === 'month'); if(k) tableFilters[k] = filters.mo; }
+        if (filters.comp) { const k = rawCols.find(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company'); if(k) tableFilters[k] = filters.comp; }
+        if (filters.dept) { const k = rawCols.find(c => c.toLowerCase() === 'department'); if(k) tableFilters[k] = filters.dept; }
+        if (filters.cc) { const k = rawCols.find(c => c.toLowerCase().includes('cost center') || c.toLowerCase().includes('cost centre')); if(k) tableFilters[k] = filters.cc; }
+        if (filters.deptGroup) { const k = rawCols.find(c => c.toLowerCase().includes('dept group') || c.toLowerCase().includes('department group')); if(k) tableFilters[k] = filters.deptGroup; }
+    }
+
+    function drillToLedger(costCenter, itemDriver = null) {
+        tableFilters = {}; 
+        const filters = getGlobalFiltersObj();
+        const rawCols = Object.keys(appData[0] || {});
+        const fileNameKey = rawCols.find(k => k.toLowerCase().includes('full file name'));
+        const pendingFilesGlobal = recData.filter(r => (getCol(r, 'Status') || "").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file') || "").toString().trim());
+
+        const validFiles = appData.filter(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return false;
+            const rCC = getCol(row, 'Cost Center', 'Cost Centre');
+            if (costCenter && rCC !== costCenter) return false;
+            if (itemDriver) {
+                const rawDriver = getCol(row, 'Cost Drivers', 'Driver');
+                const driverStr = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+                if (driverStr !== itemDriver) return false;
+            }
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            return (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFilesGlobal.includes(fname));
+        }).map(r => (getCol(r, 'Full File Name') || "").toString().trim());
+
+        if (fileNameKey) tableFilters[fileNameKey] = validFiles;
+        syncGlobalSelectionsToLedger(filters);
+        syncFilterIcons();
+        switchTab('approvals-tab', document.getElementById('btn-approvals'));
+        renderApprovalsTable(appData);
     }
 
     function syncFilterIcons() {
         document.querySelectorAll('.header-filter-icon').forEach(icon => {
-            const colId = icon.id.replace('icon_colDrop_', '');
-            const originalKey = Object.keys(tableFilters).find(k => k.replace(/\W/g, '_') === colId);
-            if (originalKey && tableFilters[originalKey].length > 0) icon.classList.add('filter-active');
-            else icon.classList.remove('filter-active');
+            const colName = icon.id.replace('icon_colDrop_', '').replace(/_/g, ' ');
+            icon.classList.remove('active');
+            for (let filterKey in tableFilters) {
+                if (filterKey === colName || (colName === 'Cost Center' && (filterKey.toLowerCase().includes('cost center') || filterKey.toLowerCase().includes('cost centre'))) || (colName === 'Date Approved' && filterKey.toLowerCase().includes('date')) || (colName === 'Month' && filterKey.toLowerCase() === 'month') || (colName === 'Year' && filterKey.toLowerCase() === 'year')) {
+                    icon.classList.add('active');
+                }
+            }
         });
     }
 
-    function drillToLedger(cc, driver) {
-        tableFilters = {};
-        if (cc) tableFilters['Cost Center'] = [cc];
-        if (driver) tableFilters['Cost Drivers'] = [driver];
-        document.getElementById('drilldown-note').innerText = `Filtered for: ${cc || ''} ${driver ? '> ' + driver : ''}`;
-        renderApprovalsTable(appData);
-        document.getElementById('ledger-anchor').scrollIntoView({ behavior: 'smooth' });
+    function toggleDropdown(id) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => { if(d.id !== id) d.classList.remove('show'); }); const el = document.getElementById(id); if (el) el.classList.toggle('show'); }
+    window.onclick = function(event) { if (!event.target.matches('.multiselect-container') && !event.target.closest('.dropdown-content') && !event.target.closest('.col-dropdown-container') && !event.target.matches('.header-filter-icon')) { document.querySelectorAll('.dropdown-content, .col-dropdown-container').forEach(d => d.classList.remove('show')); } }
+
+    const SHEET_ID = "164nSeGrs3Wx_dLdUeoSVanRWzRpcuQic1sCwcgtGmAo";
+    function fetchSheet(sheetName) {
+        const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+        return fetch(url).then(res => {
+            if (!res.ok) throw new Error("Fetch failed");
+            return res.text();
+        }).then(text => {
+            const json = JSON.parse(text.substring(47).slice(0, -2));
+            const cols = json.table.cols.map(c => (c.label || "").trim());
+            return json.table.rows.map(r => { let obj = {}; r.c.forEach((cell, i) => { if(cols[i]) obj[cols[i]] = cell ? (cell.v !== null ? cell.v : "") : ""; }); return obj; });
+        });
     }
 
-    function drillToLedgerByAgeing(ageLabel) {
-        const pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
-        const filtered = appData.filter(r => {
-            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            if (!pendingFiles.has(fname)) return false;
-            const rec = recData.find(x => getCol(x, 'PRF file') === fname);
-            if (!rec) return false;
-            const days = cleanNum(getCol(rec, 'Days Pending'));
-            if (ageLabel === '1-7d') return days >= 1 && days <= 7;
-            if (ageLabel === '8-14d') return days >= 8 && days <= 14;
-            return days >= 15;
-        });
-        document.getElementById('drilldown-note').innerText = `Filtered for Ageing: ${ageLabel}`;
-        renderApprovalsTable(filtered);
-        document.getElementById('ledger-anchor').scrollIntoView({ behavior: 'smooth' });
+    async function fetchData() {
+        try {
+            const [a, b, c, d] = await Promise.all([fetchSheet("Approvals"), fetchSheet("Reconciliation Report"), fetchSheet("P&L Costs Summary"), fetchSheet("Sales")]);
+            appData = a; recData = b; pnlData = c; salesData = d;
+            document.getElementById('status').innerText = "SYSTEM ONLINE • " + new Date().toLocaleTimeString();
+            initFilters(); updateDashboard(); renderApprovalsTable(appData);
+        } catch (e) { console.error(e); document.getElementById('status').innerText = "LINK SEVERED"; }
     }
 
-    function drillToLedgerByTrendPoint(sortKey) {
-        const filtered = appData.filter(r => {
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
-            if (!d) return false;
-            const key = d.getFullYear() + "-" + (d.getMonth() + 1).toString().padStart(2, '0');
-            return key === sortKey;
-        });
-        document.getElementById('drilldown-note').innerText = `Filtered for Trend Period: ${sortKey}`;
-        renderApprovalsTable(filtered);
-        document.getElementById('ledger-anchor').scrollIntoView({ behavior: 'smooth' });
+    function initFilters() {
+        const fill = (id, labelId, data, keys, placeholder) => {
+            const el = document.getElementById(id); if (!el || el.children.length > 0) return;
+            const vals = [...new Set(data.map(r => getCol(r, ...keys)).filter(v => v))].sort();
+            const sa = document.createElement('div'); sa.className = 'dropdown-item'; sa.style.borderBottom = '2px solid var(--primary)';
+            sa.innerHTML = `<input type="checkbox" onchange="toggleAllFilters('${id}', '${labelId}', '${placeholder}', this.checked)"> <b>SELECT ALL</b>`;
+            el.appendChild(sa);
+            vals.forEach(v => { const item = document.createElement('div'); item.className = 'dropdown-item'; item.innerHTML = `<input type="checkbox" value="${v}" onchange="updateFilterLabel('${id}', '${labelId}', '${placeholder}')"> ${v}`; el.appendChild(item); });
+        };
+        fill('fCompList', 'fCompLabel', appData, ['Burn Company', 'Company'], 'Entities'); 
+        fill('fDeptList', 'fDeptLabel', appData, ['Department'], 'Departments'); 
+        fill('fCCList', 'fCCLabel', appData, ['Cost Center', 'Cost Centre'], 'Cost Centers'); 
+        fill('fMonthList', 'fMonthLabel', appData, ['Month'], 'Months'); 
+        fill('fYearList', 'fYearLabel', appData, ['Year'], 'Years');
+        fill('fDeptGroupList', 'fDeptGroupLabel', appData, ['Department Group', 'Dept Group'], 'Dept Groups');
     }
+
+    function updateFilterLabel(containerId, labelId, placeholder) {
+        const checked = getSelected(containerId); const labelEl = document.getElementById(labelId);
+        if (checked) { labelEl.classList.add('active-filter'); labelEl.innerText = checked.length === 1 ? checked[0] : `${checked.length} ${placeholder} Selected`; }
+        else { labelEl.innerText = `Select ${placeholder}...`; labelEl.classList.remove('active-filter'); }
+        updateDashboard();
+    }
+
+    function toggleAllFilters(containerId, labelId, placeholder, checked) { document.querySelectorAll(`#${containerId} input`).forEach(i => i.checked = checked); updateFilterLabel(containerId, labelId, placeholder); }
+    function getSelected(id) { const checked = Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value).filter(v => v); return checked.length > 0 ? checked : null; }
+    
+    function resetGlobalFilters() {
+        document.getElementById('dStart').value = ''; document.getElementById('dEnd').value = '';
+        document.querySelectorAll('#global-filters .dropdown-content input').forEach(i => i.checked = false);
+        [['fYearList', 'fYearLabel', 'Years'],['fMonthList', 'fMonthLabel', 'Months'],['fCompList', 'fCompLabel', 'Entities'],['fDeptList', 'fDeptLabel', 'Departments'],['fCCList', 'fCCLabel', 'Cost Centers'],['fDeptGroupList', 'fDeptGroupLabel', 'Dept Groups']].forEach(c => { const labelEl = document.getElementById(c[1]); if(labelEl) { labelEl.innerText = `Select ${c[2]}...`; labelEl.classList.remove('active-filter'); }});
+        selectedCCForDrivers = null;
+        updateDashboard();
+    }
+
+    function resetLedgerFilters() { tableFilters = {}; amountSortOrder = 'desc'; document.querySelectorAll('.col-dropdown-container input').forEach(i => i.checked = false); document.querySelectorAll('.header-filter-icon').forEach(icon => icon.classList.remove('active')); renderApprovalsTable(appData); }
+
+    let globalTotalComm = 0;
+    let globalTotalSalesQty = 0;
+    let currentSortedTrendKeys = [];
 
     function updateDashboard() {
+        const activeTab = document.querySelector('.tab-content.active').id;
         const filters = getGlobalFiltersObj();
-        let penCount=0, recCount=0, penSum=0, recSum=0, penDaysTotal=0, maxDays=0, recWithin30=0;
-        let ccMap = {}, ccCommittedMap = {}, itemMap = {}, salesTrendAgg = {}, commitTrendAgg = {};
-        let countrySalesMap = {}, companyCommittedAgg = {};
         
-        let pendingFilesMap = {};
+        let ecf = 0, trf_actual = 0, inv = 0, totalSalesQty = 0;
+        let ccCommittedMap = {}, salesTrendAgg = {}, companyCommittedAgg = {}, commitTrendAgg = {}, countrySalesMap = {};
+
+        const getTrendKey = (date) => {
+            if (!date) return null;
+            if (currentGranularity === 'weekly') {
+                const wk = getWeekNumber(date);
+                const monthShort = monthNames[date.getMonth()].substring(0,3);
+                return { sort: `${date.getFullYear()}-${wk.toString().padStart(2, '0')}`, display: `W${wk}.${monthShort}` };
+            } else if (currentGranularity === 'monthly') {
+                return { sort: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`, display: monthNames[date.getMonth()].substring(0,3) };
+            } else {
+                const q = getQuarter(date);
+                return { sort: `${date.getFullYear()}-${q}`, display: q };
+            }
+        };
+
+        let pendingPrfSet = new Set();
         recData.forEach(r => {
-            const fname = (getCol(r, 'PRF file') || "").toString().trim();
-            if (fname) pendingFilesMap[fname] = r;
+            if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
+                pendingPrfSet.add((getCol(r, 'PRF file')||"").toString().trim());
+            }
         });
 
-        salesData.forEach(s => {
-            const d = parseExcelDate(getCol(s, 'Date'));
-            if (!d) return;
-            const yr = d.getFullYear(), mo = d.getMonth() + 1;
-            const sortKey = yr + "-" + mo.toString().padStart(2, '0');
-            const qty = cleanNum(getCol(s, 'Sales Qty', 'Qty'));
-            const country = getCol(s, 'Country', 'Region') || 'HQ';
+        let totalPendingPrfAmt = 0;
+        appData.forEach(row => {
+            const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
+            if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
+            else if (activeTab === 'dashboard') { if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return; }
             
-            if (!salesTrendAgg[sortKey]) salesTrendAgg[sortKey] = { val: 0, label: monthNames[d.getMonth()] + " " + yr.toString().slice(-2) };
-            salesTrendAgg[sortKey].val += qty;
-            countrySalesMap[country] = (countrySalesMap[country] || 0) + qty;
-        });
-
-        appData.forEach(r => {
-            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
+            const d = parseExcelDate(getCol(row, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return; 
+            if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
 
-            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            const amt = cleanNum(getCol(r, 'Amount (USD)'));
-            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            const recInfo = pendingFilesMap[fname];
+            const amt = cleanNum(getCol(row, 'Amount (USD)')); 
+            const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
+            const fname = (getCol(row, 'Full File Name') || "").toString().trim();
+            const rComp = getCol(row, 'Burn Company', 'Company'), rCC = getCol(row, 'Cost Center', 'Cost Centre') || "Misc";
 
-            if (type.includes('PRF') || type.includes('PR')) {
-                const isPen = recInfo && (getCol(recInfo, 'Status') || "").toLowerCase().includes('pending');
-                const isRec = recInfo && (getCol(recInfo, 'Status') || "").toLowerCase().includes('reconciled');
-                
-                if (!ccMap[rCC]) ccMap[rCC] = { count: 0, sum: 0 };
-                ccMap[rCC].count++;
-                if (isRec) {
-                    recCount++; recSum += amt; ccMap[rCC].sum += 100;
-                    const days = cleanNum(getCol(recInfo, 'Days to Reconcile'));
-                    if (days <= 30) recWithin30++;
-                } else if (isPen) {
-                    penCount++; penSum += amt;
-                    const days = cleanNum(getCol(recInfo, 'Days Pending'));
-                    penDaysTotal += days;
-                    if (days > maxDays) maxDays = days;
-                }
+            let isCommitted = false;
+            if (type.includes('ECF')) { ecf += amt; isCommitted = true; } 
+            else if (type.includes('TRF')) { trf_actual += amt; isCommitted = true; } 
+            else if (type.includes('INV')) { inv += amt; isCommitted = true; }
+            else if ((type.includes('PRF') || type.includes('PR')) && pendingPrfSet.has(fname)) {
+                totalPendingPrfAmt += amt;
+                isCommitted = true;
             }
 
-            const isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || 
-                                ((type.includes('PRF') || type.includes('PR')) && recInfo && (getCol(recInfo, 'Status') || "").toLowerCase().includes('pending'));
-            
             if (isCommitted) {
+                const tObj = getTrendKey(d);
+                if (tObj) {
+                    if (!commitTrendAgg[tObj.sort]) commitTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
+                    commitTrendAgg[tObj.sort].val += amt;
+                }
                 ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
-                const company = getCol(r, 'Burn Company', 'Company') || 'Other';
-                companyCommittedAgg[company] = (companyCommittedAgg[company] || 0) + amt;
-                
-                if (d) {
-                    const sortKey = d.getFullYear() + "-" + (d.getMonth() + 1).toString().padStart(2, '0');
-                    if (!commitTrendAgg[sortKey]) commitTrendAgg[sortKey] = { val: 0, label: monthNames[d.getMonth()] + " " + d.getFullYear().toString().slice(-2) };
-                    commitTrendAgg[sortKey].val += amt;
+                const country = ENTITY_TO_SALES_COUNTRY_MAP[rComp] || rComp;
+                companyCommittedAgg[country] = (companyCommittedAgg[country] || 0) + amt;
+            }
+        });
+
+        salesData.forEach(r => {
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
+            if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
+            if (filters.mo && !filters.mo.includes(sMo)) return;
+            let isSelectedCountry = true;
+            if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
+            if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) {
+                const q = cleanNum(getCol(r, 'Sales QTY'));
+                totalSalesQty += q;
+                countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
+                const tObj = getTrendKey(sDate);
+                if (tObj) { 
+                    if (!salesTrendAgg[tObj.sort]) salesTrendAgg[tObj.sort] = { val: 0, label: tObj.display };
+                    salesTrendAgg[tObj.sort].val += q; 
                 }
             }
         });
 
-        const avgMax = maxDays;
-        const avgPend = penCount > 0 ? penDaysTotal / penCount : 0;
-        globalTotalComm = Object.values(ccCommittedMap).reduce((a,b) => a + b, 0);
-        globalTotalSalesQty = Object.values(countrySalesMap).reduce((a,b) => a + b, 0);
+        const fmt = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
+        const fmtDec = (v) => v.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
+        
+        const totalComm = totalPendingPrfAmt + ecf + trf_actual + inv;
+        globalTotalComm = totalComm;
+        globalTotalSalesQty = totalSalesQty;
 
+        document.getElementById('valPRF').innerText = fmt(totalComm); 
+        document.getElementById('subCommPRF').innerText = fmt(totalPendingPrfAmt); 
+        document.getElementById('subCommECF').innerText = fmt(ecf); 
+        document.getElementById('subCommTRF').innerText = fmt(trf_actual);
+        document.getElementById('subCommInv').innerText = fmt(inv);
+        document.getElementById('valActual').innerText = fmt(ecf+trf_actual+inv); 
+        document.getElementById('subECF').innerText = fmt(ecf); 
+        document.getElementById('subTRF').innerText = fmt(trf_actual); 
+        document.getElementById('subInv').innerText = fmt(inv);
+        document.getElementById('valPNL').innerText = totalSalesQty > 0 ? fmtDec(totalComm / totalSalesQty) : "$0.00"; 
+        document.getElementById('subSalesQty').innerText = totalSalesQty.toLocaleString();
+        document.getElementById('valUnitPNLTotal').innerText = fmt(totalComm);
+        
+        let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
+        recData.forEach(r => {
+            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+            const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
+            if (filters.deptGroup && !filters.deptGroup.includes(rowDeptGroup)) return;
+            if (filters.comp && !filters.comp.includes(rowComp)) return;
+            if (filters.dept && !filters.dept.includes(rowDept)) return;
+            if (filters.cc && !filters.cc.includes(rowCC)) return;
+            if (filters.yr && !filters.yr.includes(rowYr)) return;
+            if (filters.mo && !filters.mo.includes(rowMo)) return;
+            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date', 'PRF Date'));
+            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            const status = (getCol(r, 'Status')||"").toLowerCase(), amt = cleanNum(getCol(r, 'PRF Amount (USD)')), cc = rowCC || "Misc", overdue = cleanNum(getCol(r, 'Days Overdue')), daysToRec = cleanNum(getCol(r, 'Actual Recon Days')), maxDays = cleanNum(getCol(r, 'Max Reconciliation Days')), pendDays = cleanNum(getCol(r, 'Days Pending'));
+            if (status.includes('reconciled')) { recSum += amt; recCount++; if(daysToRec <= 30) recWithin30++; } 
+            else { penSum += amt; penCount++; if (overdue > 0) { if (overdue <= 7) a1++; else if (overdue <= 14) a2++; else a3++; } }
+            mDaysTotal += maxDays; pDaysTotal += pendDays; count++;
+            if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 }; ccMap[cc].sum += cleanNum(getCol(r, 'Efficiency %')); ccMap[cc].count++;
+        });
+        
+        const avgMax = count > 0 ? (mDaysTotal / count) : 0;
+        const avgPend = count > 0 ? (pDaysTotal / count) : 0;
+        const overLabel = document.getElementById('vOverLabel'), overVal = document.getElementById('vOver');
+        if (avgMax > avgPend) { overLabel.innerText = "Avg Days to Deadline"; overVal.innerText = (avgMax - avgPend).toFixed(0) + " Days"; overVal.style.color = "var(--green)"; } 
+        else { overLabel.innerText = "Avg Overdue"; overVal.innerText = (avgPend - avgMax).toFixed(0) + " Days"; overVal.style.color = "var(--red)"; }
+        
         document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
         document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
         document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
@@ -501,14 +862,13 @@
         document.getElementById('usdTotalMix').innerText = fmt(penSum);
         
         updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
-        updateVisuals(recCount, penCount, [0, 0, 0], ccMap); // Ageing calculated inside updateVisuals usually
+        updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
         
         ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
         ccCurrentPage = 1;
         renderCCDriversList();
-        updateCostDashboardVisuals(salesTrendAgg, globalTotalComm, globalTotalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
+        updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
         updateItemDriversData();
-        renderApprovalsTable(appData);
     }
 
     function renderCCDriversList() {
@@ -550,7 +910,11 @@
 
             const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
+            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
             if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
+            if (filters.cc && !filters.cc.includes(rCC)) return;
 
             const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(r, 'Full File Name') || "").toString().trim();
@@ -705,19 +1069,8 @@
     function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) tableFilters[originalKey] = checked; else delete tableFilters[originalKey]; renderApprovalsTable(appData); }
     function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
     function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.style.color = isGood ? 'var(--green)' : 'var(--red)'; tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good-pill' : 'bg-bad-pill'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
-    
     function updateVisuals(rec, pen, ageData, rankMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); 
-        
-        let a1=0, a2=0, a3=0;
-        recData.forEach(r => {
-           if ((getCol(r, 'Status')||"").toLowerCase().includes('pending')) {
-               const d = cleanNum(getCol(r, 'Days Pending'));
-               if (d <= 7) a1++; else if (d <= 14) a2++; else a3++;
-           }
-        });
-        ageChart.data.datasets[0].data = [a1, a2, a3]; ageChart.update();
-
+        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
         const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
         Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
             const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
@@ -734,9 +1087,7 @@
         weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
         companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
         unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
-        
-        fetchData(); 
-        setInterval(fetchData, 60000);
+        fetchData(); setInterval(fetchData, 60000);
     };
 </script>
 </body>
