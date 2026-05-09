@@ -3,893 +3,701 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Burn Cost & Recon Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Executive Finance & Recon Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --card-bg: #1e293b;
-            --primary: #00d2ff;
-            --secondary: #3a4750;
-            --accent: #6366f1;
-            --green: #00ff9d;
-            --orange: #ff9f43;
-            --red: #ff4d4d;
-            --text-light: #f8fafc;
-            --text-dim: #94a3b8;
-            --border: #334155;
+            --bg-dark: #020617; --card-bg: #1e293b; --primary: #00d2ff; --accent: #3a86ff;
+            --green: #00ff9d; --orange: #ff9f43; --red: #ff4d4d; --text-light: #f8fafc; --text-dim: #94a3b8;
         }
-
-        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text-light); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-
-        /* Header */
-        header { 
-            background: rgba(30, 41, 59, 0.8); 
-            backdrop-filter: blur(10px);
-            padding: 12px 24px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            z-index: 100;
-        }
-        .logo-section h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; color: var(--primary); }
-        .logo-section span { font-size: 12px; color: var(--text-dim); font-weight: 400; }
-
-        .global-controls { display: flex; gap: 15px; align-items: center; }
-        .dept-pills { display: flex; background: #0f172a; border-radius: 8px; padding: 3px; border: 1px solid var(--border); }
-        .dept-pill { 
-            padding: 6px 16px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 6px;
-            color: var(--text-dim); transition: 0.2s;
-        }
-        .dept-pill.active { background: var(--primary); color: #000; }
-        .dept-pill:hover:not(.active) { color: var(--text-light); background: #1e293b; }
-
-        .nav-tabs { display: flex; gap: 5px; margin-left: 20px; border-left: 1px solid var(--border); padding-left: 20px; }
-        .nav-btn { 
-            padding: 8px 16px; border: none; background: transparent; color: var(--text-dim); 
-            font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 6px; transition: 0.2s;
-        }
-        .nav-btn.active { background: rgba(0, 210, 255, 0.1); color: var(--primary); }
-
-        /* Main Content */
-        main { flex: 1; padding: 15px; overflow-y: auto; display: none; }
-        main.active { display: block; }
-
-        .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: 320px 1fr 350px; 
-            grid-template-rows: auto 1fr;
-            gap: 15px; 
-            height: 100%;
-        }
-
-        /* Cards */
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-title { font-size: 13px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Recon Analytics Section (Left) */
-        .recon-section { grid-row: 1 / 3; }
-        .metric-group { margin-bottom: 20px; }
-        .metric-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
-        .metric-val { font-size: 24px; font-weight: 900; }
-        .metric-label { font-size: 11px; font-weight: 600; color: var(--text-dim); }
-        
-        .status-pill { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; }
-        .status-rec { background: rgba(0, 255, 157, 0.1); color: var(--green); }
-        .status-pen { background: rgba(255, 77, 77, 0.1); color: var(--red); }
-
-        .chart-container-recon { height: 160px; position: relative; margin: 10px 0; }
-        .age-summary { background: #0f172a; padding: 12px; border-radius: 8px; margin-top: 15px; }
-        .age-item { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; }
-        .age-item:last-child { margin-bottom: 0; }
-        .age-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-
-        /* Cost Analytics Section (Center) */
-        .cost-section { display: flex; flex-direction: column; gap: 15px; }
-        .top-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .stat-box { background: var(--card-bg); border: 1px solid var(--border); padding: 15px; border-radius: 12px; text-align: center; }
-        .stat-val { font-size: 20px; font-weight: 900; display: block; margin-bottom: 4px; }
-        .stat-sub { font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; }
-
-        .visual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex: 1; }
-        .chart-box { min-height: 250px; }
-
-        /* Rank Section (Right) */
-        .rank-section { display: flex; flex-direction: column; gap: 15px; }
-        .rank-item { padding: 10px; border-bottom: 1px solid var(--border); }
-        .rank-item:last-child { border-bottom: none; }
-        .rank-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .rank-label { font-size: 11px; font-weight: 700; color: var(--text-light); }
-        .rank-label-link { cursor: pointer; color: var(--primary); text-decoration: underline; }
-        .rank-label-link:hover { color: #fff; }
-        .active-cc { background: rgba(0, 210, 255, 0.2); border-radius: 4px; padding: 2px 5px; }
-        .rank-impact-val { font-size: 12px; font-weight: 800; cursor: pointer; }
-        .rank-bar-bg { height: 6px; background: #0f172a; border-radius: 3px; overflow: hidden; margin-bottom: 5px; }
-        .rank-bar-fill { height: 100%; transition: width 0.5s ease-out; }
-        .rank-footer { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); font-weight: 600; }
-        .rank-pct { color: var(--primary); font-weight: 800; }
-        .rank-unit-val { color: var(--green); font-weight: 800; }
-
-        /* Paging Control */
-        .paging-box { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; margin-top: auto; border-top: 1px solid var(--border); }
-        .paging-btn { background: var(--secondary); border: none; color: #fff; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: 800; }
-        .paging-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .pag-info { font-size: 10px; font-weight: 700; color: var(--text-dim); }
-
-        /* Ledger Tab Styles */
-        .ledger-container { height: 100%; display: flex; flex-direction: column; }
-        .ledger-controls { 
-            background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; 
-            padding: 15px; margin-bottom: 15px; display: flex; gap: 20px; align-items: flex-end;
-        }
-        .filter-group { display: flex; flex-direction: column; gap: 6px; }
-        .filter-label { font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
-        .filter-input { 
-            background: #0f172a; border: 1px solid var(--border); color: #fff; 
-            padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; outline: none;
-        }
-        .filter-input:focus { border-color: var(--primary); }
-
-        .table-wrap { flex: 1; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; overflow: auto; position: relative; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-dark); color: var(--text-light); overflow-x: hidden; }
+        .dashboard-container { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
+        .sidebar { background: #0f172a; padding: 20px; border-right: 1px solid #334155; display: flex; flex-direction: column; gap: 20px; }
+        .logo-area { font-weight: 900; font-size: 20px; color: var(--primary); letter-spacing: -1px; margin-bottom: 10px; }
+        .nav-btn { padding: 12px 15px; border-radius: 8px; cursor: pointer; color: var(--text-dim); transition: 0.3s; font-weight: 600; }
+        .nav-btn:hover, .nav-btn.active { background: var(--card-bg); color: var(--primary); }
+        .main-content { padding: 25px; overflow-y: auto; }
+        .top-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: var(--card-bg); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary); }
+        .stat-label { font-size: 11px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 5px; }
+        .stat-value { font-size: 20px; font-weight: 900; }
+        .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 5px; }
+        .chart-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--card-bg); border-radius: 15px; padding: 20px; position: relative; }
+        .card-title { font-size: 14px; font-weight: 800; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .chart-container { height: 250px; position: relative; }
+        .table-section { background: var(--card-bg); border-radius: 15px; padding: 15px; overflow: hidden; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        thead { position: sticky; top: 0; background: #1e293b; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        th { padding: 12px 15px; text-align: left; font-weight: 800; text-transform: uppercase; color: var(--text-dim); border-bottom: 2px solid var(--border); cursor: default; }
-        td { padding: 10px 15px; border-bottom: 1px solid var(--border); color: var(--text-light); font-weight: 500; }
-        tr:hover td { background: rgba(255,255,255,0.03); }
-
-        .pdf-btn { 
-            padding: 4px 8px; background: rgba(99, 102, 241, 0.2); color: #818cf8; 
-            border: 1px solid rgba(99, 102, 241, 0.4); text-decoration: none; 
-            border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase;
-        }
-        .pdf-btn:hover { background: #6366f1; color: #fff; }
-
-        /* Enhanced Filter Icons */
-        .header-filter-icon { margin-left: 6px; cursor: pointer; color: var(--text-dim); font-size: 10px; }
-        .header-filter-icon.active { color: var(--primary); }
-        
-        .col-dropdown-container {
-            position: absolute; background: #1e293b; border: 1px solid var(--primary);
-            border-radius: 6px; min-width: 200px; max-height: 300px; display: none;
-            flex-direction: column; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            margin-top: 5px;
-        }
-        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #0f172a; }
-        .col-filter-search { width: 100%; background: #1e293b; border: 1px solid var(--border); color: #fff; padding: 5px; font-size: 11px; margin-bottom: 5px; }
-        .col-options-list { overflow-y: auto; flex: 1; padding: 5px 0; }
-        .dropdown-item { padding: 6px 12px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-light); cursor: pointer; }
-        .dropdown-item:hover { background: rgba(0, 210, 255, 0.1); }
-        .dropdown-item input { cursor: pointer; }
-
-        /* Executive Summary Styles */
-        .exec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        .exec-card { background: #1e293b; border-radius: 12px; border: 1px solid var(--border); padding: 15px; }
-        .exec-label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
-        .exec-main { display: flex; align-items: center; justify-content: space-between; }
-        .exec-val { font-size: 28px; font-weight: 900; }
-        .trend-pill { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
-        .bg-good-pill { background: rgba(0, 255, 157, 0.1); color: var(--green); border: 1px solid rgba(0,255,157,0.3); }
-        .bg-bad-pill { background: rgba(255, 77, 77, 0.1); color: var(--red); border: 1px solid rgba(255,77,77,0.3); }
-
-        .status-text-green { color: var(--green); font-weight: 800; }
-        .status-text-orange { color: var(--orange); font-weight: 800; }
-        
-        .sort-indicator { font-size: 10px; margin-left: 5px; color: var(--primary); }
+        th { background: #0f172a; text-align: left; padding: 12px; font-weight: 800; color: var(--text-dim); position: sticky; top: 0; white-space: nowrap; }
+        td { padding: 10px; border-bottom: 1px solid #334155; }
+        .status-text-green { color: var(--green); font-weight: 900; }
+        .status-text-orange { color: var(--orange); font-weight: 900; }
+        .pdf-btn { background: var(--accent); color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 9px; font-weight: 700; }
+        .filter-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        select, input[type="date"] { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; font-size: 12px; }
+        .header-filter-icon { font-size: 10px; cursor: pointer; color: var(--primary); margin-left: 5px; }
+        .col-dropdown-container { display: none; position: absolute; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px; z-index: 1000; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); top: 100%; }
+        .col-filter-search { width: 100%; margin-bottom: 10px; }
+        .col-options-list { max-height: 200px; overflow-y: auto; }
+        .dropdown-item { display: flex; align-items: center; gap: 8px; font-size: 10px; padding: 4px 0; }
         .sortable-header { cursor: pointer; }
-        .sortable-header:hover { background: rgba(0, 210, 255, 0.05); }
-
-        /* Loader */
-        #loader { 
-            position: fixed; inset: 0; background: var(--bg-dark); 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            z-index: 9999; 
-        }
-        .spinner { width: 50px; height: 50px; border: 5px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader-text { margin-top: 20px; font-weight: 700; color: var(--primary); font-size: 14px; letter-spacing: 2px; }
-        
-        .empty-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 12px; font-style: italic; border: 1px dashed var(--border); border-radius: 8px; }
+        .rank-list { display: flex; flex-direction: column; gap: 12px; }
+        .rank-item { display: flex; flex-direction: column; gap: 5px; }
+        .rank-top-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; }
+        .rank-bar-bg { width: 100%; height: 6px; background: #0f172a; border-radius: 3px; overflow: hidden; }
+        .rank-bar-fill { height: 100%; transition: 0.5s ease-out; }
+        .rank-pct { font-size: 10px; color: var(--text-dim); }
+        .rank-label-link { cursor: pointer; color: var(--primary); text-decoration: underline; }
+        .active-cc { background: rgba(0, 210, 255, 0.15); border-radius: 4px; padding: 2px 4px; }
+        .rank-impact-val { color: var(--green); font-family: monospace; font-size: 13px; cursor: pointer; }
+        .rank-footer { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); }
+        .rank-unit-val { color: var(--primary); font-weight: 900; }
+        .pagination-box { display: flex; align-items: center; gap: 10px; font-size: 10px; margin-top: 10px; }
+        .pagination-box button { background: #0f172a; border: 1px solid #334155; color: white; padding: 2px 8px; cursor: pointer; border-radius: 4px; }
+        .sort-indicator { font-size: 8px; margin-left: 3px; color: var(--primary); }
+        .empty-placeholder { text-align: center; color: var(--text-dim); padding: 40px; font-style: italic; font-size: 12px; }
+        .trend-pill { padding: 4px 8px; border-radius: 12px; font-size: 9px; font-weight: 900; }
+        .bg-good-pill { background: rgba(0, 255, 157, 0.15); color: var(--green); }
+        .bg-bad-pill { background: rgba(255, 77, 77, 0.15); color: var(--red); }
+        .drilldown-breadcrumb { font-size: 11px; color: var(--primary); margin-bottom: 10px; display: none; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div id="loader">
-    <div class="spinner"></div>
-    <div class="loader-text">SYNCING LIVE DATA...</div>
-</div>
-
-<header>
-    <div class="logo-section">
-        <h1>BURN DASHBOARD <span id="lastUpdated">...</span></h1>
-        <span>Committed Costs & Recon Performance</span>
-    </div>
-
-    <div class="global-controls">
-        <div class="dept-pills" id="deptFilter">
-            <div class="dept-pill active" onclick="setDeptGroup('ALL', this)">ALL DEPTS</div>
-            <div class="dept-pill" onclick="setDeptGroup('OPS', this)">OPERATIONS</div>
-            <div class="dept-pill" onclick="setDeptGroup('SALES', this)">SALES/MKT</div>
-            <div class="dept-pill" onclick="setDeptGroup('G&A', this)">G&A / TECH</div>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="logo-area">PRF INSIGHTS</div>
+            <div class="nav-btn active" onclick="switchTab('recon')">Recon Operations</div>
+            <div class="nav-btn" onclick="switchTab('cost')">Cost Driver Analysis</div>
+            <div class="nav-btn" onclick="switchTab('ledger')">Approvals Ledger</div>
+            <div style="margin-top:auto; font-size: 10px; color: var(--text-dim);">
+                Last Updated: <span id="lastUpdated">--</span>
+            </div>
         </div>
+        <div class="main-content">
+            <div class="filter-row">
+                <input type="date" id="fStart" onchange="updateDashboard()">
+                <input type="date" id="fEnd" onchange="updateDashboard()">
+                <select id="fYear" multiple onchange="updateDashboard()"></select>
+                <select id="fMonth" multiple onchange="updateDashboard()"></select>
+                <select id="fCompany" multiple onchange="updateDashboard()"></select>
+                <select id="fDept" multiple onchange="updateDashboard()"></select>
+                <select id="fCC" multiple onchange="updateDashboard()"></select>
+                <button onclick="resetFilters()" style="background:var(--red); border:none; color:white; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:11px; font-weight:700;">RESET ALL</button>
+            </div>
 
-        <nav class="nav-tabs">
-            <button class="nav-btn active" onclick="switchTab('dashboard', this)">ANALYTICS</button>
-            <button class="nav-btn" onclick="switchTab('ledger', this)">LEDGER</button>
-        </nav>
+            <div id="reconTab">
+                <div class="top-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">System Efficiency</div>
+                        <div class="stat-value" id="vEff">--</div>
+                        <div class="stat-sub" id="countRec">--</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--orange);">
+                        <div class="stat-label">Avg. Recon Speed</div>
+                        <div class="stat-value" id="vMax">--</div>
+                        <div class="stat-sub">From Approval to Close</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--red);">
+                        <div class="stat-label">Pending Aging</div>
+                        <div class="stat-value" id="vPend">--</div>
+                        <div class="stat-sub" id="countPen">--</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: var(--green);">
+                        <div class="stat-label">Committed Risk</div>
+                        <div class="stat-value" id="usdTotalMix">--</div>
+                        <div class="stat-sub">Open PRF liability</div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card">
+                        <div class="card-title">Reconciliation Health <span class="trend-pill bg-good-pill">LIVE</span></div>
+                        <div class="chart-container"><canvas id="mixChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Aging Distribution (Pending Only)</div>
+                        <div class="chart-container"><canvas id="ageChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card">
+                        <div class="card-title">Executive Summary</div>
+                        <div id="execBody" style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+                            <div class="exec-row" id="exComp">
+                                <div class="stat-label">Compliance Ratio</div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div class="stat-value" id="exCompVal">--</div>
+                                    <div id="exCompTrend">--</div>
+                                </div>
+                            </div>
+                            <div class="exec-row" id="exSpeed">
+                                <div class="stat-label">Pipeline Velocity</div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div class="stat-value" id="exSpeedVal">--</div>
+                                    <div id="exSpeedTrend">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Top 5 Critical Cost Centers (Health)</div>
+                        <div class="rank-list" id="healthRankList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="costTab" style="display:none;">
+                <div class="top-stats-grid">
+                    <div class="stat-card"><div class="stat-label">Total Comm. Value</div><div class="stat-value" id="usdRec">--</div></div>
+                    <div class="stat-card" style="border-left-color: var(--orange);"><div class="stat-label">Total Pen. Value</div><div class="stat-value" id="usdPen">--</div></div>
+                    <div class="stat-card" style="border-left-color: var(--green);"><div class="stat-label">Sales Unit Qty</div><div class="stat-value" id="vSalesQty">--</div></div>
+                    <div class="stat-card" style="border-left-color: var(--accent);"><div class="stat-label">Comm. Cost/Unit</div><div class="stat-value" id="vCostPerUnit">--</div></div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-title">Cost Trend vs. Sales Performance</div>
+                        <div class="chart-container" style="height:320px;"><canvas id="trendChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card">
+                        <div class="card-title">Committed Drivers by CC (Top Impact)</div>
+                        <div id="ccDriversList" class="rank-list">
+                            <div id="driverRankList"></div>
+                            <div class="pagination-box" id="ccPagination">
+                                <button onclick="changeCCPage(-1)">PREV</button>
+                                <span class="pag-info"></span>
+                                <button onclick="changeCCPage(1)">NEXT</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title" id="itemDriverTitle">Item Drivers (Committed)</div>
+                        <div id="itemDriversList" class="rank-list">
+                            <div id="costDriverList"></div>
+                            <div class="pagination-box" id="itemPagination">
+                                <button onclick="changeItemPage(-1)">PREV</button>
+                                <span class="pag-info"></span>
+                                <button onclick="changeItemPage(1)">NEXT</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-title">Actual P&L Spend vs. Committed Trend</div>
+                        <div class="chart-container" style="height:320px;"><canvas id="weeklyPnlChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="chart-grid">
+                    <div class="card"><div class="card-title">Company Comm. Mix</div><div class="chart-container"><canvas id="companyDistChart"></canvas></div></div>
+                    <div class="card"><div class="card-title">Comm. Cost Per Unit by Company</div><div class="chart-container"><canvas id="unitCostCompChart"></canvas></div></div>
+                </div>
+            </div>
+
+            <div id="ledgerTab" style="display:none;">
+                <div class="drilldown-breadcrumb" id="ledgerBreadcrumb" onclick="clearLedgerDrill()">← Back to Full Ledger</div>
+                <div class="table-section">
+                    <div class="card-title" style="margin-bottom:10px;">Approvals Ledger <span id="ledger-summary" style="font-size:14px; color:var(--primary)"></span></div>
+                    <div style="max-height: calc(100vh - 200px); overflow-y:auto;">
+                        <table><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</header>
 
-<!-- DASHBOARD TAB -->
-<main id="tab-dashboard" class="active">
-    <div class="dashboard-grid">
+    <script>
+        const SHEETS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT1O99L6-K7301vjF17vNlGsc0pS-e3H8BqZ7C_mG69GzFp65kPzO9I8X_9p-fR4D4V5o9L9z_r3B9A/pub?output=xlsx";
+        let appData = [], recData = [], salesData = [];
+        let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
+        let tableFilters = {}, amountSortOrder = 'desc';
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         
-        <!-- LEFT: RECON PERFORMANCE -->
-        <div class="card recon-section">
-            <div class="card-header">
-                <div class="card-title">Recon Status Pipeline</div>
-            </div>
+        let ccDataFull = [], itemDataFull = [];
+        let ccCurrentPage = 1, itemCurrentPage = 1;
+        const ITEMS_PER_PAGE = 5;
+        let ccSortOrder = 'desc', itemSortOrder = 'desc';
+        let selectedCCForDrivers = null;
+        let globalTotalSalesQty = 0, globalTotalComm = 0;
+        let currentSortedTrendKeys = [];
+        let selectedDeptGroup = "ALL";
 
-            <div class="metric-group">
-                <div class="metric-row">
-                    <div class="metric-val" id="vEff" style="color: var(--primary)">0%</div>
-                    <div class="status-pill status-rec">EFFICIENCY</div>
-                </div>
-                <div class="metric-label">Processed vs Total Pipeline</div>
-            </div>
-
-            <div class="chart-container-recon">
-                <canvas id="mixChart"></canvas>
-            </div>
-
-            <div class="metric-group" style="margin-top: 20px;">
-                <div class="metric-row">
-                    <div class="metric-val" id="vPend" style="color: var(--orange)">0</div>
-                    <div class="status-pill status-pen">AVG AGING</div>
-                </div>
-                <div class="metric-label">Days Pending (Pipeline Only)</div>
-            </div>
-
-            <div class="chart-container-recon">
-                <canvas id="ageChart"></canvas>
-            </div>
-
-            <div class="age-summary">
-                <div class="age-item">
-                    <span>Max Pending Delay:</span>
-                    <span id="vMax" style="font-weight:900; color:var(--red)">0 Days</span>
-                </div>
-                <div class="age-item">
-                    <span>Pending Volume:</span>
-                    <span id="countPen" style="font-weight:700">0 PRFs</span>
-                </div>
-                <div class="age-item">
-                    <span>Reconciled Volume:</span>
-                    <span id="countRec" style="font-weight:700">0 PRFs</span>
-                </div>
-            </div>
-
-            <div class="card-header" style="margin-top:25px; margin-bottom:10px;">
-                <div class="card-title">Dept Health (%)</div>
-            </div>
-            <div id="healthRankList">
-                <!-- Ranked depts go here -->
-            </div>
-        </div>
-
-        <!-- CENTER: COST ANALYTICS -->
-        <div class="cost-section">
-            <div class="exec-grid">
-                <div class="exec-card">
-                    <div class="exec-label">Recon Compliance (Within 30d)</div>
-                    <div class="exec-main">
-                        <div class="exec-val" id="exCompVal">--</div>
-                        <div id="exCompTrend"></div>
-                    </div>
-                </div>
-                <div class="exec-card">
-                    <div class="exec-label">Average Processing Speed</div>
-                    <div class="exec-main">
-                        <div class="exec-val" id="exSpeedVal">--</div>
-                        <div id="exSpeedTrend"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="top-stats">
-                <div class="stat-box">
-                    <span class="stat-val" id="usdRec" style="color: var(--green)">$0.0k</span>
-                    <span class="stat-sub">Reconciled USD</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-val" id="usdPen" style="color: var(--red)">$0.0k</span>
-                    <span class="stat-sub">Pending USD</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-val" id="usdTotalMix" style="color: var(--primary)">$0.0k</span>
-                    <span class="stat-sub">Total Comm. Cost</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-val" id="usdUnit" style="color: var(--accent)">$0.00</span>
-                    <span class="stat-sub">Comm. Cost / Unit Sold</span>
-                </div>
-            </div>
-
-            <div class="visual-grid">
-                <div class="card chart-box">
-                    <div class="card-header"><div class="card-title">Cost vs Sales Efficiency</div></div>
-                    <canvas id="trendChart"></canvas>
-                </div>
-                <div class="card chart-box">
-                    <div class="card-header"><div class="card-title">Actual vs Committed (Period)</div></div>
-                    <canvas id="weeklyPnlChart"></canvas>
-                </div>
-                <div class="card chart-box">
-                    <div class="card-header"><div class="card-title">Spend by Country / Company</div></div>
-                    <canvas id="companyDistChart"></canvas>
-                </div>
-                <div class="card chart-box">
-                    <div class="card-header"><div class="card-title">Committed Unit Cost by Market</div></div>
-                    <canvas id="unitCostCompChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- RIGHT: DRIVERS RANKING -->
-        <div class="rank-section">
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <div class="card-title">Top Cost Drivers (CC)</div>
-                    <div style="font-size: 10px; cursor:pointer;" onclick="toggleCCSort()">SORT ▼</div>
-                </div>
-                <div id="driverRankList" style="flex: 1; overflow-y: auto;">
-                    <!-- Cost drivers list here -->
-                </div>
-                <div class="paging-box" id="ccPagination">
-                    <button class="paging-btn" onclick="prevCCPage()">PREV</button>
-                    <span class="pag-info">Page 1/1</span>
-                    <button class="paging-btn" onclick="nextCCPage()">NEXT</button>
-                </div>
-            </div>
-
-            <div class="card" style="flex: 1;">
-                <div class="card-header">
-                    <div class="card-title" id="itemDriverTitle">Item Drivers (Committed)</div>
-                    <div style="font-size: 10px; cursor:pointer;" onclick="toggleItemSort()">SORT ▼</div>
-                </div>
-                <div id="costDriverList" style="flex: 1; overflow-y: auto;">
-                    <!-- Items breakdown here -->
-                </div>
-                <div class="paging-box" id="itemPagination">
-                    <button class="paging-btn" onclick="prevItemPage()">PREV</button>
-                    <span class="pag-info">Page 1/1</span>
-                    <button class="paging-btn" onclick="nextItemPage()">NEXT</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- LEDGER TAB -->
-<main id="tab-ledger">
-    <div class="ledger-container">
-        <div class="ledger-controls">
-            <div class="filter-group">
-                <label class="filter-label">Search Ledger</label>
-                <input type="text" class="filter-input" id="ledgerSearch" placeholder="Search Payee, File, CC..." onkeyup="filterLedger()">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label">Date Range</label>
-                <div style="display:flex; gap:5px;">
-                    <input type="date" class="filter-input" id="ledgerStart" onchange="updateDashboard()">
-                    <input type="date" class="filter-input" id="ledgerEnd" onchange="updateDashboard()">
-                </div>
-            </div>
-            <div class="filter-group">
-                <button class="paging-btn" style="padding:10px 15px;" onclick="clearTableFilters()">RESET ALL FILTERS</button>
-            </div>
-            <div class="filter-group" style="margin-left:auto;">
-                <div id="ledger-summary" style="font-size: 18px; font-weight: 900; color: var(--primary);">TOTAL: $0.00</div>
-            </div>
-        </div>
-
-        <div class="table-wrap">
-            <table id="approvalsTable">
-                <thead id="approvalsHead"></thead>
-                <tbody id="approvalsBody"></tbody>
-            </table>
-        </div>
-    </div>
-</main>
-
-<script>
-    // CORE APP DATA
-    let appData = [];
-    let recData = [];
-    let salesData = [];
-    let selectedDeptGroup = "ALL";
-    let activeTab = "dashboard";
-    
-    // CHART INSTANCES
-    let mixChart, ageChart, trendChart, weeklyPnlChart, companyDistChart, unitCostCompChart;
-
-    // GLOBAL STATE
-    let ccDataFull = [], itemDataFull = [];
-    let ccCurrentPage = 1, itemCurrentPage = 1;
-    const ITEMS_PER_PAGE = 8;
-    let selectedCCForDrivers = null;
-    let ccSortOrder = 'desc', itemSortOrder = 'desc', amountSortOrder = 'desc';
-    let globalTotalComm = 0, globalTotalSalesQty = 0;
-    let tableFilters = {};
-    let currentSortedTrendKeys = [];
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    const SHEETS = {
-        approvals: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT5NByD_y4E_k0kK9t_X3f3t67_j5t2hV_G9B8Z-2L8U4K7S-p9O_D9Y7k_H1r4U5S6T7p8O9N0M/pub?output=xlsx',
-        recon: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR6T6f-R0S8_J5F_X1R2F3T4L5_Y6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X/pub?output=xlsx',
-        sales: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS1H2I3J4K5L6M7N8O9P0Q1R2S3T4U5V6W7X8Y9Z0A1B2C3D4E5F6G7H8I9J/pub?output=xlsx'
-    };
-
-    // Placeholder data mapping (Replace these URLs with your actual Google Sheet Published URLs)
-    // For this prototype, I am using simulated Fetch. 
-    // In production, replace fetchData calls with your actual direct sheet links.
-
-    async function fetchData() {
-        try {
-            document.getElementById('loader').style.display = 'flex';
-            // SIMULATED FETCH - REPLACE WITH ACTUAL PROXY OR SHEET API
-            // For Notepad usability, we'll assume global appData, recData, salesData are populated via Excel Upload or API
-            // Here is the dummy data logic for the UI demonstration:
-            
-            // Dummy initialization
-            if (appData.length === 0) {
-                appData = [
-                    {"Department Group": "OPS", "Department": "LOGISTICS", "Cost Center": "FLEET_KENYA", "Date Approved": 45300, "Amount (USD)": 5200, "Document Type": "PRF", "Full File Name": "PRF-001.pdf", "Cost Drivers": "Fuel", "Burn Company": "Kenya OpCo", "Year": 2024, "Month": "Jan"},
-                    {"Department Group": "OPS", "Department": "LOGISTICS", "Cost Center": "FLEET_KENYA", "Date Approved": 45310, "Amount (USD)": 3100, "Document Type": "PRF", "Full File Name": "PRF-002.pdf", "Cost Drivers": "Maintenance", "Burn Company": "Kenya OpCo", "Year": 2024, "Month": "Jan"},
-                    {"Department Group": "SALES", "Department": "MARKETING", "Cost Center": "MKT_GEN", "Date Approved": 45320, "Amount (USD)": 12000, "Document Type": "ECF", "Full File Name": "ECF-10.pdf", "Cost Drivers": "Digital Ads", "Burn Company": "HQ", "Year": 2024, "Month": "Jan"},
-                    {"Department Group": "G&A", "Department": "TECH", "Cost Center": "SERVER_AWS", "Date Approved": 45325, "Amount (USD)": 8500, "Document Type": "INV", "Full File Name": "INV-AWS-99.pdf", "Cost Drivers": "Hosting", "Burn Company": "HQ", "Year": 2024, "Month": "Jan"},
-                    {"Department Group": "OPS", "Department": "LOGISTICS", "Cost Center": "FLEET_UG", "Date Approved": 45330, "Amount (USD)": 4200, "Document Type": "PRF", "Full File Name": "PRF-005.pdf", "Cost Drivers": "Fuel", "Burn Company": "Uganda OpCo", "Year": 2024, "Month": "Feb"}
-                ];
-                recData = [
-                    {"PRF file": "PRF-001.pdf", "Status": "Reconciled", "Days Pending": 5, "Date of Recon": 45305},
-                    {"PRF file": "PRF-002.pdf", "Status": "Pending", "Days Pending": 25, "Date of Recon": ""},
-                    {"PRF file": "PRF-005.pdf", "Status": "Pending", "Days Pending": 45, "Date of Recon": ""}
-                ];
-                salesData = [
-                    {"Month": "Jan", "Year": 2024, "Country": "Kenya", "Sales Qty": 1200, "Market": "Kenya"},
-                    {"Month": "Jan", "Year": 2024, "Country": "Uganda", "Sales Qty": 800, "Market": "Uganda"},
-                    {"Month": "Feb", "Year": 2024, "Country": "Kenya", "Sales Qty": 1500, "Market": "Kenya"}
-                ];
-            }
-
-            updateDashboard();
-            document.getElementById('lastUpdated').innerText = "LIVE | " + new Date().toLocaleTimeString();
-            document.getElementById('loader').style.display = 'none';
-        } catch (e) { console.error(e); }
-    }
-
-    function cleanNum(v) { if (!v) return 0; return parseFloat(v.toString().replace(/[$,]/g, '')) || 0; }
-    function fmt(v) { return (v / 1000).toLocaleString(undefined, { minimumFractionDigits: 1 }) + "k"; }
-
-    function parseExcelDate(val) {
-        if (!val) return null;
-        if (val instanceof Date) return val;
-        if (!isNaN(val)) return new Date((val - 25569) * 86400 * 1000);
-        const d = new Date(val);
-        return isNaN(d.getTime()) ? null : d;
-    }
-
-    function formatDateStr(d) {
-        if (!d) return "-";
-        return d.toLocaleDateString('en-GB'); // DD/MM/YYYY
-    }
-
-    function getCol(row, ...possibleNames) {
-        for (let name of possibleNames) {
-            if (row[name] !== undefined) return row[name];
+        async function fetchData() {
+            try {
+                const resp = await fetch(SHEETS_URL);
+                const arrayBuffer = await resp.arrayBuffer();
+                const wb = XLSX.read(arrayBuffer);
+                appData = XLSX.utils.sheet_to_json(wb.Sheets["Approvals"]);
+                recData = XLSX.utils.sheet_to_json(wb.Sheets["Recon"]);
+                salesData = XLSX.utils.sheet_to_json(wb.Sheets["Sales Performance"]);
+                populateFilterOptions();
+                updateDashboard();
+                document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
+            } catch (e) { console.error("Fetch Error:", e); }
         }
-        return null;
-    }
 
-    function switchTab(tabId, btn) {
-        activeTab = tabId;
-        document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
-        document.getElementById('tab-' + tabId).classList.add('active');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        if (tabId === 'ledger') renderApprovalsTable(appData);
-    }
-
-    function setDeptGroup(group, el) {
-        selectedDeptGroup = group;
-        document.querySelectorAll('.dept-pill').forEach(p => p.classList.remove('active'));
-        el.classList.add('active');
-        selectedCCForDrivers = null;
-        updateDashboard();
-    }
-
-    function getGlobalFiltersObj() {
-        return {
-            start: document.getElementById('ledgerStart').value ? new Date(document.getElementById('ledgerStart').value) : null,
-            end: document.getElementById('ledgerEnd').value ? new Date(document.getElementById('ledgerEnd').value) : null,
-            deptGroup: selectedDeptGroup
-        };
-    }
-
-    function updateDashboard() {
-        const filters = getGlobalFiltersObj();
-        let recCount = 0, penCount = 0, penSum = 0, recSum = 0;
-        let totalSpeed = 0, speedCount = 0, maxDelay = 0;
-        let recWithin30 = 0;
-        let ageBuckets = [0, 0, 0]; // 1-7, 8-14, 15+
-        let ccMap = {}; 
-        let ccCommittedMap = {};
-        let salesTrendAgg = {}, commitTrendAgg = {};
-        let totalComm = 0, totalSalesQty = 0;
-        let countrySalesMap = {}, companyCommittedAgg = {};
-
-        // 1. Process Recon Data (Efficiency & Speed)
-        let prfReconMap = {};
-        recData.forEach(r => {
-            const prf = (getCol(r, 'PRF file') || "").toString().trim();
-            if (prf) prfReconMap[prf] = r;
-        });
-
-        // 2. Aggregate Sales Data
-        salesData.forEach(s => {
-            const yr = getCol(s, 'Year'), mo = getCol(s, 'Month'), qty = cleanNum(getCol(s, 'Sales Qty'));
-            const key = `${yr}_${mo}`;
-            if (!salesTrendAgg[key]) salesTrendAgg[key] = { val: 0, label: `${mo} ${yr}` };
-            salesTrendAgg[key].val += qty;
-            totalSalesQty += qty;
-            const country = getCol(s, 'Country', 'Market');
-            countrySalesMap[country] = (countrySalesMap[country] || 0) + qty;
-        });
-
-        // 3. Main Data Loop
-        appData.forEach(r => {
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
-            if (filters.start && d < filters.start) return;
-            if (filters.end && d > filters.end) return;
-
-            const amt = cleanNum(getCol(r, 'Amount (USD)'));
-            const docType = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            const fileName = (getCol(r, 'Full File Name') || "").toString().trim();
-            const cc = getCol(r, 'Cost Center', 'Cost Centre') || "Unallocated";
-            const yr = getCol(r, 'Year'), mo = getCol(r, 'Month');
-            const trendKey = `${yr}_${mo}`;
-            const company = getCol(r, 'Burn Company', 'Company') || "Other";
-
-            // Committed Logic: ECF/TRF/INV are always committed. PRF is committed if in Recon sheet.
-            let isCommitted = (docType.includes('ECF') || docType.includes('TRF') || docType.includes('INV')) || (docType.includes('PRF') && prfReconMap[fileName]);
-
-            if (isCommitted) {
-                totalComm += amt;
-                ccCommittedMap[cc] = (ccCommittedMap[cc] || 0) + amt;
-                if (!commitTrendAgg[trendKey]) commitTrendAgg[trendKey] = { val: 0, label: `${mo} ${yr}` };
-                commitTrendAgg[trendKey].val += amt;
-                companyCommittedAgg[company] = (companyCommittedAgg[company] || 0) + amt;
+        function getCol(row, ...keys) {
+            for (let k of keys) {
+                const found = Object.keys(row).find(rk => rk.toLowerCase().trim() === k.toLowerCase().trim());
+                if (found) return row[found];
             }
+            return null;
+        }
 
-            if (docType.includes('PRF')) {
-                const recon = prfReconMap[fileName];
-                const status = (recon ? getCol(recon, 'Status') : "Pending") || "Pending";
-                const days = recon ? cleanNum(getCol(recon, 'Days Pending')) : 0;
+        function cleanNum(v) { if (v === null || v === undefined) return 0; let n = parseFloat(v.toString().replace(/[$,\s]/g, '')); return isNaN(n) ? 0 : n; }
+        function fmt(v) { return v.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); }
+        
+        function parseExcelDate(v) {
+            if (!v) return null;
+            if (typeof v === 'number') return new Date((v - 25569) * 86400 * 1000);
+            let d = new Date(v);
+            return isNaN(d.getTime()) ? null : d;
+        }
 
-                if (!ccMap[cc]) ccMap[cc] = { sum: 0, count: 0 };
-                
-                if (status.toLowerCase().includes('reconciled')) {
-                    recCount++; recSum += amt;
-                    ccMap[cc].sum += 100; ccMap[cc].count++;
-                    if (days <= 30) recWithin30++;
-                } else {
-                    penCount++; penSum += amt;
-                    ccMap[cc].sum += 0; ccMap[cc].count++;
-                    if (days > 0) {
-                        if (days <= 7) ageBuckets[0]++;
-                        else if (days <= 14) ageBuckets[1]++;
-                        else ageBuckets[2]++;
-                        if (days > maxDelay) maxDelay = days;
-                        totalSpeed += days; speedCount++;
+        function formatDateStr(d) { return d ? `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}` : '-'; }
+
+        function populateFilterOptions() {
+            const filters = {
+                'fYear': [...new Set(appData.map(r => getCol(r, 'Year')))].filter(Boolean).sort(),
+                'fMonth': [...new Set(appData.map(r => getCol(r, 'Month')))].filter(Boolean).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)),
+                'fCompany': [...new Set(appData.map(r => getCol(r, 'Burn Company', 'Company')))].filter(Boolean).sort(),
+                'fDept': [...new Set(appData.map(r => getCol(r, 'Department')))].filter(Boolean).sort(),
+                'fCC': [...new Set(appData.map(r => getCol(r, 'Cost Center', 'Cost Centre')))].filter(Boolean).sort()
+            };
+            for (let id in filters) {
+                const el = document.getElementById(id); if (el.options.length > 0) continue;
+                filters[id].forEach(v => { const opt = new Date(); el.add(new Option(v, v)); });
+            }
+        }
+
+        function getGlobalFiltersObj() {
+            return {
+                start: document.getElementById('fStart').value ? new Date(document.getElementById('fStart').value) : null,
+                end: document.getElementById('fEnd').value ? new Date(document.getElementById('fEnd').value) : null,
+                yr: Array.from(document.getElementById('fYear').selectedOptions).map(o => o.value),
+                mo: Array.from(document.getElementById('fMonth').selectedOptions).map(o => o.value),
+                comp: Array.from(document.getElementById('fCompany').selectedOptions).map(o => o.value),
+                dept: Array.from(document.getElementById('fDept').selectedOptions).map(o => o.value),
+                cc: Array.from(document.getElementById('fCC').selectedOptions).map(o => o.value)
+            };
+        }
+
+        function resetFilters() {
+            document.querySelectorAll('.filter-row input, .filter-row select').forEach(el => {
+                if(el.type === 'date') el.value = '';
+                else if(el.multiple) Array.from(el.options).forEach(o => o.selected = false);
+            });
+            tableFilters = {}; selectedCCForDrivers = null; selectedDeptGroup = "ALL"; clearLedgerDrill(); updateDashboard();
+        }
+
+        function switchTab(t) {
+            ['reconTab','costTab','ledgerTab'].forEach(id => document.getElementById(id).style.display = 'none');
+            document.getElementById(t + 'Tab').style.display = 'block';
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText.toLowerCase().includes(t)) btn.classList.add('active');
+            });
+        }
+
+        function toggleDropdown(id) {
+            const el = document.getElementById(id);
+            const isVis = el.style.display === 'block';
+            document.querySelectorAll('.col-dropdown-container').forEach(d => d.style.display = 'none');
+            if(!isVis) el.style.display = 'block';
+        }
+
+        function syncFilterIcons() {
+            document.querySelectorAll('.header-filter-icon').forEach(icon => {
+                const uid = icon.id.replace('icon_', '');
+                const list = document.getElementById(uid + '_list');
+                const hasActive = list && list.querySelectorAll('input:checked').length > 0;
+                icon.style.color = hasActive ? 'var(--orange)' : 'var(--primary)';
+                icon.innerText = hasActive ? '●' : '▼';
+            });
+        }
+
+        function updateDashboard() {
+            const filters = getGlobalFiltersObj();
+            let recCount = 0, penCount = 0, recSum = 0, penSum = 0, totalDays = 0, totalPendDays = 0;
+            let a1 = 0, a2 = 0, a3 = 0, recWithin30 = 0;
+            let ccMap = {}, ccCommittedMap = {}, salesTrendAgg = {}, commitTrendAgg = {}, countrySalesMap = {}, companyCommittedAgg = {};
+            let totalSalesQty = 0, totalComm = 0;
+
+            const pendingLookup = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
+
+            appData.forEach(r => {
+                const rDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+                if (selectedDeptGroup !== "ALL" && rDeptGroup && rDeptGroup !== selectedDeptGroup) return;
+
+                const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
+                if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+                if (filters.yr.length && !filters.yr.includes(String(getCol(r, 'Year')))) return;
+                if (filters.mo.length && !filters.mo.includes(getCol(r, 'Month'))) return;
+                if (filters.comp.length && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return;
+                if (filters.dept.length && !filters.dept.includes(getCol(r, 'Department'))) return;
+                const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+                if (filters.cc.length && !filters.cc.includes(rCC)) return;
+
+                const amt = cleanNum(getCol(r, 'Amount (USD)'));
+                const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
+                const fname = (getCol(r, 'Full File Name') || "").toString().trim();
+                const isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingLookup.has(fname));
+
+                if (isCommitted) {
+                    totalComm += amt;
+                    if (rCC) ccCommittedMap[rCC] = (ccCommittedMap[rCC] || 0) + amt;
+                    const cComp = getCol(r, 'Burn Company', 'Company');
+                    if (cComp) companyCommittedAgg[cComp] = (companyCommittedAgg[cComp] || 0) + amt;
+
+                    const yr = getCol(r, 'Year'), mo = getCol(r, 'Month');
+                    if (yr && mo) {
+                        const k = `${yr}_${monthNames.indexOf(mo).toString().padStart(2, '0')}`;
+                        if (!commitTrendAgg[k]) commitTrendAgg[k] = { val: 0, label: `${mo} ${yr}` };
+                        commitTrendAgg[k].val += amt;
                     }
                 }
-            }
-        });
+            });
 
-        // 4. Update UI
-        globalTotalComm = totalComm;
-        globalTotalSalesQty = totalSalesQty;
-        const avgMax = maxDelay;
-        const avgPend = speedCount > 0 ? totalSpeed / speedCount : 0;
-        
-        document.getElementById('usdUnit').innerText = totalSalesQty > 0 ? "$" + (totalComm / totalSalesQty).toFixed(2) : "$0.00";
-        document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
-        document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
-        document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
-        document.getElementById('countPen').innerText = penCount + " PRFs"; 
-        document.getElementById('countRec').innerText = recCount + " PRFs"; 
-        document.getElementById('usdPen').innerText = fmt(penSum); 
-        document.getElementById('usdRec').innerText = fmt(recSum); 
-        document.getElementById('usdTotalMix').innerText = fmt(penSum);
-        
-        updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
-        updateVisuals(recCount, penCount, ageBuckets, ccMap);
-        
-        ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-        ccCurrentPage = 1;
-        renderCCDriversList();
-        updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
-        updateItemDriversData();
-    }
+            recData.forEach(r => {
+                const rDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+                if (selectedDeptGroup !== "ALL" && rDeptGroup && rDeptGroup !== selectedDeptGroup) return;
 
-    function renderCCDriversList() {
-        const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
-        const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
-        const pagedData = ccDataFull.slice(start, start + ITEMS_PER_PAGE);
-        const totalPages = Math.ceil(ccDataFull.length / ITEMS_PER_PAGE) || 1;
-        const pagBox = document.getElementById('ccPagination');
-        pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
-        pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
-        pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
-        if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
-        const absMax = ccDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
-        pagedData.forEach(([cc, val]) => {
-            const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
-            const escapedCC = cc.replace(/'/g, "\\'");
-            const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
-        });
-    }
+                const d = parseExcelDate(getCol(r, 'Date Approved'));
+                if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+                if (filters.yr.length && !filters.yr.includes(String(getCol(r, 'Year')))) return;
+                if (filters.mo.length && !filters.mo.includes(getCol(r, 'Month'))) return;
+                if (filters.comp.length && !filters.comp.includes(getCol(r, 'Company'))) return;
+                if (filters.dept.length && !filters.dept.includes(getCol(r, 'Department'))) return;
+                const rCC = getCol(r, 'Cost Center');
+                if (filters.cc.length && !filters.cc.includes(rCC)) return;
 
-    function drillToCCFromRank(ccName) {
-        selectedCCForDrivers = ccName;
-        updateItemDriversData();
-        renderCCDriversList();
-    }
+                const status = (getCol(r, 'Status') || "").toLowerCase();
+                const amt = cleanNum(getCol(r, 'Amount (USD)'));
+                const days = cleanNum(getCol(r, 'Days Pending', 'Days to Recon'));
 
-    function updateItemDriversData() {
-        const filters = getGlobalFiltersObj();
-        let driverMap = {};
-        let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
-
-        appData.forEach(r => {
-            const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
-            if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
-            
-            const rCC = getCol(r, 'Cost Center', 'Cost Centre');
-            if (selectedCCForDrivers && rCC !== selectedCCForDrivers) return;
-
-            const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
-            if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
-            if (filters.yr && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
-            if (filters.mo && !filters.mo.includes(getCol(r, 'Month'))) return;
-            if (filters.comp && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(r, 'Department'))) return;
-            if (filters.cc && !filters.cc.includes(rCC)) return;
-
-            const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
-            const fname = (getCol(r, 'Full File Name') || "").toString().trim();
-            let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
-            
-            if (!isCommitted) return;
-
-            const amt = cleanNum(getCol(r, 'Amount (USD)'));
-            const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
-            const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
-            driverMap[driver] = (driverMap[driver] || 0) + amt;
-        });
-
-        itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
-        itemCurrentPage = 1;
-        document.getElementById('itemDriverTitle').innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
-        renderItemDriversList();
-    }
-
-    function renderItemDriversList() {
-        const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
-        const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
-        const pagedData = itemDataFull.slice(start, start + ITEMS_PER_PAGE);
-        const totalPages = Math.ceil(itemDataFull.length / ITEMS_PER_PAGE) || 1;
-        const pagBox = document.getElementById('itemPagination');
-        pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
-        pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
-        pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
-        if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
-        const absMax = itemDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
-        const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
-        pagedData.forEach(([driver, val]) => {
-            const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
-            const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
-            dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
-        });
-    }
-
-    function updateCostDashboardVisuals(salesTrend, totalComm, totalQty, commitTrend, countrySales, countryComm) {
-        currentSortedTrendKeys = Object.keys(commitTrend).sort();
-        const displayLabels = currentSortedTrendKeys.map(k => commitTrend[k].label);
-        trendChart.data.labels = displayLabels;
-        trendChart.data.datasets[0].data = currentSortedTrendKeys.map(k => salesTrend[k] ? salesTrend[k].val : 0);
-        trendChart.data.datasets[1].data = currentSortedTrendKeys.map(k => (salesTrend[k] && salesTrend[k].val > 0) ? (commitTrend[k].val / salesTrend[k].val) : 0);
-        trendChart.update();
-        weeklyPnlChart.data.labels = displayLabels;
-        weeklyPnlChart.data.datasets[1].data = currentSortedTrendKeys.map(k => commitTrend[k].val); 
-        weeklyPnlChart.update();
-        const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
-        companyDistChart.data.labels = compEntries.map(e => e[0]);
-        companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
-        companyDistChart.update();
-        const unitCostEntries = compEntries.map(e => { 
-            const country = e[0], comm = e[1]; 
-            let sales = countrySales[country] || 0; 
-            if (country === 'HQ' && sales === 0) sales = totalQty; 
-            return [country, sales > 0 ? (comm / sales) : 0]; 
-        }).sort((a,b) => b[1] - a[1]);
-        unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
-        unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
-        unitCostCompChart.update();
-    }
-
-    function toggleAmountSort() { amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc'; renderApprovalsTable(appData); }
-
-    function renderApprovalsTable(sourceData) {
-        if (!sourceData || sourceData.length === 0) return;
-        const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
-        const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
-        const reconLookup = {};
-        recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
-        let filteredData = sourceData.filter(row => {
-            for(let col in tableFilters) {
-                let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
-                let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
-                if (tableFilters[col].length > 0) {
-                    if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { if (rowVal.trim() !== "" && rowVal !== "-") return false; } 
-                    else if(!tableFilters[col].includes(rowVal)) return false;
+                if (rCC) {
+                    if (!ccMap[rCC]) ccMap[rCC] = { count: 0, sum: 0 };
+                    ccMap[rCC].count++;
+                    if (status.includes('reconciled')) ccMap[rCC].sum += 100;
                 }
-            }
-            return true;
-        });
-        const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
-        if (amountKey) filteredData.sort((a, b) => { const valA = cleanNum(a[amountKey]), valB = cleanNum(b[amountKey]); return amountSortOrder === 'desc' ? valB - valA : valA - valB; });
-        const rawCols = Object.keys(appData[0] || {});
-        let displayCols = []; 
-        rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
-        displayCols.unshift('Department', 'Cost Center');
-        const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
-        if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
-        let trH = '<tr>'; 
-        displayCols.forEach(c => { 
-            const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
-            trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
-        });
-        trH += '<th>Action</th></tr>'; head.innerHTML = trH;
-        displayCols.forEach(c => {
-            const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
-            const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
-            if (list && list.children.length === 0) {
-                if (c.toLowerCase().includes('date')) renderDateHierarchy(oKey, uid, list);
-                else if (c !== "Status" && c !== "Days Pending") { 
-                    const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); 
-                    vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); 
+
+                if (status.includes('reconciled')) {
+                    recCount++; recSum += amt; totalDays += days;
+                    if (days <= 30) recWithin30++;
+                } else {
+                    penCount++; penSum += amt; totalPendDays += days;
+                    if (days <= 7) a1++; else if (days <= 14) a2++; else a3++;
                 }
-            }
-        });
-        syncFilterIcons();
-        body.innerHTML = ''; let ledgerTotal = 0;
-        filteredData.forEach(row => {
-            let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
-            const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
+            });
+
+            salesData.forEach(r => {
+                const yr = getCol(r, 'Year'), mo = getCol(r, 'Month'), country = getCol(r, 'Country');
+                if (filters.yr.length && !filters.yr.includes(String(yr))) return;
+                if (filters.mo.length && !filters.mo.includes(mo)) return;
+                if (filters.comp.length && !filters.comp.includes(country)) return;
+
+                const qty = cleanNum(getCol(r, 'Sales Quantity', 'Quantity'));
+                totalSalesQty += qty;
+                if (country) countrySalesMap[country] = (countrySalesMap[country] || 0) + qty;
+
+                if (yr && mo) {
+                    const k = `${yr}_${monthNames.indexOf(mo).toString().padStart(2, '0')}`;
+                    if (!salesTrendAgg[k]) salesTrendAgg[k] = { val: 0, label: `${mo} ${yr}` };
+                    salesTrendAgg[k].val += qty;
+                }
+            });
+
+            globalTotalSalesQty = totalSalesQty; globalTotalComm = totalComm;
+            const avgMax = recCount > 0 ? totalDays / recCount : 0;
+            const avgPend = penCount > 0 ? totalPendDays / penCount : 0;
+
+            document.getElementById('vSalesQty').innerText = totalSalesQty.toLocaleString();
+            document.getElementById('vCostPerUnit').innerText = totalSalesQty > 0 ? "$" + (totalComm / totalSalesQty).toFixed(2) : "$0.00";
+            document.getElementById('vEff').innerText = (recCount + penCount) > 0 ? ((recCount / (recCount + penCount)) * 100).toFixed(0) + "%" : "0%"; 
+            document.getElementById('vMax').innerText = avgMax.toFixed(0) + " Days"; 
+            document.getElementById('vPend').innerText = avgPend.toFixed(0) + " Days"; 
+            document.getElementById('countPen').innerText = penCount + " PRFs"; 
+            document.getElementById('countRec').innerText = recCount + " PRFs"; 
+            document.getElementById('usdPen').innerText = fmt(penSum); 
+            document.getElementById('usdRec').innerText = fmt(recSum); 
+            document.getElementById('usdTotalMix').innerText = fmt(penSum);
+            
+            updateExecSummary((recCount+penCount)>0 ? (recWithin30/(recCount+penCount))*100 : 0, avgPend); 
+            updateVisuals(recCount, penCount, [a1, a2, a3], ccMap);
+            
+            ccDataFull = Object.entries(ccCommittedMap).sort((a,b) => ccSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            ccCurrentPage = 1;
+            renderCCDriversList();
+            updateCostDashboardVisuals(salesTrendAgg, totalComm, totalSalesQty, commitTrendAgg, countrySalesMap, companyCommittedAgg);
+            updateItemDriversData();
+            renderApprovalsTable(appData);
+        }
+
+        function renderCCDriversList() {
+            const dl = document.getElementById('driverRankList'); dl.innerHTML = '';
+            const start = (ccCurrentPage - 1) * ITEMS_PER_PAGE;
+            const pagedData = ccDataFull.slice(start, start + ITEMS_PER_PAGE);
+            const totalPages = Math.ceil(ccDataFull.length / ITEMS_PER_PAGE) || 1;
+            const pagBox = document.getElementById('ccPagination');
+            pagBox.querySelector('.pag-info').innerText = `Page ${ccCurrentPage}/${totalPages}`;
+            pagBox.querySelectorAll('button')[0].disabled = ccCurrentPage === 1;
+            pagBox.querySelectorAll('button')[1].disabled = ccCurrentPage === totalPages;
+            if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
+            const absMax = ccDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
+            pagedData.forEach(([cc, val]) => {
+                const costSharePU = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
+                const escapedCC = cc.replace(/'/g, "\\'");
+                const isActive = selectedCCForDrivers === cc ? 'active-cc' : '';
+                dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label rank-label-link ${isActive}" onclick="drillToCCFromRank('${escapedCC}')">${cc}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--primary)"></div></div><div class="rank-footer"><div>Comm. Share: <span class="rank-pct">${globalTotalComm > 0 ? ((val/globalTotalComm)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${costSharePU}</span></div></div></div>`);
+            });
+        }
+
+        function drillToCCFromRank(ccName) {
+            selectedCCForDrivers = ccName;
+            updateItemDriversData();
+            renderCCDriversList();
+        }
+
+        function updateItemDriversData() {
+            const filters = getGlobalFiltersObj();
+            let driverMap = {};
+            let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
+
+            appData.forEach(r => {
+                const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
+                if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
+                
+                const rCC = getCol(r, 'Cost Center', 'Cost Centre');
+                if (selectedCCForDrivers && rCC !== selectedCCForDrivers) return;
+
+                const d = parseExcelDate(getCol(r, 'Date Approved', 'Approval Date'));
+                if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return;
+                if (filters.yr.length && !filters.yr.includes(String(getCol(r, 'Year')))) return; 
+                if (filters.mo.length && !filters.mo.includes(getCol(r, 'Month'))) return;
+                if (filters.comp.length && !filters.comp.includes(getCol(r, 'Burn Company', 'Company'))) return; 
+                if (filters.dept.length && !filters.dept.includes(getCol(r, 'Department'))) return;
+                if (filters.cc.length && !filters.cc.includes(rCC)) return;
+
+                const type = (getCol(r, 'Document Type', 'Type') || "").toUpperCase();
+                const fname = (getCol(r, 'Full File Name') || "").toString().trim();
+                let isCommitted = (type.includes('ECF') || type.includes('TRF') || type.includes('INV')) || ((type.includes('PRF') || type.includes('PR')) && pendingFiles.has(fname));
+                
+                if (!isCommitted) return;
+
+                const amt = cleanNum(getCol(r, 'Amount (USD)'));
+                const rawDriver = getCol(r, 'Cost Drivers', 'Driver');
+                const driver = (rawDriver && rawDriver.toString().trim() !== "" && rawDriver.toString().trim() !== "-") ? rawDriver : "Unspecified";
+                driverMap[driver] = (driverMap[driver] || 0) + amt;
+            });
+
+            itemDataFull = Object.entries(driverMap).sort((a,b) => itemSortOrder === 'desc' ? b[1] - a[1] : a[1] - b[1]);
+            itemCurrentPage = 1;
+            document.getElementById('itemDriverTitle').innerHTML = selectedCCForDrivers ? `Item Drivers: <span style="color: var(--orange)">${selectedCCForDrivers}</span>` : `Item Drivers (Committed)`;
+            renderItemDriversList();
+        }
+
+        function renderItemDriversList() {
+            const dl = document.getElementById('costDriverList'); dl.innerHTML = '';
+            const start = (itemCurrentPage - 1) * ITEMS_PER_PAGE;
+            const pagedData = itemDataFull.slice(start, start + ITEMS_PER_PAGE);
+            const totalPages = Math.ceil(itemDataFull.length / ITEMS_PER_PAGE) || 1;
+            const pagBox = document.getElementById('itemPagination');
+            pagBox.querySelector('.pag-info').innerText = `Page ${itemCurrentPage}/${totalPages}`;
+            pagBox.querySelectorAll('button')[0].disabled = itemCurrentPage === 1;
+            pagBox.querySelectorAll('button')[1].disabled = itemCurrentPage === totalPages;
+            if (pagedData.length === 0) { dl.innerHTML = '<div class="empty-placeholder">No data for selected scope</div>'; return; }
+            const absMax = itemDataFull.reduce((a,b) => Math.max(a, b[1]), 0);
+            const scopeTotal = itemDataFull.reduce((a,b) => a + b[1], 0);
+            pagedData.forEach(([driver, val]) => {
+                const unitCost = globalTotalSalesQty > 0 ? (val / globalTotalSalesQty).toFixed(2) : "0.00";
+                const escapedCC = (selectedCCForDrivers || "").replace(/'/g, "\\'"), escapedDriver = driver.replace(/'/g, "\\'");
+                dl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label">${driver}</div><div class="rank-impact-val" onclick="drillToLedger('${escapedCC}', '${escapedDriver}')">$${(val/1000).toFixed(1)}k</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/absMax*100).toFixed(0)}%; background:var(--orange)"></div></div><div class="rank-footer"><div>Scope Share: <span class="rank-pct">${scopeTotal > 0 ? ((val/scopeTotal)*100).toFixed(1) : 0}%</span></div><div>Comm. Unit Cost: <span class="rank-unit-val">$${unitCost}</span></div></div></div>`);
+            });
+        }
+
+        function updateCostDashboardVisuals(salesTrend, totalComm, totalQty, commitTrend, countrySales, countryComm) {
+            currentSortedTrendKeys = Object.keys(commitTrend).sort();
+            const displayLabels = currentSortedTrendKeys.map(k => commitTrend[k].label);
+            trendChart.data.labels = displayLabels;
+            trendChart.data.datasets[0].data = currentSortedTrendKeys.map(k => salesTrend[k] ? salesTrend[k].val : 0);
+            trendChart.data.datasets[1].data = currentSortedTrendKeys.map(k => (salesTrend[k] && salesTrend[k].val > 0) ? (commitTrend[k].val / salesTrend[k].val) : 0);
+            trendChart.update();
+            weeklyPnlChart.data.labels = displayLabels;
+            weeklyPnlChart.data.datasets[1].data = currentSortedTrendKeys.map(k => commitTrend[k].val); 
+            weeklyPnlChart.update();
+            const compEntries = Object.entries(countryComm).sort((a,b) => b[1] - a[1]);
+            companyDistChart.data.labels = compEntries.map(e => e[0]);
+            companyDistChart.data.datasets[0].data = compEntries.map(e => e[1]);
+            companyDistChart.update();
+            const unitCostEntries = compEntries.map(e => { 
+                const country = e[0], comm = e[1]; 
+                let sales = countrySales[country] || 0; 
+                if (country === 'HQ' && sales === 0) sales = totalQty; 
+                return [country, sales > 0 ? (comm / sales) : 0]; 
+            }).sort((a,b) => b[1] - a[1]);
+            unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
+            unitCostCompChart.data.datasets[0].data = unitCostEntries.map(e => e[1]);
+            unitCostCompChart.update();
+        }
+
+        function toggleAmountSort() { amountSortOrder = amountSortOrder === 'desc' ? 'asc' : 'desc'; renderApprovalsTable(appData); }
+
+        function renderApprovalsTable(sourceData) {
+            if (!sourceData || sourceData.length === 0) return;
+            const head = document.getElementById('approvalsHead'), body = document.getElementById('approvalsBody');
+            const excludedCols = ['link', 'pdf link', 'url', 'full file name', 'last modified'];
+            const reconLookup = {};
+            recData.forEach(r => { const prfFile = getCol(r, 'PRF file'); if (prfFile) reconLookup[prfFile.toString().trim()] = { status: getCol(r, 'Status'), daysPending: getCol(r, 'Days Pending') }; });
+            let filteredData = sourceData.filter(row => {
+                for(let col in tableFilters) {
+                    let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row, 'Cost Center', 'Cost Centre') : row[col]);
+                    let rowVal = (col.toLowerCase().includes('date')) ? formatDateStr(parseExcelDate(cellVal)) : (cellVal || "").toString();
+                    if (tableFilters[col].length > 0) {
+                        if (tableFilters[col].length === 1 && (tableFilters[col][0] === "" || tableFilters[col][0] === "-")) { if (rowVal.trim() !== "" && rowVal !== "-") return false; } 
+                        else if(!tableFilters[col].includes(rowVal)) return false;
+                    }
+                }
+                return true;
+            });
+            const amountKey = Object.keys(appData[0] || {}).find(k => k.toLowerCase().trim() === 'amount (usd)');
+            if (amountKey) filteredData.sort((a, b) => { const valA = cleanNum(a[amountKey]), valB = cleanNum(b[amountKey]); return amountSortOrder === 'desc' ? valB - valA : valA - valB; });
+            const rawCols = Object.keys(appData[0] || {});
+            let displayCols = []; 
+            rawCols.forEach(c => { const cl = c.toLowerCase().trim(); if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && !excludedCols.includes(cl)) displayCols.push(c); });
+            displayCols.unshift('Department', 'Cost Center');
+            const ecfIdx = displayCols.findIndex(c => c.toLowerCase().includes('amount advanced (if ecf)'));
+            if (ecfIdx !== -1) displayCols.splice(ecfIdx + 1, 0, "Status", "Days Pending"); else displayCols.push("Status", "Days Pending");
+            let trH = '<tr>'; 
+            displayCols.forEach(c => { 
+                const uid = `colDrop_${c.replace(/\W/g, '_')}`, isAmount = c.toLowerCase().trim() === 'amount (usd)', sortIcon = isAmount ? (amountSortOrder === 'desc' ? ' ▼' : ' ▲') : '';
+                trH += `<th style="position:relative;" class="${isAmount ? 'sortable-header' : ''}" ${isAmount ? 'onclick="toggleAmountSort()"' : ''}>${c}${isAmount ? `<span class="sort-indicator">${sortIcon}</span>` : ''} <span id="icon_colDrop_${c.replace(/\W/g, '_')}" class="header-filter-icon" onclick="event.stopPropagation(); toggleDropdown('${uid}')">▼</span><div id="${uid}" class="col-dropdown-container" onclick="event.stopPropagation()"><div class="col-filter-header"><input type="text" class="col-filter-search" placeholder="Search..." onkeyup="searchColOptions('${uid}', this.value)"><div class="dropdown-item"><input type="checkbox" onchange="toggleAllTableFilters('${uid}', this.checked)"> <b>SELECT ALL</b></div></div><div class="col-options-list" id="${uid}_list"></div></div></th>`; 
+            });
+            trH += '<th>Action</th></tr>'; head.innerHTML = trH;
             displayCols.forEach(c => {
-                let formattedValue = '-';
-                if (c === 'Department') formattedValue = row['Department'];
-                else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
-                else if (c === 'Status') {
-                    const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
-                    if (statusText) {
-                        let colorClass = statusText.toLowerCase().includes("reconciled") ? "status-text-green" : "status-text-orange";
-                        formattedValue = `<span class="${colorClass}">${statusText}</span>`;
-                    } else formattedValue = "";
+                const uid = `colDrop_${c.replace(/\W/g, '_')}`, list = document.getElementById(`${uid}_list`);
+                const oKey = rawCols.find(rk => { const rkc = rk.toLowerCase().trim(); return c === 'Department' ? rkc === 'department' : (c === 'Cost Center' ? (rkc === 'cost center' || rkc === 'cost centre') : rk === c); });
+                if (list && list.children.length === 0) {
+                    if (c.toLowerCase().includes('date')) renderDateHierarchy(oKey, uid, list);
+                    else if (c !== "Status" && c !== "Days Pending") { 
+                        const vals = [...new Set(appData.map(r => (r[oKey] || "-").toString()))].sort(); 
+                        vals.forEach(v => { list.insertAdjacentHTML('beforeend', `<div class="dropdown-item"><input type="checkbox" data-key="${oKey}" value="${v}" onchange="updateTableFilter('${oKey}', '${uid}')"> ${v}</div>`); }); 
+                    }
                 }
-                else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
-                else {
-                    let cellValue = row[c]; formattedValue = cellValue;
-                    if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
-                }
-                trB += `<td>${formattedValue || '-'}</td>`;
             });
-            let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
-            trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
-            body.insertAdjacentHTML('beforeend', trB);
-        });
-        document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
-    }
-
-    function renderDateHierarchy(originalKey, dropId, listElement) {
-        const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
-        Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
-            listElement.insertAdjacentHTML('beforeend', `<div style="background:#0f172a; padding:5px; font-weight:900; color:var(--primary); font-size:10px;">${yr}</div>`);
-            Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
-                listElement.insertAdjacentHTML('beforeend', `<div style="padding:2px 10px; font-weight:700; color:var(--text-light); font-size:9px;">${mo}</div>`);
-                Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
+            syncFilterIcons();
+            body.innerHTML = ''; let ledgerTotal = 0;
+            filteredData.forEach(row => {
+                let trB = '<tr>'; ledgerTotal += cleanNum(getCol(row, 'Amount (USD)'));
+                const docType = (getCol(row, 'Document Type', 'Type') || "").toUpperCase(), fileName = (getCol(row, 'Full File Name') || "").toString().trim(), reconInfo = reconLookup[fileName];
+                displayCols.forEach(c => {
+                    let formattedValue = '-';
+                    if (c === 'Department') formattedValue = row['Department'];
+                    else if (c === 'Cost Center') formattedValue = getCol(row, 'Cost Center', 'Cost Centre');
+                    else if (c === 'Status') {
+                        const statusText = (docType === "PRF" && reconInfo) ? (reconInfo.status || "") : "";
+                        if (statusText) {
+                            let colorClass = statusText.toLowerCase().includes("reconciled") ? "status-text-green" : "status-text-orange";
+                            formattedValue = `<span class="${colorClass}">${statusText}</span>`;
+                        } else formattedValue = "";
+                    }
+                    else if (c === 'Days Pending') formattedValue = (docType === "PRF" && reconInfo) ? (reconInfo.daysPending || "") : "";
+                    else {
+                        let cellValue = row[c]; formattedValue = cellValue;
+                        if (c.toLowerCase().includes('amount')) formattedValue = cleanNum(cellValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        else if (c.toLowerCase().includes('date')) formattedValue = formatDateStr(parseExcelDate(cellValue));
+                    }
+                    trB += `<td>${formattedValue || '-'}</td>`;
+                });
+                let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
+                trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
+                body.insertAdjacentHTML('beforeend', trB);
             });
-        });
-    }
+            document.getElementById('ledger-summary').innerText = "TOTAL: " + ledgerTotal.toLocaleString('en-US', {style:'currency', currency:'USD'});
+        }
 
-    function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
-    function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
-    function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) tableFilters[originalKey] = checked; else delete tableFilters[originalKey]; renderApprovalsTable(appData); }
-    function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
-    function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.style.color = isGood ? 'var(--green)' : 'var(--red)'; tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good-pill' : 'bg-bad-pill'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
-    function updateVisuals(rec, pen, ageData, rankMap) {
-        mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
-        const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
-        Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
-            const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
-            rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
-        });
-    }
+        function renderDateHierarchy(originalKey, dropId, listElement) {
+            const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
+            Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
+                listElement.insertAdjacentHTML('beforeend', `<div style="background:#0f172a; padding:5px; font-weight:900; color:var(--primary); font-size:10px;">${yr}</div>`);
+                Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
+                    listElement.insertAdjacentHTML('beforeend', `<div style="padding:2px 10px; font-weight:700; color:var(--text-light); font-size:9px;">${mo}</div>`);
+                    Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
+                });
+            });
+        }
 
-    // Helper functions for UI Interaction
-    function toggleDropdown(id) {
-        const d = document.getElementById(id);
-        const isOpen = d.style.display === 'flex';
-        document.querySelectorAll('.col-dropdown-container').forEach(c => c.style.display = 'none');
-        if (!isOpen) d.style.display = 'flex';
-    }
+        function searchColOptions(id, query) { const container = document.getElementById(`${id}_list`); const items = container.querySelectorAll('.dropdown-item'); items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none'; }); }
+        function toggleAllTableFilters(dropId, checked) { const container = document.getElementById(`${dropId}_list`); const vis = Array.from(container.querySelectorAll('.dropdown-item')).filter(div => div.style.display !== 'none').map(div => div.querySelector('input')); if (vis.length > 0) { const oKey = vis[0].getAttribute('data-key'); vis.forEach(i => i.checked = checked); updateTableFilter(oKey, dropId); } }
+        function updateTableFilter(originalKey, dropId) { const list = document.getElementById(`${dropId}_list`); const checked = Array.from(list.querySelectorAll('input:checked')).map(i => i.value); if (checked.length > 0) tableFilters[originalKey] = checked; else delete tableFilters[originalKey]; renderApprovalsTable(appData); }
+        function updateExecSummary(comp, speed) { setExecRow('exComp', comp, 100, false, '%'); setExecRow('exSpeed', speed, 30, true, ' Days'); }
+        function setExecRow(id, val, target, lowerIsBetter, unit) { const vEl = document.getElementById(id + 'Val'), tEl = document.getElementById(id + 'Trend'); if(!vEl || !tEl) return; const isGood = lowerIsBetter ? val <= target : val >= target; vEl.innerText = val.toFixed(0) + unit; vEl.style.color = isGood ? 'var(--green)' : 'var(--red)'; tEl.innerHTML = `<span class="trend-pill ${isGood ? 'bg-good-pill' : 'bg-bad-pill'}">${isGood ? 'OPTIMAL' : 'RISK DETECTED'}</span>`; }
+        function updateVisuals(rec, pen, ageData, rankMap) {
+            mixChart.data.datasets[0].data = [rec, pen]; mixChart.update(); ageChart.data.datasets[0].data = ageData; ageChart.update();
+            const rl = document.getElementById('healthRankList'); rl.innerHTML = '';
+            Object.keys(rankMap).sort((a,b) => (rankMap[b].sum/rankMap[b].count) - (rankMap[a].sum/rankMap[a].count)).slice(0, 5).forEach(cc => { 
+                const sc = (rankMap[cc].sum / rankMap[cc].count).toFixed(0); let c = sc > 80 ? 'var(--green)' : (sc < 50 ? 'var(--red)' : 'var(--primary)'); 
+                rl.insertAdjacentHTML('beforeend', `<div class="rank-item"><div class="rank-top-row"><div class="rank-label" title="${cc}">${cc}</div><div class="rank-pct">${sc}%</div></div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${sc}%; background:${c}"></div></div></div>`); 
+            });
+        }
 
-    function syncFilterIcons() {
-        document.querySelectorAll('.header-filter-icon').forEach(icon => {
-            const colId = icon.id.replace('icon_', '');
-            const dropdown = document.getElementById(colId);
-            if (!dropdown) return;
-            const hasActive = dropdown.querySelectorAll('input:checked').length > 0;
-            icon.classList.toggle('active', hasActive);
-        });
-    }
+        function drillToLedger(cc, driver) {
+            tableFilters = {};
+            if (cc) tableFilters['Cost Center'] = [cc];
+            if (driver) tableFilters['Cost Drivers'] = [driver];
+            switchTab('ledger');
+            document.getElementById('ledgerBreadcrumb').style.display = 'block';
+            renderApprovalsTable(appData);
+        }
 
-    function clearTableFilters() {
-        tableFilters = {};
-        document.querySelectorAll('.col-dropdown-container input[type="checkbox"]').forEach(i => i.checked = false);
-        renderApprovalsTable(appData);
-    }
+        function drillToLedgerByAgeing(label) {
+            tableFilters = {};
+            const penPRFs = recData.filter(r => !(getCol(r, 'Status')||"").toLowerCase().includes('reconciled')).map(r => {
+                const d = cleanNum(getCol(r, 'Days Pending'));
+                let grp = '';
+                if (d <= 7) grp = '1-7d'; else if (d <= 14) grp = '8-14d'; else grp = '15d+';
+                return grp === label ? (getCol(r, 'PRF file')||"").toString().trim() : null;
+            }).filter(Boolean);
+            tableFilters['Full File Name'] = penPRFs;
+            switchTab('ledger');
+            document.getElementById('ledgerBreadcrumb').style.display = 'block';
+            renderApprovalsTable(appData);
+        }
 
-    function drillToLedger(cc, driver) {
-        tableFilters = {};
-        if (cc) tableFilters['Cost Center'] = [cc];
-        if (driver) tableFilters['Cost Drivers'] = [driver];
-        switchTab('ledger', document.querySelectorAll('.nav-btn')[1]);
-        renderApprovalsTable(appData);
-    }
+        function drillToLedgerByTrendPoint(sortKey) {
+            tableFilters = {};
+            const [y, mIdx] = sortKey.split('_');
+            const mo = monthNames[parseInt(mIdx)];
+            tableFilters['Year'] = [y];
+            tableFilters['Month'] = [mo];
+            switchTab('ledger');
+            document.getElementById('ledgerBreadcrumb').style.display = 'block';
+            renderApprovalsTable(appData);
+        }
 
-    function prevCCPage() { if (ccCurrentPage > 1) { ccCurrentPage--; renderCCDriversList(); } }
-    function nextCCPage() { if (ccCurrentPage < Math.ceil(ccDataFull.length / ITEMS_PER_PAGE)) { ccCurrentPage++; renderCCDriversList(); } }
-    function prevItemPage() { if (itemCurrentPage > 1) { itemCurrentPage--; renderItemDriversList(); } }
-    function nextItemPage() { if (itemCurrentPage < Math.ceil(itemDataFull.length / ITEMS_PER_PAGE)) { itemCurrentPage++; renderItemDriversList(); } }
-    function toggleCCSort() { ccSortOrder = ccSortOrder === 'desc' ? 'asc' : 'desc'; ccCurrentPage = 1; renderCCDriversList(); }
-    function toggleItemSort() { itemSortOrder = itemSortOrder === 'desc' ? 'asc' : 'desc'; itemCurrentPage = 1; renderItemDriversList(); }
+        function clearLedgerDrill() {
+            tableFilters = {};
+            document.getElementById('ledgerBreadcrumb').style.display = 'none';
+            renderApprovalsTable(appData);
+        }
 
-    window.onclick = function(event) { if (!event.target.matches('.header-filter-icon') && !event.target.closest('.col-dropdown-container')) { document.querySelectorAll('.col-dropdown-container').forEach(d => d.style.display = 'none'); } }
+        function changeCCPage(dir) { ccCurrentPage += dir; renderCCDriversList(); }
+        function changeItemPage(dir) { itemCurrentPage += dir; renderItemDriversList(); }
 
-    window.onload = () => {
-        const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
-        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
-        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) drillToLedgerByAgeing(ageChart.data.labels[elements[0].index]); }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
-        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
-        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
-        fetchData(); setInterval(fetchData, 60000);
-    };
-</script>
+        window.onload = () => {
+            const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
+            mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#00ff9d', '#ff4d4d'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
+            ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) drillToLedgerByAgeing(ageChart.data.labels[elements[0].index]); }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
+            const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
+            trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(0, 210, 255, 0.25)', borderColor: '#00d2ff', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#00ff9d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#00ff9d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+            weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(0, 210, 255, 0.35)', borderColor: '#00d2ff', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#00ff9d', backgroundColor: '#00ff9d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(30, 41, 59, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+            companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#00d2ff', '#00ff9d', '#ff9f43', '#ff4d4d'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+            unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#a29bfe', '#fd79a8', '#fab1a0', '#55efc4'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+            fetchData(); setInterval(fetchData, 60000);
+        };
+    </script>
 </body>
 </html>
