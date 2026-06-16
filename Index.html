@@ -1,5 +1,3 @@
---- START OF FILE Index.html ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,10 +41,12 @@
         .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #0f172a; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
         .tri-slider { position: absolute; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); transition: 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
         
+        /* BU Toggle States */
         .tri-state-toggle[data-state="ALL"] .tri-slider { left: 3px; background: var(--green); }
         .tri-state-toggle[data-state="Electric"] .tri-slider { left: 18px; background: var(--primary); }
         .tri-state-toggle[data-state="Biomass"] .tri-slider { left: 33px; background: var(--orange); }
         
+        /* Dept Toggle States */
         .tri-state-toggle[data-state="SD"] .tri-slider { left: 3px; background: var(--primary); }
         .tri-state-toggle[data-state="GA"] .tri-slider { left: 18px; background: var(--orange); }
         .tri-state-toggle[data-state="DEPT_ALL"] .tri-slider { left: 33px; background: var(--green); }
@@ -196,6 +196,7 @@
 
     <div id="toggles-container" style="display: block; margin-bottom: 10px;">
         <div class="controls-row">
+            <!-- Business Unit Toggle -->
             <div class="dept-toggle-wrap">
                 <span class="dept-toggle-label">BUSINESS UNIT:</span>
                 <div id="buTriToggle" class="tri-state-toggle" data-state="ALL" onclick="cycleBusinessUnit()">
@@ -204,6 +205,7 @@
                 <span id="activeBUText" class="active-dept-text">ALL</span>
             </div>
 
+            <!-- Dept Group Toggle (Visible on Cost Analysis Only) -->
             <div id="dept-toggle-container" class="dept-toggle-wrap">
                 <span class="dept-toggle-label">DEPT GROUP:</span>
                 <div id="deptGroupTriToggle" class="tri-state-toggle" data-state="SD" onclick="cycleDeptGroup()">
@@ -390,11 +392,12 @@
     let amountSortOrder = 'desc'; 
     let currentGranularity = 'weekly'; 
     let selectedDeptGroup = "Selling & Distribution"; 
-    let selectedBU = "ALL"; 
+    let selectedBU = "ALL"; // Default Business Unit Filter
     let selectedCCForDrivers = null; 
     
     let ccSortOrder = 'desc';
     let itemSortOrder = 'desc';
+
     let ccCurrentPage = 1;
     let ccDataFull = [];
     let itemCurrentPage = 1;
@@ -800,8 +803,8 @@
 
         let totalPendingPrfAmt = 0;
         appData.forEach(row => {
-            const rowBU = (getCol(row, 'Business Unit') || "").toString().trim();
-            if (selectedBU !== "ALL" && rowBU.toUpperCase() !== selectedBU.toUpperCase()) return;
+            const rowBU = getCol(row, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
 
             const rowDeptGroup = getCol(row, 'Department Group', 'Dept Group');
             if (activeTab === 'cost-analysis') { if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return; } 
@@ -842,22 +845,16 @@
         });
 
         salesData.forEach(r => {
-            const rawBU = getCol(r, 'Business Unit');
-            const rowBU = rawBU ? rawBU.toString().trim().toUpperCase() : null;
-            if (selectedBU !== "ALL" && rowBU && rowBU !== selectedBU.toUpperCase()) return;
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
 
-            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = (getCol(r, 'Country') || "").toString().trim(), sMo = getCol(r, 'Month');
+            const sDate = parseExcelDate(getCol(r, 'Date')), sCountry = getCol(r, 'Country'), sMo = getCol(r, 'Month');
             if ((filters.start && sDate < filters.start) || (filters.end && sDate > filters.end)) return;
             if (filters.mo && !filters.mo.includes(sMo)) return;
-            
             let isSelectedCountry = true;
-            if (filters.comp) { 
-                const targetCountries = filters.comp.map(e => (ENTITY_TO_SALES_COUNTRY_MAP[e] || e).toUpperCase()); 
-                if (!targetCountries.includes(sCountry.toUpperCase())) isSelectedCountry = false; 
-            }
-            
-            if (isSelectedCountry && !(!filters.comp && sCountry.toUpperCase() === 'HQ')) {
-                const q = cleanNum(getCol(r, 'Sales QTY', 'Sales Qty', 'Qty', 'Quantity'));
+            if (filters.comp) { const targetCountries = filters.comp.map(e => ENTITY_TO_SALES_COUNTRY_MAP[e] || e); if (!targetCountries.includes(sCountry)) isSelectedCountry = false; }
+            if (isSelectedCountry && !(!filters.comp && sCountry === 'HQ')) {
+                const q = cleanNum(getCol(r, 'Sales QTY'));
                 totalSalesQty += q;
                 countrySalesMap[sCountry] = (countrySalesMap[sCountry] || 0) + q;
                 const tObj = getTrendKey(sDate);
@@ -890,8 +887,8 @@
         
         let recCount = 0, penCount = 0, recSum = 0, penSum = 0, mDaysTotal = 0, pDaysTotal = 0, count = 0, recWithin30 = 0, ccMap = {}, a1=0, a2=0, a3=0;
         recData.forEach(r => {
-            const rowBU = (getCol(r, 'Business Unit') || "").toString().trim();
-            if (selectedBU !== "ALL" && rowBU.toUpperCase() !== selectedBU.toUpperCase()) return;
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
 
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             const rowComp = getCol(r, 'Burn Company', 'Company'), rowDept = getCol(r, 'Department'), rowCC = getCol(r, 'Cost Center', 'Cost Centre'), rowMo = getCol(r, 'Month'), rowYr = String(getCol(r, 'Year'));
@@ -966,8 +963,8 @@
         let pendingFiles = new Set(recData.filter(r => (getCol(r, 'Status')||"").toLowerCase().includes('pending')).map(r => (getCol(r, 'PRF file')||"").toString().trim()));
 
         appData.forEach(r => {
-            const rowBU = (getCol(r, 'Business Unit') || "").toString().trim();
-            if (selectedBU !== "ALL" && rowBU.toUpperCase() !== selectedBU.toUpperCase()) return;
+            const rowBU = getCol(r, 'Business Unit');
+            if (selectedBU !== "ALL" && rowBU !== selectedBU) return;
 
             const rowDeptGroup = getCol(r, 'Department Group', 'Dept Group');
             if (selectedDeptGroup !== "ALL" && rowDeptGroup && rowDeptGroup !== selectedDeptGroup) return;
@@ -1037,7 +1034,7 @@
         const unitCostEntries = compEntries.map(e => { 
             const country = e[0], comm = e[1]; 
             let sales = countrySales[country] || 0; 
-            if (country.toUpperCase() === 'HQ' && sales === 0) sales = totalQty; 
+            if (country === 'HQ' && sales === 0) sales = totalQty; 
             return [country, sales > 0 ? (comm / sales) : 0]; 
         }).sort((a,b) => b[1] - a[1]);
         unitCostCompChart.data.labels = unitCostEntries.map(e => e[0]);
@@ -1076,6 +1073,7 @@
             if (cl !== 'department' && cl !== 'cost center' && cl !== 'cost centre' && cl !== 'business unit' && !excludedCols.includes(cl)) displayCols.push(c); 
         });
 
+        // Order: Department, Cost Center, ... Burn Company, Business Unit ...
         displayCols.unshift('Department', 'Cost Center');
         const compIdx = displayCols.findIndex(c => c.toLowerCase().includes('burn company') || c.toLowerCase() === 'company');
         if (compIdx !== -1) displayCols.splice(compIdx + 1, 0, "Business Unit");
@@ -1134,6 +1132,7 @@
                 }
                 trB += `<td>${formattedValue || '-'}</td>`;
             });
+            // Pick from Column S (via header map)
             let pdf = getCol(row, 'PDF Link', 'Link', 'URL');
             trB += `<td>${pdf ? `<a href="${pdf}" target="_blank" class="pdf-btn">VIEW PDF</a>` : '-'}</td></tr>`;
             body.insertAdjacentHTML('beforeend', trB);
