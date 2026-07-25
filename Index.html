@@ -102,7 +102,6 @@
         .toggle-btn:hover { background: rgba(0,0,0,0.05); }
         .toggle-btn.active { background: var(--primary); color: #fff; }
 
-        /* Export buttons */
         .export-btn {
             background: #fff; border: 1px solid var(--primary); color: var(--primary);
             padding: 0 10px; height: 28px; border-radius: 5px; font-size: 9px; font-weight: 900;
@@ -110,13 +109,6 @@
             display: inline-flex; align-items: center; gap: 4px;
         }
         .export-btn:hover { background: #f5f0e8; }
-        .chart-export-btn {
-            position: absolute; top: 10px; right: 110px; z-index: 11;
-            background: #fff; border: 1px solid var(--border); color: var(--text-light);
-            padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 800;
-            cursor: pointer; font-family: 'Inter', sans-serif;
-        }
-        .chart-export-btn:hover { border-color: var(--primary); color: var(--primary); }
 
         .gauge-container { position: relative; width: 100%; height: 160px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
@@ -279,7 +271,6 @@
         <div class="cost-viz-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Trends: Sales Vol vs Committed Cost / Unit</h3>
-                <button class="chart-export-btn" onclick="exportChart('trendChart','Sales_vs_UnitCost')">⬇ PNG</button>
                 <div class="chart-controls">
                     <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
                     <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
@@ -307,7 +298,6 @@
         <div class="cost-viz-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Committed Trend</h3>
-                <button class="chart-export-btn" onclick="exportChart('weeklyPnlChart','Committed_Trend')">⬇ PNG</button>
                 <div class="chart-controls">
                     <button class="toggle-btn active btn-weekly" onclick="syncGranularity('weekly')">Wk</button>
                     <button class="toggle-btn btn-monthly" onclick="syncGranularity('monthly')">Mo</button>
@@ -335,12 +325,10 @@
         <div class="cost-lower-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Committed Impact by Company</h3>
-                <button class="chart-export-btn" style="right:12px;" onclick="exportChart('companyDistChart','Impact_by_Company')">⬇ PNG</button>
                 <div style="flex:1; position:relative;"><canvas id="companyDistChart"></canvas></div>
             </div>
             <div class="chart-box">
                 <h3 class="chart-title">Comm. Unit Cost per Country</h3>
-                <button class="chart-export-btn" style="right:12px;" onclick="exportChart('unitCostCompChart','UnitCost_by_Country')">⬇ PNG</button>
                 <div style="flex:1; position:relative;"><canvas id="unitCostCompChart"></canvas></div>
             </div>
         </div>
@@ -357,7 +345,6 @@
         <div class="viz-grid">
             <div class="chart-box">
                 <h3 class="chart-title">Global Compliance</h3>
-                <button class="chart-export-btn" style="right:12px;" onclick="exportChart('mixChart','Compliance_Gauge')">⬇ PNG</button>
                 <div class="gauge-container"><canvas id="mixChart"></canvas></div>
                 <div class="status-mix-footer">
                     <div class="status-row">
@@ -369,7 +356,6 @@
             </div>
             <div class="chart-box">
                 <h3 style="text-align:left; border-left:4px solid var(--orange); padding-left:9px; font-size:11px; text-transform:uppercase; font-weight:900; color:var(--orange)">Overdue Ageing (Pending)</h3>
-                <button class="chart-export-btn" style="right:12px;" onclick="exportChart('ageChart','Overdue_Ageing')">⬇ PNG</button>
                 <div style="flex:1; position:relative; margin-top:8px;"><canvas id="ageChart"></canvas></div>
             </div>
             <div class="chart-box">
@@ -421,7 +407,7 @@
 </div>
 
 <script>
-/* ========== CORE LOGIC (unchanged) + EXPORTS + COLUMN PERSISTENCE ========== */
+/* Core logic unchanged. PNG chart export removed. CSV ledger export + column persistence retained. */
 Chart.register(ChartDataLabels);
 Chart.defaults.devicePixelRatio = 2;
 Chart.defaults.font.family = "'Inter', sans-serif";
@@ -440,7 +426,7 @@ let selectedCCForDrivers = null;
 let ccSortOrder = 'desc', itemSortOrder = 'desc';
 let ccCurrentPage = 1, ccDataFull = [];
 let itemCurrentPage = 1, itemDataFull = [];
-let visibleColumns = null; // will be loaded from localStorage
+let visibleColumns = null;
 
 const ITEMS_PER_PAGE = 5;
 const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -468,7 +454,6 @@ const formatDateStr = (d) => { if (!d || isNaN(d.getTime())) return '-'; return 
 const getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7)); const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1)); return Math.ceil((((d - yearStart)/86400000)+1)/7); };
 const getQuarter = (d) => 'Q' + Math.floor((d.getMonth()+3)/3);
 
-/* ===== Column persistence ===== */
 function loadVisibleColumns() {
     try {
         const raw = localStorage.getItem(COL_STORAGE_KEY);
@@ -476,19 +461,15 @@ function loadVisibleColumns() {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length) visibleColumns = parsed;
         }
-    } catch (e) { console.warn('Could not load column prefs', e); }
+    } catch (e) {}
 }
 function saveVisibleColumns() {
     try {
-        if (visibleColumns && visibleColumns.length) {
-            localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(visibleColumns));
-        } else {
-            localStorage.removeItem(COL_STORAGE_KEY);
-        }
-    } catch (e) { console.warn('Could not save column prefs', e); }
+        if (visibleColumns && visibleColumns.length) localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(visibleColumns));
+        else localStorage.removeItem(COL_STORAGE_KEY);
+    } catch (e) {}
 }
 
-/* ===== Export helpers ===== */
 function downloadBlob(content, filename, mime) {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -498,17 +479,8 @@ function downloadBlob(content, filename, mime) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
-function exportChart(canvasId, name) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = `${name}_${new Date().toISOString().slice(0,10)}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-}
 function exportLedgerCSV() {
     if (!appData || !appData.length) return;
-    // Re-use the same filtering as the table
     let filtered = appData.filter(row => {
         for (let col in tableFilters) {
             let cellVal = (col === 'Department') ? row['Department'] : ((col === 'Cost Center' || col === 'Cost Centre') ? getCol(row,'Cost Center','Cost Centre') : row[col]);
@@ -526,11 +498,8 @@ function exportLedgerCSV() {
         const va = cleanNum(a[amountKey]), vb = cleanNum(b[amountKey]);
         return amountSortOrder === 'desc' ? vb - va : va - vb;
     });
-
     let cols = getAllPossibleColumns();
     if (visibleColumns && visibleColumns.length) cols = cols.filter(c => visibleColumns.includes(c));
-
-    // Build CSV
     const escape = (v) => {
         const s = (v === null || v === undefined) ? '' : String(v);
         if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"';
@@ -546,7 +515,6 @@ function exportLedgerCSV() {
             else if (c === 'Status' || c === 'Days Pending') {
                 const docType = (getCol(row,'Document Type','Type')||"").toUpperCase();
                 const fname = (getCol(row,'Full File Name')||"").toString().trim();
-                // simple lookup
                 const rec = recData.find(r => (getCol(r,'PRF file')||"").toString().trim() === fname);
                 if (c === 'Status') val = (docType === 'PRF' && rec) ? (getCol(rec,'Status')||'') : '';
                 else val = (docType === 'PRF' && rec) ? (getCol(rec,'Days Pending')||'') : '';
@@ -558,8 +526,7 @@ function exportLedgerCSV() {
             return escape(val);
         }).join(',');
     });
-    const csv = [header, ...rows].join('\n');
-    downloadBlob(csv, `Approvals_Ledger_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
+    downloadBlob([header, ...rows].join('\n'), `Approvals_Ledger_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8;');
 }
 
 function cycleBusinessUnit() {
@@ -1407,7 +1374,7 @@ function updateVisuals(rec, pen, ageData, rankMap) {
 }
 
 window.onload = () => {
-    loadVisibleColumns(); // restore column prefs
+    loadVisibleColumns();
 
     const needle = {
         id: 'needle',
