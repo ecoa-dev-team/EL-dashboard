@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,17 +10,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --primary: #d97706; /* Professional Orange */
-            --accent: #262626;  /* Deep Slate/Charcoal */
-            --green: #15803d;   /* Muted Professional Green */
-            --red: #b91c1c;     /* Muted Professional Red */
-            --orange: #c2410c;  /* Warm Orange */
-            --bg: #171717;      /* Dark Grey Background */
-            --card: #212121;    /* Slate Card Background */
-            --dark-blue: #171717; 
-            --text-main: #f5f5f5;
-            --text-light: #a3a3a3;
-            --border: #404040;
+            --primary: #e67e22; 
+            --accent: #3a3a3a;
+            --green: #2ecc71; 
+            --red: #e74c3c; 
+            --orange: #d35400; 
+            --bg: #2b2b2b; 
+            --card: #3a3a3a; 
+            --dark-blue: #2b2b2b; 
+            --text-main: #f8f8f8;
+            --text-light: #c0c0c0;
+            --border: #555555;
         }
         
         * { box-sizing: border-box; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -35,10 +36,10 @@
         .tab-content.active { display: block; }
 
         .controls-row { display: flex; gap: 15px; align-items: center; margin-bottom: 10px; }
-        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(33, 33, 33, 0.8); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); width: fit-content; }
+        .dept-toggle-wrap { display: flex; align-items: center; gap: 8px; background: rgba(58, 58, 58, 0.9); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); width: fit-content; }
         .dept-toggle-label { font-size: 9px; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #171717; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
+        .tri-state-toggle { position: relative; display: flex; width: 50px; height: 18px; background: #2b2b2b; border-radius: 18px; border: 1px solid var(--primary); cursor: pointer; padding: 2px; }
         .tri-slider { position: absolute; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); transition: 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
         
         /* BU Toggle States */
@@ -53,24 +54,24 @@
         
         .active-dept-text { font-size: 10px; font-weight: 800; color: var(--text-light); min-width: 110px; }
 
-        .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4); border: 1px solid var(--border); align-items: flex-end; }
+        .filter-section { display: flex; flex-wrap: wrap; gap: 12px; background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); border: 1px solid var(--border); align-items: flex-end; }
         .f-group { display: flex; flex-direction: column; min-width: 140px; flex: 1; position: relative; }
         .f-group label { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
         
         .multiselect-container { 
-            background: #171717; color: white; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
+            background: #2b2b2b; color: #ffffff; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; 
             cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-weight: 600; overflow: hidden; white-space: nowrap; transition: all 0.2s; text-overflow: ellipsis; font-family: 'Inter', sans-serif;
         }
-        .multiselect-container::after { content: "▼"; font-size: 8px; color: white; margin-left: 8px; }
-        .multiselect-container.active-filter { border-color: var(--green); background: rgba(21, 128, 61, 0.2); color: var(--text-main); }
+        .multiselect-container::after { content: "▼"; font-size: 8px; color: #ffffff; margin-left: 8px; }
+        .multiselect-container.active-filter { border-color: var(--green); background: rgba(46, 204, 113, 0.12); color: var(--green); }
 
-        .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #212121; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+        .dropdown-content { display: none; position: absolute; top: 55px; left: 0; background: #3a3a3a; border: 2px solid var(--primary); width: 100%; z-index: 100; max-height: 300px; overflow-y: auto; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.35); }
         .dropdown-content.show { display: block; }
-        .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #333333; font-size: 11px; }
-        .dropdown-item:hover { background: #333333; }
+        .dropdown-item { padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #555555; font-size: 11px; }
+        .dropdown-item:hover { background: #4a4a4a; }
         .dropdown-item input { height: 14px; width: 14px; cursor: pointer; }
 
-        input[type="date"] { background: #171717 !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
+        input[type="date"] { background: #2b2b2b !important; color: #ffffff !important; padding: 0 10px; border: 1px solid var(--primary); border-radius: 5px; font-size: 11px; height: 35px; outline: none; font-weight: 800; cursor: pointer; width: 100%; font-family: 'Inter', sans-serif; }
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
@@ -105,14 +106,14 @@
         h3.chart-title { margin: 0; font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
         
         .sort-btn-wrap { display: flex; gap: 2px; }
-        .sort-arrow-btn { background: #171717; border: 1px solid var(--border); color: var(--text-light); font-size: 8px; padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: 0.2s; }
+        .sort-arrow-btn { background: #2b2b2b; border: 1px solid var(--border); color: var(--text-light); font-size: 8px; padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: 0.2s; }
         .sort-arrow-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .sort-arrow-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .sort-arrow-btn.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
 
-        .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(23, 23, 23, 0.9); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
+        .chart-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10; background: rgba(43, 43, 43, 0.95); padding: 2px; border-radius: 4px; border: 1px solid var(--border); }
         .toggle-btn { background: transparent; border: none; color: var(--text-light); padding: 3px 6px; cursor: pointer; font-size: 8px; font-weight: 900; border-radius: 3px; text-transform: uppercase; transition: all 0.2s; font-family: 'Inter', sans-serif; line-height: 1; min-width: 45px; }
         .toggle-btn:hover { background: rgba(255,255,255,0.1); }
-        .toggle-btn.active { background: var(--primary); color: #fff; }
+        .toggle-btn.active { background: var(--primary); color: #ffffff; }
 
         .gauge-container { position: relative; width: 100%; height: 150px; margin: 0 auto; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; }
         .status-mix-footer { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -137,48 +138,48 @@
 
         .rank-impact-val { font-size: 16px; font-weight: 900; color: var(--primary); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
         .rank-impact-val:hover { color: var(--green); }
-        .rank-bar-bg { width: 100%; background: #171717; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid var(--border); position: relative; }
+        .rank-bar-bg { width: 100%; background: #2b2b2b; height: 10px; border-radius: 5px; overflow: hidden; border: 1px solid #555555; position: relative; }
         .rank-bar-fill { height: 100%; border-radius: 5px; }
         .rank-footer { display: flex; justify-content: space-between; font-size: 10px; font-weight: 800; color: var(--text-light); text-transform: uppercase; }
         .rank-pct { color: var(--green); }
         .rank-unit-val { color: var(--orange); font-size: 12px; font-weight: 900; }
 
         .pagination-ctrl { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 10px 0; border-top: 1px solid var(--border); margin-top: auto; }
-        .pag-btn { background: #333333; border: 1px solid var(--border); color: white; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
+        .pag-btn { background: #4a4a4a; border: 1px solid var(--border); color: white; padding: 4px 12px; border-radius: 4px; font-size: 10px; font-weight: 900; cursor: pointer; text-transform: uppercase; }
         .pag-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .pag-info { font-size: 10px; font-weight: 900; color: var(--primary); }
 
         .empty-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-light); font-style: italic; font-weight: 800; opacity: 0.5; text-align: center; padding: 20px; }
 
         .exec-summary-box { background: var(--card); color: white; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; clear: both; }
-        .exec-header { background: #262626; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .exec-header { background: #4a4a4a; padding: 12px; text-align: center; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-size: 13px; color: var(--primary); border-bottom: 2px solid var(--primary); }
         .exec-header.sticky { position: sticky; top: 0; z-index: 110; }
         .exec-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #212121 !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .ledger-table thead th { position: sticky !important; top: 0 !important; z-index: 105 !important; background: #3a3a3a !important; border-bottom: 2px solid var(--primary) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.25); }
         .ledger-table { font-size: 12px !important; table-layout: auto; }
         .ledger-table th { padding: 12px 10px !important; }
         .ledger-table td { padding: 12px 10px !important; border-bottom: 1px solid var(--border); vertical-align: middle; }
         .sortable-header { cursor: pointer; transition: background 0.2s; position: relative; }
-        .sortable-header:hover { background: #333333 !important; }
+        .sortable-header:hover { background: #4a4a4a !important; }
         .sort-indicator { margin-left: 5px; font-size: 14px; color: var(--green); vertical-align: middle; }
         .header-filter-icon { margin-left: 8px; cursor: pointer; color: var(--primary); font-size: 10px; display: inline-block; }
         .header-filter-icon.active { color: var(--green); transform: scale(1.2); }
         .exec-table th { color: var(--primary); text-align: left; text-transform: uppercase; font-size: 10px; font-weight: 900; padding: 12px; border-bottom: 1px solid var(--border); }
-        .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(64, 64, 64, 0.5); }
+        .exec-table td { padding: 15px 12px; border-bottom: 1px solid rgba(85, 85, 85, 0.6); }
         .table-wrap { max-height: 800px; overflow-y: auto; background: var(--card); position: relative; }
-        .pdf-btn { background: var(--primary); color: #fff; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
+        .pdf-btn { background: var(--primary); color: #ffffff; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 9px; font-weight: 900; display: inline-block; transition: background 0.3s; font-family: 'Inter', sans-serif; }
         .status-text-green { color: var(--green) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
         .status-text-orange { color: var(--orange) !important; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
-        .bg-good-pill { background: rgba(21, 128, 61, 0.2); color: var(--green) !important; border: 1px solid var(--green); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
-        .bg-bad-pill { background: rgba(185, 28, 28, 0.2); color: var(--red) !important; border: 1px solid var(--red); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
+        .bg-good-pill { background: rgba(46, 204, 113, 0.18); color: var(--green) !important; border: 1px solid var(--green); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
+        .bg-bad-pill { background: rgba(231, 76, 60, 0.18); color: var(--red) !important; border: 1px solid var(--red); border-radius: 4px; padding: 4px 8px; font-weight: 900; }
         .trend-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; border: 2px solid transparent; display: inline-block; min-width: 120px; }
         #status { font-size: 11px; font-weight: 900; color: var(--green); letter-spacing: 1.5px; }
-        button#reset-btn { background: var(--primary); color: #fff; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
-        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #212121; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-transform: none; font-weight: normal; }
+        button#reset-btn { background: var(--primary); color: #ffffff; border: none; padding: 0 20px; border-radius: 6px; font-weight: 900; cursor: pointer; text-transform: uppercase; height: 35px; font-size: 11px; font-family: 'Inter', sans-serif; }
+        .col-dropdown-container { position: absolute; top: 100%; left: 0; background: #3a3a3a; border: 2px solid var(--primary); width: 250px; z-index: 200; display: none; max-height: 400px; overflow-y: auto; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.35); text-transform: none; font-weight: normal; }
         .col-dropdown-container.show { display: block; }
-        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #171717; position: sticky; top: 0; z-index: 10; }
-        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #212121; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
-        #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
+        .col-filter-header { padding: 10px; border-bottom: 1px solid var(--border); background: #2b2b2b; position: sticky; top: 0; z-index: 10; }
+        .col-filter-search { width: 100%; margin-bottom: 8px; height: 30px; background: #3a3a3a; color: white; border: 1px solid var(--border); padding: 0 8px; font-size: 12px; font-family: 'Inter', sans-serif; }
+        #ledger-summary { font-size: 14px; font-weight: 900; color: var(--green); background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; border: 2px solid var(--green); }
     </style>
 </head>
 <body>
@@ -372,18 +373,18 @@
         <div class="exec-summary-box" style="margin-top: 10px;">
             <div class="exec-header sticky" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
                 <div style="display:flex; align-items:center; gap:20px;"><span>Detailed Approvals Ledger</span><div id="ledger-summary">TOTAL: $0.00</div></div>
-                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #fff; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
+                <button onclick="resetLedgerFilters()" style="background: var(--primary); color: #ffffff; height: 30px; padding: 0 15px; font-size: 10px;">Reset Ledger Filters</button>
             </div>
             <div class="table-wrap"><table class="exec-table ledger-table" id="approvalsTable"><thead id="approvalsHead"></thead><tbody id="approvalsBody"></tbody></table></div>
         </div>
     </div>
 
-<script[cite: 1]>
+<script>
     Chart.register(ChartDataLabels);
     Chart.defaults.devicePixelRatio = 2; 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.font.weight = '700';
-    Chart.defaults.color = '#a3a3a3';
+    Chart.defaults.color = '#c0c0c0';
     Chart.defaults.animation = false;
 
     let appData = [], recData = [], pnlData = [], salesData = [];
@@ -548,9 +549,9 @@
             if ((filters.start && d < filters.start) || (filters.end && d > filters.end)) return false;
             if (filters.yr && !filters.yr.includes(String(getCol(row, 'Year')))) return false; 
             if (filters.mo && !filters.mo.includes(getCol(row, 'Month'))) return false;
-            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return; 
-            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return;
-            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return;
+            if (filters.comp && !filters.comp.includes(getCol(row, 'Burn Company', 'Company'))) return false; 
+            if (filters.dept && !filters.dept.includes(getCol(row, 'Department'))) return false;
+            if (filters.cc && !filters.cc.includes(getCol(row, 'Cost Center', 'Cost Centre'))) return false;
             const type = (getCol(row, 'Document Type', 'Type') || "").toUpperCase();
             const fname = (getCol(row, 'Full File Name') || "").toString().trim();
             const isReconciled = type.includes('ECF') || type.includes('TRF') || type.includes('INV');
@@ -1143,7 +1144,7 @@
     function renderDateHierarchy(originalKey, dropId, listElement) {
         const dateMap = {}; appData.forEach(r => { const d = parseExcelDate(r[originalKey]); if (!d) return; const yr = d.getFullYear(), mo = monthNames[d.getMonth()], dStr = formatDateStr(d); if (!dateMap[yr]) dateMap[yr] = {}; if (!dateMap[yr][mo]) dateMap[yr][mo] = new Set(); dateMap[yr][mo].add(dStr); });
         Object.keys(dateMap).sort((a,b) => b-a).forEach(yr => {
-            listElement.insertAdjacentHTML('beforeend', `<div style="background:#171717; padding:5px; font-weight:900; color:var(--primary); font-size:10px;">${yr}</div>`);
+            listElement.insertAdjacentHTML('beforeend', `<div style="background:#2b2b2b; padding:5px; font-weight:900; color:var(--primary); font-size:10px;">${yr}</div>`);
             Object.keys(dateMap[yr]).sort((a,b) => monthNames.indexOf(a) - monthNames.indexOf(b)).forEach(mo => {
                 listElement.insertAdjacentHTML('beforeend', `<div style="padding:2px 10px; font-weight:700; color:var(--text-light); font-size:9px;">${mo}</div>`);
                 Array.from(dateMap[yr][mo]).sort().forEach(date => { listElement.insertAdjacentHTML('beforeend', `<div class="dropdown-item" style="padding-left: 20px;"><input type="checkbox" data-key="${originalKey}" value="${date}" onchange="updateTableFilter('${originalKey}', '${dropId}')"> ${date.split('/')[0]}</div>`); });
@@ -1166,16 +1167,17 @@
     }
 
     window.onload = () => {
-        const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#212121'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
-        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#15803d', '#b91c1c'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
-        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#d97706', '#c2410c', '#b91c1c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) drillToLedgerByAgeing(ageChart.data.labels[elements[0].index]); }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#f5f5f5', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
-        const commonScaleOptions = { ticks: { color: '#f5f5f5', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
-        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(217, 119, 6, 0.25)', borderColor: '#d97706', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#15803d', backgroundColor: '#15803d', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#15803d', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#15803d', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(217, 119, 6, 0.35)', borderColor: '#d97706', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#15803d', backgroundColor: '#15803d', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(33, 33, 33, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
-        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#d97706', '#15803d', '#c2410c', '#b91c1c'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
-        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#78716c', '#a855f7', '#fb923c', '#38bdf8'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+        const needle = { id: 'needle', afterDraw(chart) { const { ctx, data } = chart; ctx.save(); const meta = chart.getDatasetMeta(0).data[0], total = data.datasets[0].data.reduce((a, b) => a + b, 0), value = data.datasets[0].data[0], x = meta.x, y = meta.y - 10, rad = 18, pct = total > 0 ? value / total : 0, ang = Math.PI + (Math.PI * pct); ctx.translate(x, y); ctx.save(); ctx.rotate(ang); ctx.beginPath(); ctx.fillStyle = '#ffffff'; ctx.moveTo(rad - 2, -3); ctx.lineTo(meta.outerRadius - 30, -0.5); ctx.lineTo(meta.outerRadius - 30, 0.5); ctx.lineTo(rad - 2, 3); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.fillStyle = '#3a3a3a'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke(); ctx.font = 'bold 12px Inter'; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText((pct * 100).toFixed(0) + '%', 0, 0); ctx.restore(); } };
+        mixChart = new Chart(document.getElementById('mixChart'), { type: 'doughnut', plugins: [needle], data: { labels: ['Rec', 'Pen'], datasets: [{ backgroundColor: ['#2ecc71', '#e74c3c'], data: [0,0], borderWidth: 0, circumference: 180, rotation: 270 }] }, options: { maintainAspectRatio: false, cutout: '85%', plugins: { legend: { display: false }, datalabels: { display: false } } } });
+        ageChart = new Chart(document.getElementById('ageChart'), { type: 'pie', data: { labels: ['1-7d', '8-14d', '15d+'], datasets: [{ backgroundColor: ['#f1c40f', '#e67e22', '#e74c3c'], data: [0,0,0], borderWidth: 0 }] }, options: { maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) drillToLedgerByAgeing(ageChart.data.labels[elements[0].index]); }, plugins: { datalabels: { display: true, color: '#fff', font: { weight: '900', size: 14 }, formatter: (value) => value > 0 ? value : '' }, legend: { position: 'bottom', labels: { color: '#ffffff', font: { size: 10, weight: 'bold', family: 'Inter' } } } } } });
+        const commonScaleOptions = { ticks: { color: '#ffffff', font: { size: 12, weight: '700', family: 'Inter' }, padding: 10 }, grid: { display: false }, border: { display: false } };
+        trendChart = new Chart(document.getElementById('trendChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Sales Qty', data: [], backgroundColor: 'rgba(230, 126, 34, 0.3)', borderColor: '#e67e22', borderWidth: 2, yAxisID: 'y', order: 2, datalabels: { display: false }, clip: false }, { label: 'Comm. Cost/Unit', data: [], type: 'line', borderColor: '#2ecc71', backgroundColor: '#2ecc71', pointRadius: 5, pointHoverRadius: 7, tension: 0.1, yAxisID: 'y1', order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 4, color: '#2ecc71', font: { weight: '800', size: 14, family: 'Inter' }, formatter: (v) => v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '15%' }, y1: { ...commonScaleOptions, position: 'right', beginAtZero: true, grace: '15%', ticks: { color: '#2ecc71', font: { size: 12, weight: '700', family: 'Inter' } } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+        weeklyPnlChart = new Chart(document.getElementById('weeklyPnlChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Actual P&L Spend', data: [], backgroundColor: 'rgba(230, 126, 34, 0.35)', borderColor: '#e67e22', borderWidth: 2, order: 2, datalabels: { display: false }, clip: false }, { label: 'Committed Spend', data: [], type: 'line', borderColor: '#2ecc71', backgroundColor: '#2ecc71', pointRadius: 5, pointHoverRadius: 7, tension: 0, order: 1, clip: false, datalabels: { display: true, align: 'top', anchor: 'end', offset: 8, color: '#ffffff', backgroundColor: 'rgba(58, 58, 58, 0.9)', padding: 4, borderRadius: 4, font: { weight: '800', size: 13, family: 'Inter' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k', clamp: false } }] }, options: { layout: { padding: { top: 35 } }, maintainAspectRatio: false, onClick: (evt, elements) => { if (elements.length > 0) { const pointSortKey = currentSortedTrendKeys[elements[0].index]; if (pointSortKey) drillToLedgerByTrendPoint(pointSortKey); } }, scales: { x: commonScaleOptions, y: { ...commonScaleOptions, beginAtZero: true, grace: '20%', ticks: { color: '#ffffff', font: { size: 12, family: 'Inter', weight: '700' }, callback: v => '$'+(v/1000)+'k' } } }, plugins: { legend: { labels: { color: '#fff', font: { size: 12, weight: '800', family: 'Inter' } } } } } });
+        companyDistChart = new Chart(document.getElementById('companyDistChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#e67e22', '#2ecc71', '#d35400', '#e74c3c'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+(v/1000).toFixed(0)+'k', clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
+        unitCostCompChart = new Chart(document.getElementById('unitCostCompChart'), { type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#e67e22', '#d35400', '#e74c3c', '#2ecc71'], clip: false, datalabels: { display: true, align: 'right', anchor: 'end', offset: 10, color: '#fff', font: { size: 13, weight: '800', family: 'Inter' }, formatter: (v) => '$'+v.toFixed(2), clamp: false } }] }, options: { layout: { padding: { right: 60, top: 10, bottom: 10 } }, indexAxis: 'y', maintainAspectRatio: false, scales: { x: { ...commonScaleOptions, grace: '10%' }, y: commonScaleOptions }, plugins: { legend: { display: false } } } });
         fetchData(); setInterval(fetchData, 60000);
     };
 </script>
 </body>
 </html>
+```
